@@ -1,0 +1,29 @@
+env:
+  # Most of the code here will not be for the browser; use overrides to indicate
+  # browser code.
+  browser: false
+  node: true
+
+extends:
+  - 'plugin:@ianwremmel/ianwremmel/modern'
+  - 'plugin:@ianwremmel/ianwremmel/typescript'
+  - 'prettier'
+
+ignorePatterns:
+  - dist
+
+overrides:
+  - files:
+      - '**/*.ts'
+      - '**/*.tsx'
+    parserOptions:
+      sourceType: module
+
+  - files:
+      - '**/*.test.*'
+      - '**/__mocks__/**/*'
+    env:
+      jest: true
+
+parserOptions:
+  sourceType: 'script'
