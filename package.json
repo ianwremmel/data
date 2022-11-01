@@ -60,5 +60,8 @@
     "*.tsx": "npm run eslint -- ",
     "bin/**": "npm run eslint -- "
   },
-  "private": true
+  "private": true,
+  "dependencies": {
+    "@graphql-codegen/plugin-helpers": "^2.7.1"
+  }
 }

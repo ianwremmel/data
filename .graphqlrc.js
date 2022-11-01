@@ -11,17 +11,15 @@ const config = {
       extensions: {
         codegen: {
           generates: {
-            [`examples/${example}/__generated__/types.ts`]: {
-              hooks: {
-                afterOneFileWrite: ['npm run eslint -- --fix'],
-              },
-              plugins: ['typescript'],
+            [`examples/${example}/__generated__/template.yml`]: {
+              plugins: ['./src/codegen/cloudformation'],
             },
           },
         },
       },
       schema: [
         'examples/common.graphqls',
+        // 'src/codegen/schema.graphqls',
         `examples/${example}/schema/**/*.graphqls`,
       ],
     };
@@ -30,5 +28,3 @@ const config = {
 };
 
 module.exports = config;
-
-console.log(module.exports);

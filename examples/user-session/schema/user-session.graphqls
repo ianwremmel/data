@@ -1,8 +1,8 @@
 """
 A user session object.
 """
-type UserSession implements Node @consistent {
+type UserSession implements Node & SimpleModel @consistent {
   expires: Date! @ttl(duration: "1d")
   id: ID! @primary
-  session: JSON!
+  session: JSONObject!
 }
