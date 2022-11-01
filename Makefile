@@ -44,7 +44,7 @@ SENTINEL_DIR             := $(TMP_DIR)/sentinel
 
 EXAMPLE_DIRS             := $(shell find examples -mindepth 1 -maxdepth 1 -type d)
 
-EXAMPLE_OUTPUT_FILES     := template.yml types.ts actions.ts
+EXAMPLE_OUTPUT_FILES     := types.ts
 EXAMPLE_OUTPUT           := $(addprefix $(EXAMPLE_DIRS),$(addprefix /__generated__/,$(EXAMPLE_OUTPUT_FILES)))
 
 ################################################################################
@@ -79,12 +79,10 @@ $(TMP_DIR):
 ###############################################################################
 
 define GEN_EXAMPLE
-$(EXAMPLE_DIR)/__generated__/template.yml:
-	touch $$(@)
-$(EXAMPLE_DIR)/__generated__/types.ts:
-	touch $$(@)
-$(EXAMPLE_DIR)/__generated__/actions.ts:
-	touch $$(@)
+
+$(EXAMPLE_DIR)/__generated__/$(EXAMPLE_OUTPUT_FILES) &:
+	npx graphql-codegen --project $(subst examples/,,$(EXAMPLE_DIR))
+
 endef
 $(foreach EXAMPLE_DIR,$(EXAMPLE_DIRS),$(eval $(GEN_EXAMPLE)))
 

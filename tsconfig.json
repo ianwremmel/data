@@ -30,5 +30,6 @@
     "src/**/*.jsx",
     "src/**/*.ts",
     "src/**/*.tsx",
+    ".graphqlrc.js",
   ]
 }
