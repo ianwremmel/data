@@ -38,22 +38,25 @@ NPX := npx --no-install
 ## Constants
 ################################################################################
 
+# Reminder: order matters here
 TMP_DIR                  := .tmp
 SENTINEL_DIR             := $(TMP_DIR)/sentinel
+
+EXAMPLE_DIRS             := $(shell find examples -mindepth 1 -maxdepth 1 -type d)
+
+EXAMPLE_OUTPUT_FILES     := template.yml types.ts actions.ts
+EXAMPLE_OUTPUT           := $(addprefix $(EXAMPLE_DIRS),$(addprefix /__generated__/,$(EXAMPLE_OUTPUT_FILES)))
 
 ################################################################################
 ## Public Targets
 ################################################################################
 
-build: README.md | $(SENTINEL_DIR) $(TMP_DIR)
+build: README.md $(EXAMPLE_OUTPUT) | $(SENTINEL_DIR) $(TMP_DIR)
 .PHONY: build
 
 clean:
-	rm -rf $(TMP_DIR) $(SENTINEL_DIR)
+	rm -rf $(EXAMPLE_OUTPUT) $(TMP_DIR) $(SENTINEL_DIR)
 .PHONY: clean
-
-deploy: .tmp/sentinel/deploy
-.PHONY: deploy
 
 ################################################################################
 ## Helpers
@@ -70,6 +73,20 @@ $(SENTINEL_DIR): | $(TMP_DIR)
 
 $(TMP_DIR):
 	@mkdir -p $@
+
+###############################################################################
+## Generated Rules
+###############################################################################
+
+define GEN_EXAMPLE
+$(EXAMPLE_DIR)/__generated__/template.yml:
+	touch $$(@)
+$(EXAMPLE_DIR)/__generated__/types.ts:
+	touch $$(@)
+$(EXAMPLE_DIR)/__generated__/actions.ts:
+	touch $$(@)
+endef
+$(foreach EXAMPLE_DIR,$(EXAMPLE_DIRS),$(eval $(GEN_EXAMPLE)))
 
 ###############################################################################
 ## Targets
