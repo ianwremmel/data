@@ -77,5 +77,5 @@ $(TMP_DIR):
 
 README.md:
 	$(NPX) markdown-toc -i --bullets='-' --maxdepth=3 README.md
-	# TODO $(NPX) prettier --write README.md
+	$(NPX) prettier --write README.md
 .PHONY: README.md
