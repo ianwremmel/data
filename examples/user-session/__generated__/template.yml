@@ -1,1 +1,73 @@
-It Works!1667280218954
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Conditions:
+  IsProd: !Equals
+    - !Ref StageName
+    - production
+
+Globals:
+  Function:
+    Environment:
+      Variables:
+        ### Generated Simple Table Name Environment Variables ###
+        TABLE_USER_SESSION: !Ref TableUserSession
+        ### End Generated Simple Table Name Environment Variables ###
+
+Outputs:
+  ### Generated Simple Table Name Outputs ###
+  TableUserSession:
+    Description: The name of the DynamoDB table for UserSession
+    Value: !Ref TableUserSession
+    Export:
+      Name: !Sub ${AWS::StackName}-TableUserSession
+      Value: !Ref TableUserSession
+  ### End Generated Simple Table Name Outputs ###
+
+Parameters:
+  StageName:
+    Type: String
+    Description: The name of the stage
+    AllowedValues:
+      - development
+      - production
+      - test
+    Default: development
+
+Resources:
+  ### Generated Simple Table Resources ###
+
+  TableUserSession:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        # Use the customer-owned, AWS-managed KMS key in prod; use the
+        # AWS-owned, AWS-managed KMS key in dev and test.
+        SSEEnabled: !If
+          - IsProd
+          - true
+          - false
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - Key: StageName
+          Value: !Ref StageName
+        - Key: TableName
+          Value: TableUserSession
+        - Key: TableType
+          Value: SimpleTable
+      TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+  ### End Generated Simple Table Resources ###
+    

@@ -16,12 +16,6 @@ might require it.
 directive @consistent on OBJECT
 
 """
-Indicates the field will be configured as the DynamoDB partition key for this
-entity. Requires a simple key schema.
-"""
-directive @primary on FIELD_DEFINITION
-
-"""
 Indicates the field will be configured as the DynamoDB ttl field for this type.
 Always gets saved to a column named "ttl" to avoid conflicts in single-table
 entities that all might use different names
