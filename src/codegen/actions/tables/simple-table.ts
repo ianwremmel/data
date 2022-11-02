@@ -78,10 +78,7 @@ export async function create${objType.name}(input: Create${
     objType.name
   }Input): Promise<${objType.name}> {
   const now = new Date();
-  const tableName = process.env.TABLE_${snakeCase(objType.name).toUpperCase()};
-  assert(tableName, 'TABLE_${snakeCase(
-    objType.name
-  ).toUpperCase()} is not set');
+${ensureTableTemplate(objType)}
 
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
@@ -105,6 +102,47 @@ ${eav.map((e) => `        ${e},`).join('\n')}
 ${unmarshall.map((item) => `    ${item},`).join('\n')}
   }
 }`;
+}
+
+/**
+ * Generates the deleteItem function for a simple table
+ */
+export function deleteItemTemplate(objType: GraphQLObjectType) {
+  return `
+/**  */
+export async function delete${objType.name}(id: string) {
+${ensureTableTemplate(objType)}
+
+  const {$metadata, Attributes, ...data} = await ddbDocClient.send(new DeleteCommand({
+    ConditionExpression: 'attribute_exists(#id)',
+    ExpressionAttributeNames: {
+      '#id': 'id',
+    },
+    Key: {
+      id,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'NONE',
+    TableName: tableName,
+  }));
+
+  return data;
+}
+`;
+}
+
+/**
+ * Generates the code for checking that the environment variables for this
+ * tables's name has been set.
+ */
+function ensureTableTemplate(objType: GraphQLObjectType): string {
+  return `  const tableName = process.env.TABLE_${snakeCase(
+    objType.name
+  ).toUpperCase()};
+  assert(tableName, 'TABLE_${snakeCase(
+    objType.name
+  ).toUpperCase()} is not set');`;
 }
 
 type Nullable<T> = T | null;

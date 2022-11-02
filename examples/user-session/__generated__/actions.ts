@@ -1,6 +1,6 @@
 import assert from 'assert'
 import {v4 as uuidv4} from 'uuid'
-import {UpdateCommand} from '@aws-sdk/lib-dynamodb'
+import {DeleteCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'
 import {ddbDocClient} from "../../../src/client"
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
@@ -97,4 +97,27 @@ export async function createUserSession(input: CreateUserSessionInput): Promise<
     session: data.Attributes?.session,
     updatedAt: new Date(data.Attributes?.updated_at),
   }
+}
+
+
+/**  */
+export async function deleteUserSession(id: string) {
+  const tableName = process.env.TABLE_USER_SESSION;
+  assert(tableName, 'TABLE_USER_SESSION is not set');
+
+  const {$metadata, Attributes, ...data} = await ddbDocClient.send(new DeleteCommand({
+    ConditionExpression: 'attribute_exists(#id)',
+    ExpressionAttributeNames: {
+      '#id': 'id',
+    },
+    Key: {
+      id,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'NONE',
+    TableName: tableName,
+  }));
+
+  return data;
 }

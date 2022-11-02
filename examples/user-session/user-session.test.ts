@@ -36,6 +36,9 @@ describe('createUserSession()', () => {
     expect(result.createdAt.getTime()).not.toBeNaN();
     expect(result.expires.getTime()).not.toBeNaN();
     expect(result.updatedAt.getTime()).not.toBeNaN();
+
+    // cleanup, not part of test
+    await deleteUserSession(result.id);
   });
 });
 
@@ -43,7 +46,28 @@ describe('deleteUserSession()', () => {
   it('deletes a user session', async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
 
-    deleteUserSession({id: result.id});
+    const deleteResult = await deleteUserSession(result.id);
+    expect(deleteResult).toMatchInlineSnapshot(
+      {ConsumedCapacity: {TableName: expect.any(String)}},
+      `
+      {
+        "ConsumedCapacity": {
+          "CapacityUnits": 1,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 1,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": Any<String>,
+          "WriteCapacityUnits": undefined,
+        },
+        "ItemCollectionMetrics": undefined,
+      }
+    `
+    );
     await expect(
       async () => await readUserSession({id: result.id})
     ).rejects.toThrow();
@@ -51,7 +75,7 @@ describe('deleteUserSession()', () => {
 
   it('throws an error if the user session does not exist', async () => {
     await expect(
-      async () => await deleteUserSession({id: 'some-id'})
+      async () => await deleteUserSession('some-id')
     ).rejects.toThrow();
   });
 });
