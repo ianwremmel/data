@@ -9,7 +9,7 @@
     "lint:es": "npm run --silent eslint -- .",
     "prelint:types": "mkdir --parents reports/style",
     "lint:types": "bash -c \"tsc $TSC_OPTIONS\"",
-    "test": "ENDPOINT=http://localhost:4566 TZ=UTC jest",
+    "test": "REGION=us-east-1 ENDPOINT=http://localhost:4566 TZ=UTC jest",
     "prepare": "husky install"
   },
   "engines": {
@@ -20,6 +20,7 @@
   "author": "Ian Remmel <1182361+ianwremmel@users.noreply.github.com>",
   "license": "MIT",
   "devDependencies": {
+    "@aws-sdk/client-cloudformation": "^3.201.0",
     "@babel/preset-env": "^7.19.4",
     "@babel/preset-typescript": "^7.18.6",
     "@babel/register": "^7.18.9",
@@ -64,6 +65,11 @@
   },
   "private": true,
   "dependencies": {
-    "@graphql-codegen/plugin-helpers": "^2.7.1"
+    "@graphql-codegen/plugin-helpers": "^2.7.1",
+    "uuid": "^9.0.0"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.201.0",
+    "@aws-sdk/lib-dynamodb": "^3.201.0"
   }
 }

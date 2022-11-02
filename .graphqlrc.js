@@ -11,6 +11,12 @@ const config = {
       extensions: {
         codegen: {
           generates: {
+            [`examples/${example}/__generated__/actions.ts`]: {
+              config: {
+                pathToDocumentClient: './src/client',
+              },
+              plugins: ['typescript', './src/codegen/actions'],
+            },
             [`examples/${example}/__generated__/template.yml`]: {
               plugins: ['./src/codegen/cloudformation'],
             },

@@ -6,10 +6,36 @@ import {
   updateUserSession,
 } from './__generated__/actions';
 
+const userSessionMatcher = {
+  createdAt: expect.any(Date),
+  expires: expect.any(Date),
+  id: expect.any(String),
+  updatedAt: expect.any(Date),
+};
+
 describe('createUserSession()', () => {
   it('creates a user session', async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
-    expect(result).toMatchInlineSnapshot(`undefined`);
+
+    expect(result).toMatchInlineSnapshot(
+      userSessionMatcher,
+      `
+      {
+        "createdAt": Any<Date>,
+        "expires": Any<Date>,
+        "id": Any<String>,
+        "session": {
+          "foo": "foo",
+        },
+        "updatedAt": Any<Date>,
+      }
+    `
+    );
+
+    expect(result.id).toMatch(/UserSession#/);
+    expect(result.createdAt.getTime()).not.toBeNaN();
+    expect(result.expires.getTime()).not.toBeNaN();
+    expect(result.updatedAt.getTime()).not.toBeNaN();
   });
 });
 

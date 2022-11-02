@@ -26,6 +26,7 @@ module.exports = {
     ...glob.sync('examples/*/').map((example) => ({
       ...commonProjectConfig,
       displayName: `Example: ${upperFirst(camelCase(example.split('/')[1]))}`,
+      globalSetup: '<rootDir>/jest.d/global-setup/stack-env.ts',
       testMatch: [`<rootDir>/${example}**/?(*.)+(test).[tj]s?(x)`],
     })),
   ],

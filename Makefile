@@ -44,7 +44,7 @@ SENTINEL_DIR             := $(TMP_DIR)/sentinel
 
 EXAMPLE_DIRS             := $(shell find examples -mindepth 1 -maxdepth 1 -type d)
 
-EXAMPLE_OUTPUT_FILES     := template.yml
+EXAMPLE_OUTPUT_FILES     := action.ts template.yml
 EXAMPLE_OUTPUT           := $(addprefix $(EXAMPLE_DIRS),$(addprefix /__generated__/,$(EXAMPLE_OUTPUT_FILES)))
 
 ################################################################################
