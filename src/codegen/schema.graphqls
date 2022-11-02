@@ -26,5 +26,13 @@ directive @ttl(duration: String!) on FIELD_DEFINITION
 SimpleModels are DynamoDB with a key schema that does not include a sort key.
 """
 interface SimpleModel {
+  """
+  Set automatically when the item is first written
+  """
+  createdAt: Date!
   id: ID!
+  """
+  Set automatically when the item is updated
+  """
+  updatedAt: Date!
 }
