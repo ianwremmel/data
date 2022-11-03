@@ -206,6 +206,104 @@ ${unmarshall.map((item) => `    ${item},`).join('\n')}
 }
 
 /**
+ * Generates the updateItem function for a simple table
+ */
+export function updateItemTemplate(objType: GraphQLObjectType) {
+  const ttlInfo = extractTtlInfo(objType);
+
+  const dateFields = Object.entries(objType.getFields())
+    .filter(([, field]) => {
+      let {type} = field;
+      if (isNonNullType(type)) {
+        type = type.ofType;
+      }
+
+      return isScalarType(type) && type.name === 'Date';
+    })
+    .map(([fieldName]) => fieldName);
+
+  const ean: string[] = [];
+  const eav: string[] = [];
+  const unmarshall: string[] = [];
+  const updatedExpressions: string[] = [];
+
+  const fieldNames = Object.keys(objType.getFields()).sort();
+
+  for (const fieldName of fieldNames) {
+    if (fieldName === 'id') {
+      ean.push(`'#id': 'id'`);
+      unmarshall.push(`id: data.Attributes?.id`);
+      continue;
+    }
+
+    if (fieldName === ttlInfo?.fieldName) {
+      ean.push(`'#ttl': 'ttl'`);
+      eav.push(`':ttl': now.getTime() + ${ttlInfo.duration}`);
+      unmarshall.push(`${ttlInfo.fieldName}: new Date(data.Attributes?.ttl)`);
+      updatedExpressions.push(`#ttl = :ttl`);
+      continue;
+    }
+
+    if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
+      ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
+      eav.push(`':${fieldName}': now.getTime()`);
+      unmarshall.push(
+        `${fieldName}: new Date(data.Attributes?.${snakeCase(fieldName)})`
+      );
+      updatedExpressions.push(`#${fieldName} = :${fieldName}`);
+      continue;
+    }
+
+    ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
+    eav.push(`':${fieldName}': input.${fieldName}`);
+    if (dateFields.includes(fieldName)) {
+      unmarshall.push(
+        `${fieldName}: new Date(data.Attributes?.${snakeCase(fieldName)})`
+      );
+    } else {
+      unmarshall.push(`${fieldName}: data.Attributes?.${snakeCase(fieldName)}`);
+    }
+    updatedExpressions.push(`#${fieldName} = :${fieldName}`);
+  }
+
+  ean.sort();
+  eav.sort();
+  updatedExpressions.sort();
+
+  return `
+export type Update${objType.name}Input = Omit<${
+    objType.name
+  }, 'createdAt'|'updatedAt'${ttlInfo ? `|'${ttlInfo.fieldName}'` : ''}>;
+
+/**  */
+export async function update${objType.name}(input: Update${
+    objType.name
+  }Input): Promise<${objType.name}> {
+  const now = new Date();
+${ensureTableTemplate(objType)}
+  const data = await ddbDocClient.send(new UpdateCommand({
+      ConditionExpression: 'attribute_not_exists(#id)',
+      ExpressionAttributeNames: {
+${ean.map((e) => `        ${e},`).join('\n')}
+      },
+      ExpressionAttributeValues: {
+${eav.map((e) => `        ${e},`).join('\n')}
+      },
+      Key: {
+        id: \`${objType.name}#\${uuidv4()}\`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: 'SET ${updatedExpressions.join(', ')}',
+  }));
+  return {
+${unmarshall.map((item) => `    ${item},`).join('\n')}
+  }
+}`;
+}
+
+/**
  * Generates the code for checking that the environment variables for this
  * tables's name has been set.
  */

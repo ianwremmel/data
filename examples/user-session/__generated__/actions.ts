@@ -150,3 +150,43 @@ export async function readUserSession(id: string) {
     updatedAt: new Date(data.Item?.updated_at),
   }
 }
+
+
+export type UpdateUserSessionInput = Omit<UserSession, 'createdAt'|'updatedAt'|'expires'>;
+
+/**  */
+export async function updateUserSession(input: UpdateUserSessionInput): Promise<UserSession> {
+  const now = new Date();
+  const tableName = process.env.TABLE_USER_SESSION;
+  assert(tableName, 'TABLE_USER_SESSION is not set');
+  const data = await ddbDocClient.send(new UpdateCommand({
+      ConditionExpression: 'attribute_not_exists(#id)',
+      ExpressionAttributeNames: {
+        '#createdAt': 'created_at',
+        '#id': 'id',
+        '#session': 'session',
+        '#ttl': 'ttl',
+        '#updatedAt': 'updated_at',
+      },
+      ExpressionAttributeValues: {
+        ':createdAt': now.getTime(),
+        ':session': input.session,
+        ':ttl': now.getTime() + 86400000,
+        ':updatedAt': now.getTime(),
+      },
+      Key: {
+        id: `UserSession#${uuidv4()}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: 'SET #createdAt = :createdAt, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt',
+  }));
+  return {
+    createdAt: new Date(data.Attributes?.created_at),
+    expires: new Date(data.Attributes?.ttl),
+    id: data.Attributes?.id,
+    session: data.Attributes?.session,
+    updatedAt: new Date(data.Attributes?.updated_at),
+  }
+}

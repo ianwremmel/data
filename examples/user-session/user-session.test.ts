@@ -133,17 +133,58 @@ describe('touchUserSession()', () => {
 
 describe('updateUserSession()', () => {
   it('updates a user session', async () => {
-    const result = await createUserSession({session: {foo: 'foo'}});
+    const createResult = await createUserSession({session: {foo: 'foo'}});
+    expect(createResult).toMatchInlineSnapshot(
+      userSessionMatcher,
+      `
+      {
+        "createdAt": Any<Date>,
+        "expires": Any<Date>,
+        "id": Any<String>,
+        "session": {
+          "foo": "foo",
+        },
+        "updatedAt": Any<Date>,
+      }
+    `
+    );
+    expect(createResult.session).toEqual({foo: 'foo'});
 
-    const readResult = await readUserSession(result.id);
-    expect(readResult).toMatchInlineSnapshot();
-
-    await updateUserSession({
-      id: result.id,
+    const updateResult = await updateUserSession({
+      ...createResult,
       session: {foo: 'bar'},
     });
-    const updateResult = await readUserSession(result.id);
-    expect(updateResult).toMatchInlineSnapshot();
+    expect(updateResult).toMatchInlineSnapshot(
+      userSessionMatcher,
+      `
+      {
+        "createdAt": Any<Date>,
+        "expires": Any<Date>,
+        "id": Any<String>,
+        "session": {
+          "foo": "bar",
+        },
+        "updatedAt": Any<Date>,
+      }
+    `
+    );
+    expect(updateResult.session).toEqual({foo: 'bar'});
+
+    const readResult = await readUserSession(createResult.id);
+    expect(readResult).toMatchInlineSnapshot(
+      userSessionMatcher,
+      `
+      {
+        "createdAt": Any<Date>,
+        "expires": Any<Date>,
+        "id": Any<String>,
+        "session": {
+          "foo": "bar",
+        },
+        "updatedAt": Any<Date>,
+      }
+    `
+    );
     expect(updateResult.session).toEqual({foo: 'bar'});
   });
 
