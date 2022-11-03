@@ -7,4 +7,5 @@ type UserSession implements Node & SimpleModel @consistent {
   id: ID!
   session: JSONObject!
   updatedAt: Date!
+  version: Int!
 }

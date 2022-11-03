@@ -28,6 +28,7 @@ describe('createUserSession()', () => {
           "foo": "foo",
         },
         "updatedAt": Any<Date>,
+        "version": 0,
       }
     `
     );
@@ -96,6 +97,7 @@ describe('readUserSession()', () => {
           "foo": "foo",
         },
         "updatedAt": Any<Date>,
+        "version": 0,
       }
     `
     );
@@ -145,6 +147,7 @@ describe('updateUserSession()', () => {
           "foo": "foo",
         },
         "updatedAt": Any<Date>,
+        "version": 0,
       }
     `
     );
@@ -165,6 +168,7 @@ describe('updateUserSession()', () => {
           "foo": "bar",
         },
         "updatedAt": Any<Date>,
+        "version": 1,
       }
     `
     );
@@ -182,6 +186,7 @@ describe('updateUserSession()', () => {
           "foo": "bar",
         },
         "updatedAt": Any<Date>,
+        "version": 1,
       }
     `
     );
@@ -191,7 +196,32 @@ describe('updateUserSession()', () => {
   it('throws an error if the user session does not exist', async () => {
     await expect(
       async () =>
-        await updateUserSession({id: 'some-id', session: {foo: 'foo'}})
+        await updateUserSession({
+          id: 'some-id',
+          session: {foo: 'foo'},
+          version: 0,
+        })
     ).rejects.toThrow();
+  });
+
+  it('throws an error if the loaded session data is out of date', async () => {
+    const createResult = await createUserSession({session: {foo: 'foo'}});
+    await updateUserSession({
+      ...createResult,
+      session: {foo: 'bar'},
+    });
+
+    try {
+      await expect(
+        async () =>
+          await updateUserSession({
+            ...createResult,
+            session: {foo: 'bar'},
+          })
+      ).rejects.toThrow();
+    } finally {
+      // cleanup, not part of test
+      await deleteUserSession(createResult.id);
+    }
   });
 });

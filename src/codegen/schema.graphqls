@@ -35,4 +35,5 @@ interface SimpleModel {
   Set automatically when the item is updated
   """
   updatedAt: Date!
+  version: Int!
 }

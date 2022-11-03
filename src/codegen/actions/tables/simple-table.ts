@@ -34,6 +34,14 @@ export function createItemTemplate(objType: GraphQLObjectType) {
       continue;
     }
 
+    if (fieldName === 'version') {
+      ean.push(`'#version': 'version'`);
+      eav.push(`':version': 0`);
+      unmarshall.push(`version: data.Attributes?.version`);
+      updatedExpressions.push(`#version = :version`);
+      continue;
+    }
+
     if (fieldName === ttlInfo?.fieldName) {
       ean.push(`'#ttl': 'ttl'`);
       eav.push(`':ttl': now.getTime() + ${ttlInfo.duration}`);
@@ -71,7 +79,9 @@ export function createItemTemplate(objType: GraphQLObjectType) {
   return `
 export type Create${objType.name}Input = Omit<${
     objType.name
-  }, 'createdAt'|'id'|'updatedAt'${ttlInfo ? `|'${ttlInfo.fieldName}'` : ''}>;
+  }, 'createdAt'|'id'|'updatedAt'${
+    ttlInfo ? `|'${ttlInfo.fieldName}'` : ''
+  }|'version'>;
 
 /**  */
 export async function create${objType.name}(input: Create${
@@ -244,6 +254,15 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
       continue;
     }
 
+    if (fieldName === 'version') {
+      ean.push(`'#version': 'version'`);
+      eav.push(`':newVersion': input.version + 1`);
+      eav.push(`':version': input.version`);
+      unmarshall.push(`version: data.Attributes?.version`);
+      updatedExpressions.push(`#version = :newVersion`);
+      continue;
+    }
+
     if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
       ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
       eav.push(`':${fieldName}': now.getTime()`);
@@ -282,20 +301,20 @@ export async function update${objType.name}(input: Update${
   const now = new Date();
 ${ensureTableTemplate(objType)}
   const data = await ddbDocClient.send(new UpdateCommand({
-      ConditionExpression: 'attribute_not_exists(#id)',
-      ExpressionAttributeNames: {
+    ConditionExpression: '#version = :version AND attribute_exists(#id)',
+    ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
-      },
-      ExpressionAttributeValues: {
+    },
+    ExpressionAttributeValues: {
 ${eav.map((e) => `        ${e},`).join('\n')}
-      },
-      Key: {
-        id: \`${objType.name}#\${uuidv4()}\`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET ${updatedExpressions.join(', ')}',
+    },
+    Key: {
+      id: input.id,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: 'SET ${updatedExpressions.join(', ')}',
   }));
   return {
 ${unmarshall.map((item) => `    ${item},`).join('\n')}

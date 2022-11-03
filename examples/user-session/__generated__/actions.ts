@@ -44,6 +44,7 @@ export type SimpleModel = {
   id: Scalars['ID'];
   /** Set automatically when the item is updated */
   updatedAt: Scalars['Date'];
+  version: Scalars['Int'];
 };
 
 /** A user session object. */
@@ -54,10 +55,11 @@ export type UserSession = Node & SimpleModel & {
   id: Scalars['ID'];
   session: Scalars['JSONObject'];
   updatedAt: Scalars['Date'];
+  version: Scalars['Int'];
 };
 
 
-export type CreateUserSessionInput = Omit<UserSession, 'createdAt'|'id'|'updatedAt'|'expires'>;
+export type CreateUserSessionInput = Omit<UserSession, 'createdAt'|'id'|'updatedAt'|'expires'|'version'>;
 
 /**  */
 export async function createUserSession(input: CreateUserSessionInput): Promise<UserSession> {
@@ -75,12 +77,14 @@ export async function createUserSession(input: CreateUserSessionInput): Promise<
         '#session': 'session',
         '#ttl': 'ttl',
         '#updatedAt': 'updated_at',
+        '#version': 'version',
       },
       ExpressionAttributeValues: {
         ':createdAt': now.getTime(),
         ':session': input.session,
         ':ttl': now.getTime() + 86400000,
         ':updatedAt': now.getTime(),
+        ':version': 0,
       },
       Key: {
         id: `UserSession#${uuidv4()}`,
@@ -88,7 +92,7 @@ export async function createUserSession(input: CreateUserSessionInput): Promise<
       ReturnConsumedCapacity: 'INDEXES',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression: 'SET #createdAt = :createdAt, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt',
+      UpdateExpression: 'SET #createdAt = :createdAt, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt, #version = :version',
   }));
   return {
     createdAt: new Date(data.Attributes?.created_at),
@@ -96,6 +100,7 @@ export async function createUserSession(input: CreateUserSessionInput): Promise<
     id: data.Attributes?.id,
     session: data.Attributes?.session,
     updatedAt: new Date(data.Attributes?.updated_at),
+    version: data.Attributes?.version,
   }
 }
 
@@ -148,6 +153,7 @@ export async function readUserSession(id: string) {
     id: data.Item?.id,
     session: data.Item?.session,
     updatedAt: new Date(data.Item?.updated_at),
+    version: data.Item?.version,
   }
 }
 
@@ -160,27 +166,30 @@ export async function updateUserSession(input: UpdateUserSessionInput): Promise<
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
   const data = await ddbDocClient.send(new UpdateCommand({
-      ConditionExpression: 'attribute_not_exists(#id)',
-      ExpressionAttributeNames: {
+    ConditionExpression: '#version = :version AND attribute_exists(#id)',
+    ExpressionAttributeNames: {
         '#createdAt': 'created_at',
         '#id': 'id',
         '#session': 'session',
         '#ttl': 'ttl',
         '#updatedAt': 'updated_at',
-      },
-      ExpressionAttributeValues: {
+        '#version': 'version',
+    },
+    ExpressionAttributeValues: {
         ':createdAt': now.getTime(),
+        ':newVersion': input.version + 1,
         ':session': input.session,
         ':ttl': now.getTime() + 86400000,
         ':updatedAt': now.getTime(),
-      },
-      Key: {
-        id: `UserSession#${uuidv4()}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET #createdAt = :createdAt, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt',
+        ':version': input.version,
+    },
+    Key: {
+      id: input.id,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: 'SET #createdAt = :createdAt, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt, #version = :newVersion',
   }));
   return {
     createdAt: new Date(data.Attributes?.created_at),
@@ -188,5 +197,6 @@ export async function updateUserSession(input: UpdateUserSessionInput): Promise<
     id: data.Attributes?.id,
     session: data.Attributes?.session,
     updatedAt: new Date(data.Attributes?.updated_at),
+    version: data.Attributes?.version,
   }
 }
