@@ -69,6 +69,7 @@ describe('deleteUserSession()', () => {
       }
     `
     );
+
     await expect(
       async () => await readUserSession(result.id)
     ).rejects.toThrow();
@@ -101,6 +102,9 @@ describe('readUserSession()', () => {
       }
     `
     );
+
+    // cleanup, not part of test
+    await deleteUserSession(result.id);
   });
 
   it('throws an error if the user session does not exist', async () => {
@@ -124,6 +128,9 @@ describe('touchUserSession()', () => {
     expect(readResult.createdAt).not.toEqual(touchResult.createdAt);
 
     expect(readResult.expires).not.toEqual(touchResult.expires);
+
+    // cleanup, not part of test
+    await deleteUserSession(result.id);
   });
 
   it('throws an error if the user session does not exist', async () => {
@@ -191,6 +198,9 @@ describe('updateUserSession()', () => {
     `
     );
     expect(updateResult.session).toEqual({foo: 'bar'});
+
+    // cleanup, not part of test
+    await deleteUserSession(createResult.id);
   });
 
   it('throws an error if the user session does not exist', async () => {
@@ -211,17 +221,15 @@ describe('updateUserSession()', () => {
       session: {foo: 'bar'},
     });
 
-    try {
-      await expect(
-        async () =>
-          await updateUserSession({
-            ...createResult,
-            session: {foo: 'bar'},
-          })
-      ).rejects.toThrow();
-    } finally {
-      // cleanup, not part of test
-      await deleteUserSession(createResult.id);
-    }
+    await expect(
+      async () =>
+        await updateUserSession({
+          ...createResult,
+          session: {foo: 'bar'},
+        })
+    ).rejects.toThrow();
+
+    // cleanup, not part of test
+    await deleteUserSession(createResult.id);
   });
 });
