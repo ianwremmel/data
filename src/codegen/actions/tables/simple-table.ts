@@ -4,6 +4,12 @@ import {snakeCase} from 'lodash';
 import {extractTtlInfo} from '../../common/fields';
 import {fieldsOfType, hasDirective} from '../../common/helpers';
 
+import {createItemTpl} from './templates/create-item';
+import {deleteItemTpl} from './templates/delete-item';
+import {readItemTpl} from './templates/read-item';
+import {touchItemTpl} from './templates/touch-item';
+import {updateItemTpl} from './templates/update-item';
+
 /**
  * Generates the createItem function for a simple table
  */
@@ -17,7 +23,7 @@ export function createItemTemplate(objType: GraphQLObjectType) {
   const ean: string[] = [];
   const eav: string[] = [];
   const unmarshall: string[] = [];
-  const updatedExpressions: string[] = [];
+  const updateExpressions: string[] = [];
 
   const fieldNames = Object.keys(objType.getFields()).sort();
 
@@ -25,115 +31,58 @@ export function createItemTemplate(objType: GraphQLObjectType) {
     if (fieldName === 'id') {
       ean.push(`'#id': 'id'`);
       unmarshall.push(`id: data.Attributes?.id`);
-      continue;
-    }
-
-    if (fieldName === 'version') {
+    } else if (fieldName === 'version') {
       ean.push(`'#version': 'version'`);
       eav.push(`':version': 1`);
       unmarshall.push(`version: data.Attributes?.version`);
-      updatedExpressions.push(`#version = :version`);
-      continue;
-    }
-
-    if (fieldName === ttlInfo?.fieldName) {
+      updateExpressions.push(`#version = :version`);
+    } else if (fieldName === ttlInfo?.fieldName) {
       ean.push(`'#ttl': 'ttl'`);
       eav.push(`':ttl': now.getTime() + ${ttlInfo.duration}`);
       unmarshall.push(`${ttlInfo.fieldName}: new Date(data.Attributes?.ttl)`);
-      updatedExpressions.push(`#ttl = :ttl`);
-      continue;
-    }
-
-    if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
+      updateExpressions.push(`#ttl = :ttl`);
+    } else if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
       ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
       eav.push(`':${fieldName}': now.getTime()`);
       unmarshall.push(
         `${fieldName}: new Date(data.Attributes?.${snakeCase(fieldName)})`
       );
-      updatedExpressions.push(`#${fieldName} = :${fieldName}`);
-      continue;
-    }
-
-    ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
-    eav.push(`':${fieldName}': input.${fieldName}`);
-    if (dateFields.includes(fieldName)) {
-      unmarshall.push(
-        `${fieldName}: new Date(data.Attributes?.${snakeCase(fieldName)})`
-      );
+      updateExpressions.push(`#${fieldName} = :${fieldName}`);
     } else {
-      unmarshall.push(`${fieldName}: data.Attributes?.${snakeCase(fieldName)}`);
+      ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
+      eav.push(`':${fieldName}': input.${fieldName}`);
+      if (dateFields.includes(fieldName)) {
+        unmarshall.push(
+          `${fieldName}: new Date(data.Attributes?.${snakeCase(fieldName)})`
+        );
+      } else {
+        unmarshall.push(
+          `${fieldName}: data.Attributes?.${snakeCase(fieldName)}`
+        );
+      }
+      updateExpressions.push(`#${fieldName} = :${fieldName}`);
     }
-    updatedExpressions.push(`#${fieldName} = :${fieldName}`);
   }
 
   ean.sort();
   eav.sort();
-  updatedExpressions.sort();
+  updateExpressions.sort();
 
-  return `
-export type Create${objType.name}Input = Omit<${
-    objType.name
-  }, 'createdAt'|'id'|'updatedAt'${
-    ttlInfo ? `|'${ttlInfo.fieldName}'` : ''
-  }|'version'>;
-
-/**  */
-export async function create${objType.name}(input: Create${
-    objType.name
-  }Input): Promise<${objType.name}> {
-  const now = new Date();
-${ensureTableTemplate(objType)}
-
-  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
-  // cannot return the newly written values.
-  const data = await ddbDocClient.send(new UpdateCommand({
-      ConditionExpression: 'attribute_not_exists(#id)',
-      ExpressionAttributeNames: {
-${ean.map((e) => `        ${e},`).join('\n')}
-      },
-      ExpressionAttributeValues: {
-${eav.map((e) => `        ${e},`).join('\n')}
-      },
-      Key: {
-        id: \`${objType.name}#\${uuidv4()}\`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET ${updatedExpressions.join(', ')}',
-  }));
-  return {
-${unmarshall.map((item) => `    ${item},`).join('\n')}
-  }
-}`;
+  return createItemTpl({
+    ean,
+    eav,
+    objType,
+    ttlInfo,
+    unmarshall,
+    updateExpressions,
+  });
 }
 
 /**
  * Generates the deleteItem function for a simple table
  */
 export function deleteItemTemplate(objType: GraphQLObjectType) {
-  return `
-/**  */
-export async function delete${objType.name}(id: string) {
-${ensureTableTemplate(objType)}
-
-  const {$metadata, Attributes, ...data} = await ddbDocClient.send(new DeleteCommand({
-    ConditionExpression: 'attribute_exists(#id)',
-    ExpressionAttributeNames: {
-      '#id': 'id',
-    },
-    Key: {
-      id,
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnItemCollectionMetrics: 'SIZE',
-    ReturnValues: 'NONE',
-    TableName: tableName,
-  }));
-
-  return data;
-}
-`;
+  return deleteItemTpl({objType});
 }
 
 /**
@@ -141,7 +90,7 @@ ${ensureTableTemplate(objType)}
  */
 export function readItemTemplate(objType: GraphQLObjectType) {
   const ttlInfo = extractTtlInfo(objType);
-  const constistent = hasDirective('consistent', objType);
+  const consistent = hasDirective('consistent', objType);
 
   const unmarshall: string[] = [];
 
@@ -154,22 +103,13 @@ export function readItemTemplate(objType: GraphQLObjectType) {
   for (const fieldName of fieldNames) {
     if (fieldName === 'id') {
       unmarshall.push(`id: data.Item?.id`);
-      continue;
-    }
-
-    if (fieldName === ttlInfo?.fieldName) {
+    } else if (fieldName === ttlInfo?.fieldName) {
       unmarshall.push(`${ttlInfo.fieldName}: new Date(data.Item?.ttl)`);
-      continue;
-    }
-
-    if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
+    } else if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
       unmarshall.push(
         `${fieldName}: new Date(data.Item?.${snakeCase(fieldName)})`
       );
-      continue;
-    }
-
-    if (dateFields.includes(fieldName)) {
+    } else if (dateFields.includes(fieldName)) {
       unmarshall.push(
         `${fieldName}: new Date(data.Item?.${snakeCase(fieldName)})`
       );
@@ -178,28 +118,7 @@ export function readItemTemplate(objType: GraphQLObjectType) {
     }
   }
 
-  return `
-/**  */
-export async function read${objType.name}(id: string) {
-${ensureTableTemplate(objType)}
-
-  const {$metadata, ...data} = await ddbDocClient.send(new GetCommand({
-    ConsistentRead: ${constistent},
-    Key: {
-      id,
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    TableName: tableName,
-  }));
-
-  if (!data.Item) {
-    throw new Error(\`No ${objType.name} found with id \${id}\`);
-  }
-
-  return {
-${unmarshall.map((item) => `    ${item},`).join('\n')}
-  }
-}`;
+  return readItemTpl({consistent, objType, unmarshall});
 }
 
 /**
@@ -210,56 +129,29 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
 
   const ean: string[] = [];
   const eav: string[] = [];
-  const updatedExpressions: string[] = [];
+  const updateExpressions: string[] = [];
 
   const fieldNames = Object.keys(objType.getFields()).sort();
 
   for (const fieldName of fieldNames) {
     if (fieldName === 'id') {
       ean.push(`'#id': 'id'`);
-      continue;
-    }
-
-    if (fieldName === 'version') {
+    } else if (fieldName === 'version') {
       ean.push(`'#version': 'version'`);
       eav.push(`':versionInc': 1`);
-      updatedExpressions.push(`#version = #version + :versionInc`);
-      continue;
-    }
-
-    if (fieldName === ttlInfo?.fieldName) {
+      updateExpressions.push(`#version = #version + :versionInc`);
+    } else if (fieldName === ttlInfo?.fieldName) {
       ean.push(`'#ttl': 'ttl'`);
       eav.push(`':ttlInc': ${ttlInfo.duration}`);
-      updatedExpressions.push(`#ttl = #ttl + :ttlInc`);
-      continue;
+      updateExpressions.push(`#ttl = #ttl + :ttlInc`);
     }
   }
 
   ean.sort();
   eav.sort();
-  updatedExpressions.sort();
+  updateExpressions.sort();
 
-  return `
-/**  */
-export async function touch${objType.name}(id: Scalars['ID']): Promise<void> {
-${ensureTableTemplate(objType)}
-  await ddbDocClient.send(new UpdateCommand({
-    ConditionExpression: 'attribute_exists(#id)',
-    ExpressionAttributeNames: {
-${ean.map((e) => `        ${e},`).join('\n')}
-    },
-    ExpressionAttributeValues: {
-${eav.map((e) => `        ${e},`).join('\n')}
-    },
-    Key: {
-      id,
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: 'SET ${updatedExpressions.join(', ')}',
-  }));
-}`;
+  return touchItemTpl({ean, eav, objType, updateExpressions});
 }
 
 /**
@@ -282,7 +174,7 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
   const ean: string[] = [];
   const eav: string[] = [];
   const unmarshall: string[] = [];
-  const updatedExpressions: string[] = [];
+  const updateExpressions: string[] = [];
 
   const fieldNames = Object.keys(objType.getFields()).sort();
 
@@ -290,94 +182,50 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
     if (fieldName === 'id') {
       ean.push(`'#id': 'id'`);
       unmarshall.push(`id: data.Attributes?.id`);
-      continue;
-    }
-
-    if (fieldName === ttlInfo?.fieldName) {
+    } else if (fieldName === ttlInfo?.fieldName) {
       ean.push(`'#ttl': 'ttl'`);
       eav.push(`':ttl': now.getTime() + ${ttlInfo.duration}`);
       unmarshall.push(`${ttlInfo.fieldName}: new Date(data.Attributes?.ttl)`);
-      updatedExpressions.push(`#ttl = :ttl`);
-      continue;
-    }
-
-    if (fieldName === 'version') {
+      updateExpressions.push(`#ttl = :ttl`);
+    } else if (fieldName === 'version') {
       ean.push(`'#version': 'version'`);
       eav.push(`':newVersion': input.version + 1`);
       eav.push(`':version': input.version`);
       unmarshall.push(`version: data.Attributes?.version`);
-      updatedExpressions.push(`#version = :newVersion`);
-      continue;
-    }
-
-    if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
+      updateExpressions.push(`#version = :newVersion`);
+    } else if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
       ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
       eav.push(`':${fieldName}': now.getTime()`);
       unmarshall.push(
         `${fieldName}: new Date(data.Attributes?.${snakeCase(fieldName)})`
       );
-      updatedExpressions.push(`#${fieldName} = :${fieldName}`);
-      continue;
-    }
-
-    ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
-    eav.push(`':${fieldName}': input.${fieldName}`);
-    if (dateFields.includes(fieldName)) {
-      unmarshall.push(
-        `${fieldName}: new Date(data.Attributes?.${snakeCase(fieldName)})`
-      );
+      updateExpressions.push(`#${fieldName} = :${fieldName}`);
     } else {
-      unmarshall.push(`${fieldName}: data.Attributes?.${snakeCase(fieldName)}`);
+      ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
+      eav.push(`':${fieldName}': input.${fieldName}`);
+      if (dateFields.includes(fieldName)) {
+        unmarshall.push(
+          `${fieldName}: new Date(data.Attributes?.${snakeCase(fieldName)})`
+        );
+      } else {
+        unmarshall.push(
+          `${fieldName}: data.Attributes?.${snakeCase(fieldName)}`
+        );
+      }
+      updateExpressions.push(`#${fieldName} = :${fieldName}`);
     }
-    updatedExpressions.push(`#${fieldName} = :${fieldName}`);
   }
 
   ean.sort();
   eav.sort();
-  updatedExpressions.sort();
+  updateExpressions.sort();
 
-  return `
-export type Update${objType.name}Input = Omit<${
-    objType.name
-  }, 'createdAt'|'updatedAt'${ttlInfo ? `|'${ttlInfo.fieldName}'` : ''}>;
-
-/**  */
-export async function update${objType.name}(input: Update${
-    objType.name
-  }Input): Promise<${objType.name}> {
-  const now = new Date();
-${ensureTableTemplate(objType)}
-  const data = await ddbDocClient.send(new UpdateCommand({
-    ConditionExpression: '#version = :version AND attribute_exists(#id)',
-    ExpressionAttributeNames: {
-${ean.map((e) => `        ${e},`).join('\n')}
-    },
-    ExpressionAttributeValues: {
-${eav.map((e) => `        ${e},`).join('\n')}
-    },
-    Key: {
-      id: input.id,
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: 'SET ${updatedExpressions.join(', ')}',
-  }));
-  return {
-${unmarshall.map((item) => `    ${item},`).join('\n')}
-  }
-}`;
-}
-
-/**
- * Generates the code for checking that the environment variables for this
- * tables's name has been set.
- */
-function ensureTableTemplate(objType: GraphQLObjectType): string {
-  return `  const tableName = process.env.TABLE_${snakeCase(
-    objType.name
-  ).toUpperCase()};
-  assert(tableName, 'TABLE_${snakeCase(
-    objType.name
-  ).toUpperCase()} is not set');`;
+  return updateItemTpl({
+    ean,
+    eav,
+    objType,
+    ttlInfo,
+    unmarshall,
+    updateExpressions,
+  });
 }
