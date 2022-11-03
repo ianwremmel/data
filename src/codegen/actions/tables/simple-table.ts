@@ -133,6 +133,77 @@ ${ensureTableTemplate(objType)}
 }
 
 /**
+ * Generates the readItem function for a simple table
+ */
+export function readItemTemplate(objType: GraphQLObjectType) {
+  const ttlInfo = extractTtlInfo(objType);
+
+  const unmarshall: string[] = [];
+
+  const fieldNames = Object.keys(objType.getFields()).sort();
+
+  const dateFields = Object.entries(objType.getFields())
+    .filter(([, field]) => {
+      let {type} = field;
+      if (isNonNullType(type)) {
+        type = type.ofType;
+      }
+
+      return isScalarType(type) && type.name === 'Date';
+    })
+    .map(([fieldName]) => fieldName);
+
+  for (const fieldName of fieldNames) {
+    if (fieldName === 'id') {
+      unmarshall.push(`id: data.Item?.id`);
+      continue;
+    }
+
+    if (fieldName === ttlInfo?.fieldName) {
+      unmarshall.push(`${ttlInfo.fieldName}: new Date(data.Item?.ttl)`);
+      continue;
+    }
+
+    if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
+      unmarshall.push(
+        `${fieldName}: new Date(data.Item?.${snakeCase(fieldName)})`
+      );
+      continue;
+    }
+
+    if (dateFields.includes(fieldName)) {
+      unmarshall.push(
+        `${fieldName}: new Date(data.Item?.${snakeCase(fieldName)})`
+      );
+    } else {
+      unmarshall.push(`${fieldName}: data.Item?.${snakeCase(fieldName)}`);
+    }
+  }
+
+  return `
+/**  */
+export async function read${objType.name}(id: string) {
+${ensureTableTemplate(objType)}
+
+  const {$metadata, ...data} = await ddbDocClient.send(new GetCommand({
+    Key: {
+      id,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    TableName: tableName,
+  }));
+
+  if (!data.Item) {
+    throw new Error(\`No ${objType.name} found with id \${id}\`);
+  }
+
+  return {
+${unmarshall.map((item) => `    ${item},`).join('\n')}
+  }
+}`;
+}
+
+/**
  * Generates the code for checking that the environment variables for this
  * tables's name has been set.
  */

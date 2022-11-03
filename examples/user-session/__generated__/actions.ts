@@ -1,6 +1,6 @@
 import assert from 'assert'
 import {v4 as uuidv4} from 'uuid'
-import {DeleteCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'
+import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'
 import {ddbDocClient} from "../../../src/client"
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
@@ -120,4 +120,32 @@ export async function deleteUserSession(id: string) {
   }));
 
   return data;
+}
+
+
+
+/**  */
+export async function readUserSession(id: string) {
+  const tableName = process.env.TABLE_USER_SESSION;
+  assert(tableName, 'TABLE_USER_SESSION is not set');
+
+  const {$metadata, ...data} = await ddbDocClient.send(new GetCommand({
+    Key: {
+      id,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    TableName: tableName,
+  }));
+
+  if (!data.Item) {
+    throw new Error(`No UserSession found with id ${id}`);
+  }
+
+  return {
+    createdAt: new Date(data.Item?.created_at),
+    expires: new Date(data.Item?.ttl),
+    id: data.Item?.id,
+    session: data.Item?.session,
+    updatedAt: new Date(data.Item?.updated_at),
+  }
 }

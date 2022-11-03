@@ -9,7 +9,11 @@ import {
 import {assertObjectType, GraphQLObjectType} from 'graphql';
 
 import {ActionPluginConfig} from './config';
-import {createItemTemplate, deleteItemTemplate} from './tables/simple-table';
+import {
+  createItemTemplate,
+  deleteItemTemplate,
+  readItemTemplate,
+} from './tables/simple-table';
 
 /** @override */
 export function addToSchema(): AddToSchemaResult {
@@ -51,9 +55,11 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
       // I don't know why this has to be cast here, but not 6 lines up.
       const objType: GraphQLObjectType = t as GraphQLObjectType;
 
-      return [createItemTemplate(objType), deleteItemTemplate(objType)].join(
-        '\n\n'
-      );
+      return [
+        createItemTemplate(objType),
+        deleteItemTemplate(objType),
+        readItemTemplate(objType),
+      ].join('\n\n');
     })
     .join('\n');
 
@@ -64,7 +70,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
     prepend: [
       `import assert from 'assert'`,
       `import {v4 as uuidv4} from 'uuid'`,
-      `import {DeleteCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
+      `import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
       `import {ddbDocClient} from "${path.relative(
         path.resolve(process.cwd(), path.dirname(info.outputFile)),
         path.resolve(process.cwd(), config.pathToDocumentClient)
