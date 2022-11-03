@@ -14,6 +14,11 @@ const config = {
             [`examples/${example}/__generated__/actions.ts`]: {
               config: {
                 pathToDocumentClient: './src/client',
+                scalars: {
+                  Date: 'Date',
+                  JSONObject: 'Record<string, unknown>',
+                },
+                strictScalars: true,
               },
               plugins: ['typescript', './src/codegen/actions'],
             },

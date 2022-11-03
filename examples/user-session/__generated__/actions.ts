@@ -21,9 +21,9 @@ export interface Scalars {
   Int: number;
   Float: number;
   /** JavaScript Date stored as a Number in DynamoDB */
-  Date: any;
+  Date: Date;
   /** Arbitrary JSON stored as a Map in DynamoDB */
-  JSONObject: any;
+  JSONObject: Record<string, unknown>;
 }
 
 /** The Node interface */
