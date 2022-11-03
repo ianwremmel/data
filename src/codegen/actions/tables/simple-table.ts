@@ -1,7 +1,8 @@
-import assert from 'assert';
-
-import {isNonNullType, isScalarType, GraphQLObjectType} from 'graphql';
+import {GraphQLObjectType, isNonNullType, isScalarType} from 'graphql';
 import {snakeCase} from 'lodash';
+
+import {extractTtlInfo} from '../../common/fields';
+import {fieldsOfType, hasDirective} from '../../common/helpers';
 
 /**
  * Generates the createItem function for a simple table
@@ -9,16 +10,9 @@ import {snakeCase} from 'lodash';
 export function createItemTemplate(objType: GraphQLObjectType) {
   const ttlInfo = extractTtlInfo(objType);
 
-  const dateFields = Object.entries(objType.getFields())
-    .filter(([, field]) => {
-      let {type} = field;
-      if (isNonNullType(type)) {
-        type = type.ofType;
-      }
-
-      return isScalarType(type) && type.name === 'Date';
-    })
-    .map(([fieldName]) => fieldName);
+  const dateFields = fieldsOfType('Date', objType).map(
+    ([fieldName]) => fieldName
+  );
 
   const ean: string[] = [];
   const eav: string[] = [];
@@ -153,16 +147,9 @@ export function readItemTemplate(objType: GraphQLObjectType) {
 
   const fieldNames = Object.keys(objType.getFields()).sort();
 
-  const dateFields = Object.entries(objType.getFields())
-    .filter(([, field]) => {
-      let {type} = field;
-      if (isNonNullType(type)) {
-        type = type.ofType;
-      }
-
-      return isScalarType(type) && type.name === 'Date';
-    })
-    .map(([fieldName]) => fieldName);
+  const dateFields = fieldsOfType('Date', objType).map(
+    ([fieldName]) => fieldName
+  );
 
   for (const fieldName of fieldNames) {
     if (fieldName === 'id') {
@@ -393,60 +380,4 @@ function ensureTableTemplate(objType: GraphQLObjectType): string {
   assert(tableName, 'TABLE_${snakeCase(
     objType.name
   ).toUpperCase()} is not set');`;
-}
-
-type Nullable<T> = T | null;
-
-/**
- * Parses a type that might have ttl info and returns its useful parts.
- */
-function extractTtlInfo(type: GraphQLObjectType): Nullable<{
-  duration: number;
-  fieldName: string;
-}> {
-  const fields =
-    type.astNode?.fields?.filter((field) =>
-      field.directives?.map(({name}) => name.value).includes('ttl')
-    ) ?? [];
-
-  if (fields.length === 0) {
-    return null;
-  }
-
-  assert(fields.length < 2, 'Only one ttl field is allowed per type');
-
-  const field = fields?.[0];
-
-  const fieldName = field?.name.value;
-  const directive = field.directives?.find((d) => d.name.value === 'ttl');
-
-  const arg = directive?.arguments?.find((a) => a.name.value === 'duration');
-
-  assert(arg?.value.kind === 'StringValue', 'ttl duration must be a string');
-  const duration = arg.value.value;
-
-  const durationUnit = duration?.slice(-1);
-  const durationValue = duration?.slice(0, -1);
-
-  switch (durationUnit) {
-    case 's':
-      return {duration: Number(durationValue) * 1000, fieldName};
-    case 'm':
-      return {duration: Number(durationValue) * 1000 * 60, fieldName};
-    case 'h':
-      return {duration: Number(durationValue) * 1000 * 60 * 60, fieldName};
-    case 'd':
-      return {duration: Number(durationValue) * 1000 * 60 * 60 * 24, fieldName};
-    default:
-      throw new Error(
-        `Invalid ttl duration: ${duration}. Unit must be one of s, m, h, d`
-      );
-  }
-}
-
-/** Indicates if objType contains the specified directive */
-function hasDirective(directiveName: string, objType: GraphQLObjectType) {
-  return !!objType.astNode?.directives
-    ?.map(({name}) => name.value)
-    .includes(directiveName);
 }
