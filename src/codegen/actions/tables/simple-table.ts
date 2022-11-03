@@ -137,6 +137,7 @@ ${ensureTableTemplate(objType)}
  */
 export function readItemTemplate(objType: GraphQLObjectType) {
   const ttlInfo = extractTtlInfo(objType);
+  const constistent = hasDirective('consistent', objType);
 
   const unmarshall: string[] = [];
 
@@ -186,6 +187,7 @@ export async function read${objType.name}(id: string) {
 ${ensureTableTemplate(objType)}
 
   const {$metadata, ...data} = await ddbDocClient.send(new GetCommand({
+    ConsistentRead: ${constistent},
     Key: {
       id,
     },
@@ -263,4 +265,11 @@ function extractTtlInfo(type: GraphQLObjectType): Nullable<{
         `Invalid ttl duration: ${duration}. Unit must be one of s, m, h, d`
       );
   }
+}
+
+/** Indicates if objType contains the specified directive */
+function hasDirective(directiveName: string, objType: GraphQLObjectType) {
+  return !!objType.astNode?.directives
+    ?.map(({name}) => name.value)
+    .includes(directiveName);
 }

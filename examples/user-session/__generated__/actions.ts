@@ -130,6 +130,7 @@ export async function readUserSession(id: string) {
   assert(tableName, 'TABLE_USER_SESSION is not set');
 
   const {$metadata, ...data} = await ddbDocClient.send(new GetCommand({
+    ConsistentRead: true,
     Key: {
       id,
     },
