@@ -95,7 +95,7 @@ export async function createUserSession(
         ':session': input.session,
         ':ttl': now.getTime() + 86400000,
         ':updatedAt': now.getTime(),
-        ':version': 0,
+        ':version': 1,
       },
       Key: {
         id: `UserSession#${uuidv4()}`,
@@ -169,6 +169,34 @@ export async function readUserSession(id: string) {
     updatedAt: new Date(data.Item?.updated_at),
     version: data.Item?.version,
   };
+}
+
+/**  */
+export async function touchUserSession(id: Scalars['ID']): Promise<void> {
+  const tableName = process.env.TABLE_USER_SESSION;
+  assert(tableName, 'TABLE_USER_SESSION is not set');
+  await ddbDocClient.send(
+    new UpdateCommand({
+      ConditionExpression: 'attribute_exists(#id)',
+      ExpressionAttributeNames: {
+        '#id': 'id',
+        '#ttl': 'ttl',
+        '#version': 'version',
+      },
+      ExpressionAttributeValues: {
+        ':ttlInc': 86400000,
+        ':versionInc': 1,
+      },
+      Key: {
+        id,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression:
+        'SET #ttl = #ttl + :ttlInc, #version = #version + :versionInc',
+    })
+  );
 }
 
 export type UpdateUserSessionInput = Omit<

@@ -13,6 +13,7 @@ import {
   createItemTemplate,
   deleteItemTemplate,
   readItemTemplate,
+  touchItemTemplate,
   updateItemTemplate,
 } from './tables/simple-table';
 
@@ -60,6 +61,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
         createItemTemplate(objType),
         deleteItemTemplate(objType),
         readItemTemplate(objType),
+        touchItemTemplate(objType),
         updateItemTemplate(objType),
       ].join('\n\n');
     })

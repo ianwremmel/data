@@ -36,7 +36,7 @@ export function createItemTemplate(objType: GraphQLObjectType) {
 
     if (fieldName === 'version') {
       ean.push(`'#version': 'version'`);
-      eav.push(`':version': 0`);
+      eav.push(`':version': 1`);
       unmarshall.push(`version: data.Attributes?.version`);
       updatedExpressions.push(`#version = :version`);
       continue;
@@ -212,6 +212,66 @@ ${ensureTableTemplate(objType)}
   return {
 ${unmarshall.map((item) => `    ${item},`).join('\n')}
   }
+}`;
+}
+
+/**
+ * Generates the updateItem function for a simple table
+ */
+export function touchItemTemplate(objType: GraphQLObjectType) {
+  const ttlInfo = extractTtlInfo(objType);
+
+  const ean: string[] = [];
+  const eav: string[] = [];
+  const updatedExpressions: string[] = [];
+
+  const fieldNames = Object.keys(objType.getFields()).sort();
+
+  for (const fieldName of fieldNames) {
+    if (fieldName === 'id') {
+      ean.push(`'#id': 'id'`);
+      continue;
+    }
+
+    if (fieldName === 'version') {
+      ean.push(`'#version': 'version'`);
+      eav.push(`':versionInc': 1`);
+      updatedExpressions.push(`#version = #version + :versionInc`);
+      continue;
+    }
+
+    if (fieldName === ttlInfo?.fieldName) {
+      ean.push(`'#ttl': 'ttl'`);
+      eav.push(`':ttlInc': ${ttlInfo.duration}`);
+      updatedExpressions.push(`#ttl = #ttl + :ttlInc`);
+      continue;
+    }
+  }
+
+  ean.sort();
+  eav.sort();
+  updatedExpressions.sort();
+
+  return `
+/**  */
+export async function touch${objType.name}(id: Scalars['ID']): Promise<void> {
+${ensureTableTemplate(objType)}
+  await ddbDocClient.send(new UpdateCommand({
+    ConditionExpression: 'attribute_exists(#id)',
+    ExpressionAttributeNames: {
+${ean.map((e) => `        ${e},`).join('\n')}
+    },
+    ExpressionAttributeValues: {
+${eav.map((e) => `        ${e},`).join('\n')}
+    },
+    Key: {
+      id,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: 'SET ${updatedExpressions.join(', ')}',
+  }));
 }`;
 }
 

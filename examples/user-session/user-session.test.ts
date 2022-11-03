@@ -28,7 +28,7 @@ describe('createUserSession()', () => {
           "foo": "foo",
         },
         "updatedAt": Any<Date>,
-        "version": 0,
+        "version": 1,
       }
     `
     );
@@ -98,7 +98,7 @@ describe('readUserSession()', () => {
           "foo": "foo",
         },
         "updatedAt": Any<Date>,
-        "version": 0,
+        "version": 1,
       }
     `
     );
@@ -119,13 +119,42 @@ describe('touchUserSession()', () => {
     const result = await createUserSession({session: {foo: 'foo'}});
 
     const readResult = await readUserSession(result.id);
-    expect(readResult).toMatchInlineSnapshot();
+    expect(readResult).toMatchInlineSnapshot(
+      userSessionMatcher,
+      `
+      {
+        "createdAt": Any<Date>,
+        "expires": Any<Date>,
+        "id": Any<String>,
+        "session": {
+          "foo": "foo",
+        },
+        "updatedAt": Any<Date>,
+        "version": 1,
+      }
+    `
+    );
 
-    await touchUserSession({id: result.id});
+    await touchUserSession(result.id);
     const touchResult = await readUserSession(result.id);
-    expect(touchResult).toMatchInlineSnapshot();
+    expect(touchResult).toMatchInlineSnapshot(
+      userSessionMatcher,
+      `
+      {
+        "createdAt": Any<Date>,
+        "expires": Any<Date>,
+        "id": Any<String>,
+        "session": {
+          "foo": "foo",
+        },
+        "updatedAt": Any<Date>,
+        "version": 2,
+      }
+    `
+    );
 
-    expect(readResult.createdAt).not.toEqual(touchResult.createdAt);
+    expect(readResult.createdAt).toEqual(touchResult.createdAt);
+    expect(readResult.updatedAt).toEqual(touchResult.updatedAt);
 
     expect(readResult.expires).not.toEqual(touchResult.expires);
 
@@ -135,7 +164,7 @@ describe('touchUserSession()', () => {
 
   it('throws an error if the user session does not exist', async () => {
     await expect(
-      async () => await touchUserSession({id: 'some-id'})
+      async () => await touchUserSession('some-id')
     ).rejects.toThrow();
   });
 });
@@ -154,7 +183,7 @@ describe('updateUserSession()', () => {
           "foo": "foo",
         },
         "updatedAt": Any<Date>,
-        "version": 0,
+        "version": 1,
       }
     `
     );
@@ -175,7 +204,7 @@ describe('updateUserSession()', () => {
           "foo": "bar",
         },
         "updatedAt": Any<Date>,
-        "version": 1,
+        "version": 2,
       }
     `
     );
@@ -193,11 +222,14 @@ describe('updateUserSession()', () => {
           "foo": "bar",
         },
         "updatedAt": Any<Date>,
-        "version": 1,
+        "version": 2,
       }
     `
     );
     expect(updateResult.session).toEqual({foo: 'bar'});
+
+    expect(readResult.createdAt).toEqual(updateResult.createdAt);
+    expect(readResult.updatedAt).toEqual(updateResult.updatedAt);
 
     // cleanup, not part of test
     await deleteUserSession(createResult.id);
