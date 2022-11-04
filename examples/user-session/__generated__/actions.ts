@@ -83,13 +83,13 @@ export async function createUserSession(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#id)',
       ExpressionAttributeNames: {
-        '#createdAt': 'created_at',
+        '#createdAt': '_ct',
         '#entity': '_et',
         '#id': 'id',
         '#session': 'session',
         '#ttl': 'ttl',
-        '#updatedAt': 'updated_at',
-        '#version': 'version',
+        '#updatedAt': '_md',
+        '#version': '_v',
       },
       ExpressionAttributeValues: {
         ':createdAt': now.getTime(),
@@ -110,12 +110,12 @@ export async function createUserSession(
     })
   );
   return {
-    createdAt: new Date(data.Attributes?.created_at),
+    createdAt: new Date(data.Attributes?._ct),
     expires: new Date(data.Attributes?.ttl),
     id: data.Attributes?.id,
     session: data.Attributes?.session,
-    updatedAt: new Date(data.Attributes?.updated_at),
-    version: data.Attributes?.version,
+    updatedAt: new Date(data.Attributes?._md),
+    version: data.Attributes?._v,
   };
 }
 
@@ -171,12 +171,12 @@ export async function readUserSession(
   assert(data.Item, () => new NotFoundError('UserSession', id));
 
   return {
-    createdAt: new Date(data.Item?.created_at),
+    createdAt: new Date(data.Item?._ct),
     expires: new Date(data.Item?.ttl),
     id: data.Item?.id,
     session: data.Item?.session,
-    updatedAt: new Date(data.Item?.updated_at),
-    version: data.Item?.version,
+    updatedAt: new Date(data.Item?._md),
+    version: data.Item?._v,
   };
 }
 
@@ -191,7 +191,7 @@ export async function touchUserSession(id: Scalars['ID']): Promise<void> {
         ExpressionAttributeNames: {
           '#id': 'id',
           '#ttl': 'ttl',
-          '#version': 'version',
+          '#version': '_v',
         },
         ExpressionAttributeValues: {
           ':ttlInc': 86400000,
@@ -232,12 +232,12 @@ export async function updateUserSession(
       new UpdateCommand({
         ConditionExpression: '#version = :version AND attribute_exists(#id)',
         ExpressionAttributeNames: {
-          '#createdAt': 'created_at',
+          '#createdAt': '_ct',
           '#id': 'id',
           '#session': 'session',
           '#ttl': 'ttl',
-          '#updatedAt': 'updated_at',
-          '#version': 'version',
+          '#updatedAt': '_md',
+          '#version': '_v',
         },
         ExpressionAttributeValues: {
           ':createdAt': now.getTime(),
@@ -258,12 +258,12 @@ export async function updateUserSession(
       })
     );
     return {
-      createdAt: new Date(data.Attributes?.created_at),
+      createdAt: new Date(data.Attributes?._ct),
       expires: new Date(data.Attributes?.ttl),
       id: data.Attributes?.id,
       session: data.Attributes?.session,
-      updatedAt: new Date(data.Attributes?.updated_at),
-      version: data.Attributes?.version,
+      updatedAt: new Date(data.Attributes?._md),
+      version: data.Attributes?._v,
     };
   } catch (err) {
     if (err instanceof ConditionalCheckFailedException) {

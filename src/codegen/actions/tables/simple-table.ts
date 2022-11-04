@@ -36,21 +36,24 @@ export function createItemTemplate(objType: GraphQLObjectType) {
       ean.push(`'#id': 'id'`);
       unmarshall.push(`id: data.Attributes?.id`);
     } else if (fieldName === 'version') {
-      ean.push(`'#version': 'version'`);
+      ean.push(`'#version': '_v'`);
       eav.push(`':version': 1`);
-      unmarshall.push(`version: data.Attributes?.version`);
+      unmarshall.push(`version: data.Attributes?._v`);
       updateExpressions.push(`#version = :version`);
     } else if (fieldName === ttlInfo?.fieldName) {
       ean.push(`'#ttl': 'ttl'`);
       eav.push(`':ttl': now.getTime() + ${ttlInfo.duration}`);
       unmarshall.push(`${ttlInfo.fieldName}: new Date(data.Attributes?.ttl)`);
       updateExpressions.push(`#ttl = :ttl`);
-    } else if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
-      ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
+    } else if (fieldName === 'createdAt') {
+      ean.push(`'#${fieldName}': '_ct'`);
       eav.push(`':${fieldName}': now.getTime()`);
-      unmarshall.push(
-        `${fieldName}: new Date(data.Attributes?.${snakeCase(fieldName)})`
-      );
+      unmarshall.push(`${fieldName}: new Date(data.Attributes?._ct)`);
+      updateExpressions.push(`#${fieldName} = :${fieldName}`);
+    } else if (fieldName === 'updatedAt') {
+      ean.push(`'#${fieldName}': '_md'`);
+      eav.push(`':${fieldName}': now.getTime()`);
+      unmarshall.push(`${fieldName}: new Date(data.Attributes?._md)`);
       updateExpressions.push(`#${fieldName} = :${fieldName}`);
     } else {
       ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
@@ -108,12 +111,14 @@ export function readItemTemplate(objType: GraphQLObjectType) {
   for (const fieldName of fieldNames) {
     if (fieldName === 'id') {
       unmarshall.push(`id: data.Item?.id`);
+    } else if (fieldName === 'version') {
+      unmarshall.push(`version: data.Item?._v`);
     } else if (fieldName === ttlInfo?.fieldName) {
       unmarshall.push(`${ttlInfo.fieldName}: new Date(data.Item?.ttl)`);
-    } else if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
-      unmarshall.push(
-        `${fieldName}: new Date(data.Item?.${snakeCase(fieldName)})`
-      );
+    } else if (fieldName === 'createdAt') {
+      unmarshall.push(`${fieldName}: new Date(data.Item?._ct)`);
+    } else if (fieldName === 'updatedAt') {
+      unmarshall.push(`${fieldName}: new Date(data.Item?._md)`);
     } else if (dateFields.includes(fieldName)) {
       unmarshall.push(
         `${fieldName}: new Date(data.Item?.${snakeCase(fieldName)})`
@@ -142,7 +147,7 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
     if (fieldName === 'id') {
       ean.push(`'#id': 'id'`);
     } else if (fieldName === 'version') {
-      ean.push(`'#version': 'version'`);
+      ean.push(`'#version': '_v'`);
       eav.push(`':versionInc': 1`);
       updateExpressions.push(`#version = #version + :versionInc`);
     } else if (fieldName === ttlInfo?.fieldName) {
@@ -193,17 +198,20 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
       unmarshall.push(`${ttlInfo.fieldName}: new Date(data.Attributes?.ttl)`);
       updateExpressions.push(`#ttl = :ttl`);
     } else if (fieldName === 'version') {
-      ean.push(`'#version': 'version'`);
+      ean.push(`'#version': '_v'`);
       eav.push(`':newVersion': input.version + 1`);
       eav.push(`':version': input.version`);
-      unmarshall.push(`version: data.Attributes?.version`);
+      unmarshall.push(`version: data.Attributes?._v`);
       updateExpressions.push(`#version = :newVersion`);
-    } else if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
-      ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
+    } else if (fieldName === 'createdAt') {
+      ean.push(`'#${fieldName}': '_ct'`);
       eav.push(`':${fieldName}': now.getTime()`);
-      unmarshall.push(
-        `${fieldName}: new Date(data.Attributes?.${snakeCase(fieldName)})`
-      );
+      unmarshall.push(`${fieldName}: new Date(data.Attributes?._ct)`);
+      updateExpressions.push(`#${fieldName} = :${fieldName}`);
+    } else if (fieldName === 'updatedAt') {
+      ean.push(`'#${fieldName}': '_md'`);
+      eav.push(`':${fieldName}': now.getTime()`);
+      unmarshall.push(`${fieldName}: new Date(data.Attributes?._md)`);
       updateExpressions.push(`#${fieldName} = :${fieldName}`);
     } else {
       ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
