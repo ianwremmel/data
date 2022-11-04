@@ -72,9 +72,10 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   return {
     content,
     prepend: [
-      `import {assert} from '@ianwremmel/data'`,
-      `import {v4 as uuidv4} from 'uuid'`,
+      `import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';`,
       `import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
+      `import {assert, NotFoundError, OptimisticLockingError} from '@ianwremmel/data'`,
+      `import {v4 as uuidv4} from 'uuid'`,
       `import {ddbDocClient} from "${path.relative(
         path.resolve(process.cwd(), path.dirname(info.outputFile)),
         path.resolve(process.cwd(), config.pathToDocumentClient)

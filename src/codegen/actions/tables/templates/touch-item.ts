@@ -23,21 +23,29 @@ export function touchItemTpl({
 /**  */
 export async function touch${objType.name}(id: Scalars['ID']): Promise<void> {
 ${ensureTableTemplate(objType)}
-  await ddbDocClient.send(new UpdateCommand({
-    ConditionExpression: 'attribute_exists(#id)',
-    ExpressionAttributeNames: {
-${ean.map((e) => `        ${e},`).join('\n')}
-    },
-    ExpressionAttributeValues: {
-${eav.map((e) => `        ${e},`).join('\n')}
-    },
-    Key: {
-      id,
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: 'SET ${updateExpressions.join(', ')}',
-  }));
+  try {
+    await ddbDocClient.send(new UpdateCommand({
+      ConditionExpression: 'attribute_exists(#id)',
+      ExpressionAttributeNames: {
+  ${ean.map((e) => `        ${e},`).join('\n')}
+      },
+      ExpressionAttributeValues: {
+  ${eav.map((e) => `        ${e},`).join('\n')}
+      },
+      Key: {
+        id,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: 'SET ${updateExpressions.join(', ')}',
+    }));
+  }
+  catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new NotFoundError('${objType.name}', id);
+    }
+    throw err;
+  }
 }`;
 }

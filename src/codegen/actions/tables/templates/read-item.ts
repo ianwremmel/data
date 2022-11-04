@@ -30,9 +30,7 @@ ${ensureTableTemplate(objType)}
     TableName: tableName,
   }));
 
-  if (!data.Item) {
-    throw new Error(\`No ${objType.name} found with id \${id}\`);
-  }
+  assert(data.Item, () => new NotFoundError('${objType.name}', id));
 
   return {
 ${unmarshall.map((item) => `    ${item},`).join('\n')}

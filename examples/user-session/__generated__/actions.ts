@@ -1,5 +1,6 @@
+import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
 import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
-import {assert} from '@ianwremmel/data';
+import {assert, NotFoundError, OptimisticLockingError} from '@ianwremmel/data';
 import {v4 as uuidv4} from 'uuid';
 
 import {ddbDocClient} from '../../../src/client';
@@ -123,23 +124,30 @@ export async function deleteUserSession(id: string) {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
 
-  const {$metadata, Attributes, ...data} = await ddbDocClient.send(
-    new DeleteCommand({
-      ConditionExpression: 'attribute_exists(#id)',
-      ExpressionAttributeNames: {
-        '#id': 'id',
-      },
-      Key: {
-        id,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'NONE',
-      TableName: tableName,
-    })
-  );
+  try {
+    const {$metadata, Attributes, ...data} = await ddbDocClient.send(
+      new DeleteCommand({
+        ConditionExpression: 'attribute_exists(#id)',
+        ExpressionAttributeNames: {
+          '#id': 'id',
+        },
+        Key: {
+          id,
+        },
+        ReturnConsumedCapacity: 'INDEXES',
+        ReturnItemCollectionMetrics: 'SIZE',
+        ReturnValues: 'NONE',
+        TableName: tableName,
+      })
+    );
 
-  return data;
+    return data;
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new NotFoundError('UserSession', id);
+    }
+    throw err;
+  }
 }
 
 /**  */
@@ -160,9 +168,7 @@ export async function readUserSession(
     })
   );
 
-  if (!data.Item) {
-    throw new Error(`No UserSession found with id ${id}`);
-  }
+  assert(data.Item, () => new NotFoundError('UserSession', id));
 
   return {
     createdAt: new Date(data.Item?.created_at),
@@ -178,28 +184,35 @@ export async function readUserSession(
 export async function touchUserSession(id: Scalars['ID']): Promise<void> {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
-  await ddbDocClient.send(
-    new UpdateCommand({
-      ConditionExpression: 'attribute_exists(#id)',
-      ExpressionAttributeNames: {
-        '#id': 'id',
-        '#ttl': 'ttl',
-        '#version': 'version',
-      },
-      ExpressionAttributeValues: {
-        ':ttlInc': 86400000,
-        ':versionInc': 1,
-      },
-      Key: {
-        id,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression:
-        'SET #ttl = #ttl + :ttlInc, #version = #version + :versionInc',
-    })
-  );
+  try {
+    await ddbDocClient.send(
+      new UpdateCommand({
+        ConditionExpression: 'attribute_exists(#id)',
+        ExpressionAttributeNames: {
+          '#id': 'id',
+          '#ttl': 'ttl',
+          '#version': 'version',
+        },
+        ExpressionAttributeValues: {
+          ':ttlInc': 86400000,
+          ':versionInc': 1,
+        },
+        Key: {
+          id,
+        },
+        ReturnConsumedCapacity: 'INDEXES',
+        ReturnValues: 'ALL_NEW',
+        TableName: tableName,
+        UpdateExpression:
+          'SET #ttl = #ttl + :ttlInc, #version = #version + :versionInc',
+      })
+    );
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new NotFoundError('UserSession', id);
+    }
+    throw err;
+  }
 }
 
 export type UpdateUserSessionInput = Omit<
@@ -214,41 +227,53 @@ export async function updateUserSession(
   const now = new Date();
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
-  const data = await ddbDocClient.send(
-    new UpdateCommand({
-      ConditionExpression: '#version = :version AND attribute_exists(#id)',
-      ExpressionAttributeNames: {
-        '#createdAt': 'created_at',
-        '#id': 'id',
-        '#session': 'session',
-        '#ttl': 'ttl',
-        '#updatedAt': 'updated_at',
-        '#version': 'version',
-      },
-      ExpressionAttributeValues: {
-        ':createdAt': now.getTime(),
-        ':newVersion': input.version + 1,
-        ':session': input.session,
-        ':ttl': now.getTime() + 86400000,
-        ':updatedAt': now.getTime(),
-        ':version': input.version,
-      },
-      Key: {
-        id: input.id,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression:
-        'SET #createdAt = :createdAt, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt, #version = :newVersion',
-    })
-  );
-  return {
-    createdAt: new Date(data.Attributes?.created_at),
-    expires: new Date(data.Attributes?.ttl),
-    id: data.Attributes?.id,
-    session: data.Attributes?.session,
-    updatedAt: new Date(data.Attributes?.updated_at),
-    version: data.Attributes?.version,
-  };
+  try {
+    const data = await ddbDocClient.send(
+      new UpdateCommand({
+        ConditionExpression: '#version = :version AND attribute_exists(#id)',
+        ExpressionAttributeNames: {
+          '#createdAt': 'created_at',
+          '#id': 'id',
+          '#session': 'session',
+          '#ttl': 'ttl',
+          '#updatedAt': 'updated_at',
+          '#version': 'version',
+        },
+        ExpressionAttributeValues: {
+          ':createdAt': now.getTime(),
+          ':newVersion': input.version + 1,
+          ':session': input.session,
+          ':ttl': now.getTime() + 86400000,
+          ':updatedAt': now.getTime(),
+          ':version': input.version,
+        },
+        Key: {
+          id: input.id,
+        },
+        ReturnConsumedCapacity: 'INDEXES',
+        ReturnValues: 'ALL_NEW',
+        TableName: tableName,
+        UpdateExpression:
+          'SET #createdAt = :createdAt, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt, #version = :newVersion',
+      })
+    );
+    return {
+      createdAt: new Date(data.Attributes?.created_at),
+      expires: new Date(data.Attributes?.ttl),
+      id: data.Attributes?.id,
+      session: data.Attributes?.session,
+      updatedAt: new Date(data.Attributes?.updated_at),
+      version: data.Attributes?.version,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      try {
+        const readResult = await readUserSession(input.id);
+      } catch {
+        throw new NotFoundError('UserSession', input.id);
+      }
+      throw new OptimisticLockingError('UserSession', input.id);
+    }
+    throw err;
+  }
 }

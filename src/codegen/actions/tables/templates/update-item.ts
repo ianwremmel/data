@@ -34,24 +34,38 @@ export async function update${objType.name}(input: Readonly<Update${
   }Input>): Promise<Readonly<${objType.name}>> {
   const now = new Date();
 ${ensureTableTemplate(objType)}
-  const data = await ddbDocClient.send(new UpdateCommand({
-    ConditionExpression: '#version = :version AND attribute_exists(#id)',
-    ExpressionAttributeNames: {
-${ean.map((e) => `        ${e},`).join('\n')}
-    },
-    ExpressionAttributeValues: {
-${eav.map((e) => `        ${e},`).join('\n')}
-    },
-    Key: {
-      id: input.id,
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: 'SET ${updateExpressions.join(', ')}',
-  }));
-  return {
-${unmarshall.map((item) => `    ${item},`).join('\n')}
-  };
+  try {
+    const data = await ddbDocClient.send(new UpdateCommand({
+      ConditionExpression: '#version = :version AND attribute_exists(#id)',
+      ExpressionAttributeNames: {
+  ${ean.map((e) => `        ${e},`).join('\n')}
+      },
+      ExpressionAttributeValues: {
+  ${eav.map((e) => `        ${e},`).join('\n')}
+      },
+      Key: {
+        id: input.id,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: 'SET ${updateExpressions.join(', ')}',
+    }));
+    return {
+  ${unmarshall.map((item) => `    ${item},`).join('\n')}
+    };
+  }
+  catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      try {
+        const readResult = await read${objType.name}(input.id);
+      }
+      catch {
+        throw new NotFoundError('${objType.name}', input.id);
+      }
+      throw new OptimisticLockingError('${objType.name}', input.id);
+    }
+    throw err;
+  }
 }`;
 }

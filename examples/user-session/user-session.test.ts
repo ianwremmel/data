@@ -1,3 +1,6 @@
+import {NotFoundError} from '../../src/lib/not-found-error';
+import {OptimisticLockingError} from '../../src/lib/optimistic-locking-error';
+
 import {
   createUserSession,
   deleteUserSession,
@@ -70,15 +73,15 @@ describe('deleteUserSession()', () => {
     `
     );
 
-    await expect(
-      async () => await readUserSession(result.id)
-    ).rejects.toThrow();
+    await expect(async () => await readUserSession(result.id)).rejects.toThrow(
+      NotFoundError
+    );
   });
 
   it('throws an error if the user session does not exist', async () => {
     await expect(
       async () => await deleteUserSession('some-id')
-    ).rejects.toThrow();
+    ).rejects.toThrow(NotFoundError);
   });
 });
 
@@ -108,9 +111,9 @@ describe('readUserSession()', () => {
   });
 
   it('throws an error if the user session does not exist', async () => {
-    await expect(
-      async () => await readUserSession('some-id')
-    ).rejects.toThrow();
+    await expect(async () => await readUserSession('some-id')).rejects.toThrow(
+      NotFoundError
+    );
   });
 });
 
@@ -163,9 +166,9 @@ describe('touchUserSession()', () => {
   });
 
   it('throws an error if the user session does not exist', async () => {
-    await expect(
-      async () => await touchUserSession('some-id')
-    ).rejects.toThrow();
+    await expect(async () => await touchUserSession('some-id')).rejects.toThrow(
+      NotFoundError
+    );
   });
 });
 
@@ -243,7 +246,7 @@ describe('updateUserSession()', () => {
           session: {foo: 'foo'},
           version: 0,
         })
-    ).rejects.toThrow();
+    ).rejects.toThrow(NotFoundError);
   });
 
   it('throws an error if the loaded session data is out of date', async () => {
@@ -259,7 +262,7 @@ describe('updateUserSession()', () => {
           ...createResult,
           session: {foo: 'bar'},
         })
-    ).rejects.toThrow();
+    ).rejects.toThrow(OptimisticLockingError);
 
     // cleanup, not part of test
     await deleteUserSession(createResult.id);
