@@ -84,6 +84,7 @@ export async function createUserSession(
       ConditionExpression: 'attribute_not_exists(#id)',
       ExpressionAttributeNames: {
         '#createdAt': 'created_at',
+        '#entity': '_et',
         '#id': 'id',
         '#session': 'session',
         '#ttl': 'ttl',
@@ -92,6 +93,7 @@ export async function createUserSession(
       },
       ExpressionAttributeValues: {
         ':createdAt': now.getTime(),
+        ':entity': 'UserSession',
         ':session': input.session,
         ':ttl': now.getTime() + 86400000,
         ':updatedAt': now.getTime(),
@@ -104,7 +106,7 @@ export async function createUserSession(
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
       UpdateExpression:
-        'SET #createdAt = :createdAt, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt, #version = :version',
+        'SET #createdAt = :createdAt, #entity = :entity, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt, #version = :version',
     })
   );
   return {

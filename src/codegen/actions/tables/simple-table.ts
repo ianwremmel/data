@@ -27,6 +27,10 @@ export function createItemTemplate(objType: GraphQLObjectType) {
 
   const fieldNames = Object.keys(objType.getFields()).sort();
 
+  ean.push(`'#entity': '_et'`);
+  eav.push(`':entity': '${objType.name}'`);
+  updateExpressions.push(`#entity = :entity`);
+
   for (const fieldName of fieldNames) {
     if (fieldName === 'id') {
       ean.push(`'#id': 'id'`);
@@ -66,6 +70,7 @@ export function createItemTemplate(objType: GraphQLObjectType) {
 
   ean.sort();
   eav.sort();
+  unmarshall.sort();
   updateExpressions.sort();
 
   return createItemTpl({
