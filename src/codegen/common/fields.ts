@@ -5,8 +5,8 @@ import {GraphQLObjectType} from 'graphql/index';
 import {Nullable} from '../../types';
 
 export interface TtlInfo {
-  duration: number;
-  fieldName: string;
+  readonly duration: number;
+  readonly fieldName: string;
 }
 
 /**

@@ -6,12 +6,12 @@ import {TtlInfo} from '../../../common/fields';
 import {ensureTableTemplate} from './ensure-table';
 
 export interface UpdateItemTplInput {
-  objType: GraphQLObjectType;
-  ttlInfo: Nullable<TtlInfo>;
-  ean: string[];
-  eav: string[];
-  unmarshall: string[];
-  updateExpressions: string[];
+  readonly objType: GraphQLObjectType;
+  readonly ttlInfo: Nullable<TtlInfo>;
+  readonly ean: readonly string[];
+  readonly eav: readonly string[];
+  readonly unmarshall: readonly string[];
+  readonly updateExpressions: readonly string[];
 }
 
 /** template */
@@ -29,9 +29,9 @@ export type Update${objType.name}Input = Omit<${
   }, 'createdAt'|'updatedAt'${ttlInfo ? `|'${ttlInfo.fieldName}'` : ''}>;
 
 /**  */
-export async function update${objType.name}(input: Update${
+export async function update${objType.name}(input: Readonly<Update${
     objType.name
-  }Input): Promise<${objType.name}> {
+  }Input>): Promise<Readonly<${objType.name}>> {
   const now = new Date();
 ${ensureTableTemplate(objType)}
   const data = await ddbDocClient.send(new UpdateCommand({

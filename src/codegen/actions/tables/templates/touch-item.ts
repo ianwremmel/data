@@ -3,10 +3,10 @@ import {GraphQLObjectType} from 'graphql';
 import {ensureTableTemplate} from './ensure-table';
 
 export interface TouchItemTplInput {
-  ean: string[];
-  eav: string[];
-  objType: GraphQLObjectType;
-  updateExpressions: string[];
+  readonly ean: readonly string[];
+  readonly eav: readonly string[];
+  readonly objType: GraphQLObjectType;
+  readonly updateExpressions: readonly string[];
 }
 
 /** template */

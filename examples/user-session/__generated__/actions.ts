@@ -71,8 +71,8 @@ export type CreateUserSessionInput = Omit<
 
 /**  */
 export async function createUserSession(
-  input: CreateUserSessionInput
-): Promise<UserSession> {
+  input: Readonly<CreateUserSessionInput>
+): Promise<Readonly<UserSession>> {
   const now = new Date();
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
@@ -142,7 +142,9 @@ export async function deleteUserSession(id: string) {
 }
 
 /**  */
-export async function readUserSession(id: string) {
+export async function readUserSession(
+  id: string
+): Promise<Readonly<UserSession>> {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
 
@@ -206,8 +208,8 @@ export type UpdateUserSessionInput = Omit<
 
 /**  */
 export async function updateUserSession(
-  input: UpdateUserSessionInput
-): Promise<UserSession> {
+  input: Readonly<UpdateUserSessionInput>
+): Promise<Readonly<UserSession>> {
   const now = new Date();
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');

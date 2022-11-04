@@ -6,12 +6,12 @@ import {TtlInfo} from '../../../common/fields';
 import {ensureTableTemplate} from './ensure-table';
 
 export interface CreateItemTplInput {
-  objType: GraphQLObjectType;
-  ttlInfo: Nullable<TtlInfo>;
-  ean: string[];
-  eav: string[];
-  unmarshall: string[];
-  updateExpressions: string[];
+  readonly objType: GraphQLObjectType;
+  readonly ttlInfo: Nullable<TtlInfo>;
+  readonly ean: readonly string[];
+  readonly eav: readonly string[];
+  readonly unmarshall: readonly string[];
+  readonly updateExpressions: readonly string[];
 }
 /** template */
 export function createItemTpl({
@@ -30,9 +30,9 @@ export type Create${objType.name}Input = Omit<${
   }|'version'>;
 
 /**  */
-export async function create${objType.name}(input: Create${
+export async function create${objType.name}(input: Readonly<Create${
     objType.name
-  }Input): Promise<${objType.name}> {
+  }Input>): Promise<Readonly<${objType.name}>> {
   const now = new Date();
 ${ensureTableTemplate(objType)}
 

@@ -2,12 +2,12 @@ import {GraphQLObjectType} from 'graphql';
 
 import {ensureTableTemplate} from './ensure-table';
 
-export interface DeleteItemTplInputp {
-  objType: GraphQLObjectType;
+export interface DeleteItemTplInput {
+  readonly objType: GraphQLObjectType;
 }
 
 /** template */
-export function deleteItemTpl({objType}: DeleteItemTplInputp) {
+export function deleteItemTpl({objType}: DeleteItemTplInput) {
   return `
 /**  */
 export async function delete${objType.name}(id: string) {

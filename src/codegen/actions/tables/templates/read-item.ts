@@ -3,9 +3,9 @@ import {GraphQLObjectType} from 'graphql';
 import {ensureTableTemplate} from './ensure-table';
 
 export interface ReadItemTplInput {
-  consistent: boolean;
-  objType: GraphQLObjectType;
-  unmarshall: string[];
+  readonly consistent: boolean;
+  readonly objType: GraphQLObjectType;
+  readonly unmarshall: readonly string[];
 }
 
 /** template */
@@ -16,7 +16,9 @@ export function readItemTpl({
 }: ReadItemTplInput) {
   return `
 /**  */
-export async function read${objType.name}(id: string) {
+export async function read${objType.name}(id: string): Promise<Readonly<${
+    objType.name
+  }>> {
 ${ensureTableTemplate(objType)}
 
   const {$metadata, ...data} = await ddbDocClient.send(new GetCommand({
