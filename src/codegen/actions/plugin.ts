@@ -74,7 +74,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
     prepend: [
       `import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';`,
       `import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
-      `import {assert, NotFoundError, OptimisticLockingError} from '@ianwremmel/data'`,
+      `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '@ianwremmel/data'`,
       `import {v4 as uuidv4} from 'uuid'`,
       `import {ddbDocClient} from "${path.relative(
         path.resolve(process.cwd(), path.dirname(info.outputFile)),

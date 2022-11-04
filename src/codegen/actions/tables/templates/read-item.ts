@@ -31,6 +31,11 @@ ${ensureTableTemplate(objType)}
   }));
 
   assert(data.Item, () => new NotFoundError('${objType.name}', id));
+  assert(data.Item?._et === '${
+    objType.name
+  }', () => new DataIntegrityError(\`Expected \${id} to load a ${
+    objType.name
+  } but loaded \${data.Item._et} instead\`));
 
   return {
 ${unmarshall.map((item) => `    ${item},`).join('\n')}

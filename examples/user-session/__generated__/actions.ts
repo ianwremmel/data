@@ -1,6 +1,11 @@
 import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
 import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
-import {assert, NotFoundError, OptimisticLockingError} from '@ianwremmel/data';
+import {
+  assert,
+  DataIntegrityError,
+  NotFoundError,
+  OptimisticLockingError,
+} from '@ianwremmel/data';
 import {v4 as uuidv4} from 'uuid';
 
 import {ddbDocClient} from '../../../src/client';
@@ -109,6 +114,15 @@ export async function createUserSession(
         'SET #createdAt = :createdAt, #entity = :entity, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt, #version = :version',
     })
   );
+
+  assert(
+    data.Attributes?._et === 'UserSession',
+    () =>
+      new DataIntegrityError(
+        `Expected write UserSession but wrote ${data.Attributes._et} instead`
+      )
+  );
+
   return {
     createdAt: new Date(data.Attributes?._ct),
     expires: new Date(data.Attributes?.ttl),
@@ -169,6 +183,13 @@ export async function readUserSession(
   );
 
   assert(data.Item, () => new NotFoundError('UserSession', id));
+  assert(
+    data.Item?._et === 'UserSession',
+    () =>
+      new DataIntegrityError(
+        `Expected ${id} to load a UserSession but loaded ${data.Item._et} instead`
+      )
+  );
 
   return {
     createdAt: new Date(data.Item?._ct),
@@ -257,6 +278,14 @@ export async function updateUserSession(
           'SET #createdAt = :createdAt, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt, #version = :newVersion',
       })
     );
+    assert(
+      data.Attributes?._et === 'UserSession',
+      () =>
+        new DataIntegrityError(
+          `Expected ${id} to load a UserSession but loaded ${data.Attributes._et} instead`
+        )
+    );
+
     return {
       createdAt: new Date(data.Attributes?._ct),
       expires: new Date(data.Attributes?.ttl),

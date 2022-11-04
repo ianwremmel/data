@@ -54,6 +54,13 @@ ${eav.map((e) => `        ${e},`).join('\n')}
       TableName: tableName,
       UpdateExpression: 'SET ${updateExpressions.join(', ')}',
   }));
+
+  assert(data.Attributes?._et === '${
+    objType.name
+  }', () => new DataIntegrityError(\`Expected write ${
+    objType.name
+  } but wrote \${data.Attributes._et} instead\`));
+
   return {
 ${unmarshall.map((item) => `    ${item},`).join('\n')}
   };

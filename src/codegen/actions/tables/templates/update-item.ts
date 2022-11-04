@@ -51,6 +51,12 @@ ${ensureTableTemplate(objType)}
       TableName: tableName,
       UpdateExpression: 'SET ${updateExpressions.join(', ')}',
     }));
+    assert(data.Attributes?._et === '${
+      objType.name
+    }', () => new DataIntegrityError(\`Expected \${id} to load a ${
+    objType.name
+  } but loaded \${data.Attributes._et} instead\`));
+
     return {
   ${unmarshall.map((item) => `    ${item},`).join('\n')}
     };
