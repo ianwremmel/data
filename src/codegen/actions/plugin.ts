@@ -72,7 +72,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   return {
     content,
     prepend: [
-      `import assert from 'assert'`,
+      `import {assert} from '@ianwremmel/data'`,
       `import {v4 as uuidv4} from 'uuid'`,
       `import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
       `import {ddbDocClient} from "${path.relative(

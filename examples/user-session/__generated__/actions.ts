@@ -1,6 +1,5 @@
-import assert from 'assert';
-
 import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
+import {assert} from '@ianwremmel/data';
 import {v4 as uuidv4} from 'uuid';
 
 import {ddbDocClient} from '../../../src/client';
