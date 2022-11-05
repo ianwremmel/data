@@ -16,12 +16,20 @@ export function touchItemTpl({
   objType,
   updateExpressions,
 }: TouchItemTplInput) {
+  const typeName = objType.name;
+
+  const inputTypeName = `Touch${typeName}Input`;
+  const outputTypeName = `Touch${typeName}Output`;
+
   // Note that if we want this to return the updated item, we'll 1. want do run
   // in a transaction (if possible) and 2. use  a consistent read (even
   // @consistent hasn't been applied to this Model).
   return `
+export type ${inputTypeName} = Scalars['ID'];
+export type ${outputTypeName} = void;
+
 /**  */
-export async function touch${objType.name}(id: Scalars['ID']): Promise<void> {
+export async function touch${typeName}(id: ${inputTypeName}): Promise<${outputTypeName}> {
 ${ensureTableTemplate(objType)}
   try {
     await ddbDocClient.send(new UpdateCommand({
@@ -43,7 +51,7 @@ ${ensureTableTemplate(objType)}
   }
   catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('${objType.name}', id);
+      throw new NotFoundError('${typeName}', id);
     }
     throw err;
   }

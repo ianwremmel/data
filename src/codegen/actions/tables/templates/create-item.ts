@@ -22,17 +22,23 @@ export function createItemTpl({
   unmarshall,
   updateExpressions,
 }: CreateItemTplInput) {
-  return `
-export type Create${objType.name}Input = Omit<${
-    objType.name
-  }, 'createdAt'|'id'|'updatedAt'${
-    ttlInfo ? `|'${ttlInfo.fieldName}'` : ''
-  }|'version'>;
+  const typeName = objType.name;
 
+  const inputTypeName = `Create${typeName}Input`;
+  const omitInputFields = [
+    'createdAt',
+    'id',
+    'updatedAt',
+    ...(ttlInfo ? ['ttl'] : []),
+    'version',
+  ];
+  const outputTypeName = `Create${typeName}Output`;
+
+  return `
+export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join('|')}>;
+export type ${outputTypeName} = ${typeName}
 /**  */
-export async function create${objType.name}(input: Readonly<Create${
-    objType.name
-  }Input>): Promise<Readonly<${objType.name}>> {
+export async function create${typeName}(input: Readonly<Create${typeName}Input>): Promise<Readonly<${outputTypeName}>> {
   const now = new Date();
 ${ensureTableTemplate(objType)}
 
@@ -47,7 +53,7 @@ ${ean.map((e) => `        ${e},`).join('\n')}
 ${eav.map((e) => `        ${e},`).join('\n')}
       },
       Key: {
-        id: \`${objType.name}#\${uuidv4()}\`,
+        id: \`${typeName}#\${uuidv4()}\`,
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnValues: 'ALL_NEW',
@@ -55,11 +61,7 @@ ${eav.map((e) => `        ${e},`).join('\n')}
       UpdateExpression: 'SET ${updateExpressions.join(', ')}',
   }));
 
-  assert(data.Attributes?._et === '${
-    objType.name
-  }', () => new DataIntegrityError(\`Expected write ${
-    objType.name
-  } but wrote \${data.Attributes._et} instead\`));
+  assert(data.Attributes?._et === '${typeName}', () => new DataIntegrityError(\`Expected write ${typeName} but wrote \${data.Attributes._et} instead\`));
 
   return {
 ${unmarshall.map((item) => `    ${item},`).join('\n')}

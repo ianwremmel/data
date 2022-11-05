@@ -14,11 +14,17 @@ export function readItemTpl({
   objType,
   unmarshall,
 }: ReadItemTplInput) {
+  const typeName = objType.name;
+
+  const inputTypeName = `Read${typeName}Input`;
+  const outputTypeName = `Read${typeName}Output`;
+
   return `
+export type ${inputTypeName} = Scalars['ID'];
+export type ${outputTypeName} = ${typeName};
+
 /**  */
-export async function read${objType.name}(id: string): Promise<Readonly<${
-    objType.name
-  }>> {
+export async function read${typeName}(id: ${inputTypeName}): Promise<Readonly<${outputTypeName}>> {
 ${ensureTableTemplate(objType)}
 
   const {$metadata, ...data} = await ddbDocClient.send(new GetCommand({
@@ -30,12 +36,8 @@ ${ensureTableTemplate(objType)}
     TableName: tableName,
   }));
 
-  assert(data.Item, () => new NotFoundError('${objType.name}', id));
-  assert(data.Item?._et === '${
-    objType.name
-  }', () => new DataIntegrityError(\`Expected \${id} to load a ${
-    objType.name
-  } but loaded \${data.Item._et} instead\`));
+  assert(data.Item, () => new NotFoundError('${typeName}', id));
+  assert(data.Item?._et === '${typeName}', () => new DataIntegrityError(\`Expected \${id} to load a ${typeName} but loaded \${data.Item._et} instead\`));
 
   return {
 ${unmarshall.map((item) => `    ${item},`).join('\n')}

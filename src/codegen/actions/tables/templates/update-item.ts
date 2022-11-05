@@ -23,25 +23,32 @@ export function updateItemTpl({
   unmarshall,
   updateExpressions,
 }: UpdateItemTplInput) {
+  const typeName = objType.name;
+
+  const inputTypeName = `Update${typeName}Input`;
+  const omitInputFields = [
+    'createdAt',
+    'updatedAt',
+    ...(ttlInfo ? ['ttl'] : []),
+  ];
+  const outputTypeName = `Update${typeName}Output`;
+
   return `
-export type Update${objType.name}Input = Omit<${
-    objType.name
-  }, 'createdAt'|'updatedAt'${ttlInfo ? `|'${ttlInfo.fieldName}'` : ''}>;
+export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join('|')}>;
+export type ${outputTypeName} = ${typeName}
 
 /**  */
-export async function update${objType.name}(input: Readonly<Update${
-    objType.name
-  }Input>): Promise<Readonly<${objType.name}>> {
+export async function update${typeName}(input: Readonly<${inputTypeName}>): Promise<Readonly<${outputTypeName}>> {
   const now = new Date();
 ${ensureTableTemplate(objType)}
   try {
     const data = await ddbDocClient.send(new UpdateCommand({
       ConditionExpression: '#version = :version AND attribute_exists(#id)',
       ExpressionAttributeNames: {
-  ${ean.map((e) => `        ${e},`).join('\n')}
+${ean.map((e) => `        ${e},`).join('\n')}
       },
       ExpressionAttributeValues: {
-  ${eav.map((e) => `        ${e},`).join('\n')}
+${eav.map((e) => `        ${e},`).join('\n')}
       },
       Key: {
         id: input.id,
@@ -51,25 +58,21 @@ ${ensureTableTemplate(objType)}
       TableName: tableName,
       UpdateExpression: 'SET ${updateExpressions.join(', ')}',
     }));
-    assert(data.Attributes?._et === '${
-      objType.name
-    }', () => new DataIntegrityError(\`Expected \${id} to load a ${
-    objType.name
-  } but loaded \${data.Attributes._et} instead\`));
+    assert(data.Attributes?._et === '${typeName}', () => new DataIntegrityError(\`Expected \${id} to load a ${typeName} but loaded \${data.Attributes._et} instead\`));
 
     return {
-  ${unmarshall.map((item) => `    ${item},`).join('\n')}
+${unmarshall.map((item) => `    ${item},`).join('\n')}
     };
   }
   catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
       try {
-        const readResult = await read${objType.name}(input.id);
+        const readResult = await read${typeName}(input.id);
       }
       catch {
-        throw new NotFoundError('${objType.name}', input.id);
+        throw new NotFoundError('${typeName}', input.id);
       }
-      throw new OptimisticLockingError('${objType.name}', input.id);
+      throw new OptimisticLockingError('${typeName}', input.id);
     }
     throw err;
   }

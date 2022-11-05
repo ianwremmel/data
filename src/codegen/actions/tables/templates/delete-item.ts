@@ -8,9 +8,17 @@ export interface DeleteItemTplInput {
 
 /** template */
 export function deleteItemTpl({objType}: DeleteItemTplInput) {
+  const typeName = objType.name;
+
+  const inputTypeName = `Delete${typeName}Input`;
+  const outputTypeName = `Delete${typeName}Output`;
+
   return `
+export type ${inputTypeName} = Scalars['ID'];
+export type ${outputTypeName} = void;
+
 /**  */
-export async function delete${objType.name}(id: string) {
+export async function delete${typeName}(id: ${inputTypeName}): Promise<${outputTypeName}> {
 ${ensureTableTemplate(objType)}
 
   try {
@@ -32,7 +40,7 @@ ${ensureTableTemplate(objType)}
   }
   catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('${objType.name}', id);
+      throw new NotFoundError('${typeName}', id);
     }
     throw err;
   }

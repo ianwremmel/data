@@ -71,13 +71,13 @@ export type UserSession = Node &
 
 export type CreateUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'id' | 'updatedAt' | 'expires' | 'version'
+  createdAt | id | updatedAt | ttl | version
 >;
-
+export type CreateUserSessionOutput = UserSession;
 /**  */
 export async function createUserSession(
   input: Readonly<CreateUserSessionInput>
-): Promise<Readonly<UserSession>> {
+): Promise<Readonly<CreateUserSessionOutput>> {
   const now = new Date();
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
@@ -133,8 +133,13 @@ export async function createUserSession(
   };
 }
 
+export type DeleteUserSessionInput = Scalars['ID'];
+export type DeleteUserSessionOutput = void;
+
 /**  */
-export async function deleteUserSession(id: string) {
+export async function deleteUserSession(
+  id: DeleteUserSessionInput
+): Promise<DeleteUserSessionOutput> {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
 
@@ -164,10 +169,13 @@ export async function deleteUserSession(id: string) {
   }
 }
 
+export type ReadUserSessionInput = Scalars['ID'];
+export type ReadUserSessionOutput = UserSession;
+
 /**  */
 export async function readUserSession(
-  id: string
-): Promise<Readonly<UserSession>> {
+  id: ReadUserSessionInput
+): Promise<Readonly<ReadUserSessionOutput>> {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
 
@@ -201,8 +209,13 @@ export async function readUserSession(
   };
 }
 
+export type TouchUserSessionInput = Scalars['ID'];
+export type TouchUserSessionOutput = void;
+
 /**  */
-export async function touchUserSession(id: Scalars['ID']): Promise<void> {
+export async function touchUserSession(
+  id: TouchUserSessionInput
+): Promise<TouchUserSessionOutput> {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
   try {
@@ -238,13 +251,14 @@ export async function touchUserSession(id: Scalars['ID']): Promise<void> {
 
 export type UpdateUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'updatedAt' | 'expires'
+  createdAt | updatedAt | ttl
 >;
+export type UpdateUserSessionOutput = UserSession;
 
 /**  */
 export async function updateUserSession(
   input: Readonly<UpdateUserSessionInput>
-): Promise<Readonly<UserSession>> {
+): Promise<Readonly<UpdateUserSessionOutput>> {
   const now = new Date();
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
