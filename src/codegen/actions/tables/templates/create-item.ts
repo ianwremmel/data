@@ -29,14 +29,14 @@ export function createItemTpl({
     'createdAt',
     'id',
     'updatedAt',
-    ...(ttlInfo ? ['ttl'] : []),
+    ...(ttlInfo ? [ttlInfo.fieldName] : []),
     'version',
-  ];
+  ].map((f) => `'${f}'`);
   const outputTypeName = `Create${typeName}Output`;
 
   return `
 export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join('|')}>;
-export type ${outputTypeName} = ${typeName}
+export type ${outputTypeName} = ResultType<${typeName}>
 /**  */
 export async function create${typeName}(input: Readonly<Create${typeName}Input>): Promise<Readonly<${outputTypeName}>> {
   const now = new Date();
@@ -44,7 +44,7 @@ ${ensureTableTemplate(objType)}
 
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
-  const data = await ddbDocClient.send(new UpdateCommand({
+  const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, ...data} = await ddbDocClient.send(new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#id)',
       ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
@@ -64,7 +64,11 @@ ${eav.map((e) => `        ${e},`).join('\n')}
   assert(data.Attributes?._et === '${typeName}', () => new DataIntegrityError(\`Expected write ${typeName} but wrote \${data.Attributes._et} instead\`));
 
   return {
-${unmarshall.map((item) => `    ${item},`).join('\n')}
-  };
+    capacity,
+    item: {
+${unmarshall.map((item) => `        ${item},`).join('\n')}
+    },
+    metrics,
+  }
 }`;
 }

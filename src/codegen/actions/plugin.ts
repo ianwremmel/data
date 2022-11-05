@@ -58,6 +58,11 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
       const objType: GraphQLObjectType = t as GraphQLObjectType;
 
       return [
+        `export interface ResultType<T> {
+  capacity: ConsumedCapacity;
+  item: T;
+  metrics: ItemCollectionMetrics;
+}`,
         createItemTemplate(objType),
         deleteItemTemplate(objType),
         readItemTemplate(objType),
@@ -73,7 +78,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
     content,
     prepend: [
       `import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';`,
-      `import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
+      `import {ConsumedCapacity, DeleteCommand, GetCommand, ItemCollectionMetrics, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
       `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '@ianwremmel/data'`,
       `import {v4 as uuidv4} from 'uuid'`,
       `import {ddbDocClient} from "${path.relative(

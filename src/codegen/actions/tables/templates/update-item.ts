@@ -29,20 +29,20 @@ export function updateItemTpl({
   const omitInputFields = [
     'createdAt',
     'updatedAt',
-    ...(ttlInfo ? ['ttl'] : []),
-  ];
+    ...(ttlInfo ? [ttlInfo.fieldName] : []),
+  ].map((f) => `'${f}'`);
   const outputTypeName = `Update${typeName}Output`;
 
   return `
 export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join('|')}>;
-export type ${outputTypeName} = ${typeName}
+export type ${outputTypeName} = ResultType<${typeName}>
 
 /**  */
 export async function update${typeName}(input: Readonly<${inputTypeName}>): Promise<Readonly<${outputTypeName}>> {
   const now = new Date();
 ${ensureTableTemplate(objType)}
   try {
-    const data = await ddbDocClient.send(new UpdateCommand({
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, ...data} = await ddbDocClient.send(new UpdateCommand({
       ConditionExpression: '#version = :version AND attribute_exists(#id)',
       ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
@@ -61,8 +61,12 @@ ${eav.map((e) => `        ${e},`).join('\n')}
     assert(data.Attributes?._et === '${typeName}', () => new DataIntegrityError(\`Expected \${id} to load a ${typeName} but loaded \${data.Attributes._et} instead\`));
 
     return {
-${unmarshall.map((item) => `    ${item},`).join('\n')}
-    };
+      capacity,
+      item: {
+${unmarshall.map((item) => `        ${item},`).join('\n')}
+      },
+      metrics,
+    }
   }
   catch (err) {
     if (err instanceof ConditionalCheckFailedException) {

@@ -15,14 +15,14 @@ export function deleteItemTpl({objType}: DeleteItemTplInput) {
 
   return `
 export type ${inputTypeName} = Scalars['ID'];
-export type ${outputTypeName} = void;
+export type ${outputTypeName} = ResultType<void>;
 
 /**  */
 export async function delete${typeName}(id: ${inputTypeName}): Promise<${outputTypeName}> {
 ${ensureTableTemplate(objType)}
 
   try {
-    const {$metadata, Attributes, ...data} = await ddbDocClient.send(new DeleteCommand({
+    const {$metadata, Attributes, ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, ...data} = await ddbDocClient.send(new DeleteCommand({
       ConditionExpression: 'attribute_exists(#id)',
       ExpressionAttributeNames: {
         '#id': 'id',
@@ -36,7 +36,11 @@ ${ensureTableTemplate(objType)}
       TableName: tableName,
     }));
 
-    return data;
+    return {
+      capacity,
+      item: undefined,
+      metrics,
+    }
   }
   catch (err) {
     if (err instanceof ConditionalCheckFailedException) {

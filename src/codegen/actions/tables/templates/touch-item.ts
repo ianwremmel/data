@@ -26,13 +26,13 @@ export function touchItemTpl({
   // @consistent hasn't been applied to this Model).
   return `
 export type ${inputTypeName} = Scalars['ID'];
-export type ${outputTypeName} = void;
+export type ${outputTypeName} = ResultType<void>;
 
 /**  */
 export async function touch${typeName}(id: ${inputTypeName}): Promise<${outputTypeName}> {
 ${ensureTableTemplate(objType)}
   try {
-    await ddbDocClient.send(new UpdateCommand({
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand({
       ConditionExpression: 'attribute_exists(#id)',
       ExpressionAttributeNames: {
   ${ean.map((e) => `        ${e},`).join('\n')}
@@ -48,6 +48,12 @@ ${ensureTableTemplate(objType)}
       TableName: tableName,
       UpdateExpression: 'SET ${updateExpressions.join(', ')}',
     }));
+
+    return {
+      capacity,
+      item: undefined,
+      metrics,
+    }
   }
   catch (err) {
     if (err instanceof ConditionalCheckFailedException) {

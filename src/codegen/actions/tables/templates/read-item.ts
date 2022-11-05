@@ -21,13 +21,13 @@ export function readItemTpl({
 
   return `
 export type ${inputTypeName} = Scalars['ID'];
-export type ${outputTypeName} = ${typeName};
+export type ${outputTypeName} = ResultType<${typeName}>;
 
 /**  */
 export async function read${typeName}(id: ${inputTypeName}): Promise<Readonly<${outputTypeName}>> {
 ${ensureTableTemplate(objType)}
 
-  const {$metadata, ...data} = await ddbDocClient.send(new GetCommand({
+  const {$metadata, ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, ...data} = await ddbDocClient.send(new GetCommand({
     ConsistentRead: ${consistent},
     Key: {
       id,
@@ -40,7 +40,11 @@ ${ensureTableTemplate(objType)}
   assert(data.Item?._et === '${typeName}', () => new DataIntegrityError(\`Expected \${id} to load a ${typeName} but loaded \${data.Item._et} instead\`));
 
   return {
-${unmarshall.map((item) => `    ${item},`).join('\n')}
+    capacity,
+    item: {
+${unmarshall.map((item) => `      ${item},`).join('\n')}
+    },
+    metrics,
   }
 }`;
 }

@@ -1,5 +1,4 @@
-import {NotFoundError} from '../../src/lib/not-found-error';
-import {OptimisticLockingError} from '../../src/lib/optimistic-locking-error';
+import {NotFoundError, OptimisticLockingError} from '../../src/lib';
 
 import {
   createUserSession,
@@ -10,12 +9,13 @@ import {
 } from './__generated__/actions';
 
 const userSessionMatcher = {
-  createdAt: expect.any(Date),
-  expires: expect.any(Date),
-  id: expect.any(String),
-  updatedAt: expect.any(Date),
+  item: {
+    createdAt: expect.any(Date),
+    expires: expect.any(Date),
+    id: expect.any(String),
+    updatedAt: expect.any(Date),
+  },
 };
-
 describe('createUserSession()', () => {
   it('creates a user session', async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
@@ -24,25 +24,41 @@ describe('createUserSession()', () => {
       userSessionMatcher,
       `
       {
-        "createdAt": Any<Date>,
-        "expires": Any<Date>,
-        "id": Any<String>,
-        "session": {
-          "foo": "foo",
+        "capacity": {
+          "CapacityUnits": 1,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 1,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "WriteCapacityUnits": undefined,
         },
-        "updatedAt": Any<Date>,
-        "version": 1,
+        "item": {
+          "createdAt": Any<Date>,
+          "expires": Any<Date>,
+          "id": Any<String>,
+          "session": {
+            "foo": "foo",
+          },
+          "updatedAt": Any<Date>,
+          "version": 1,
+        },
+        "metrics": undefined,
       }
     `
     );
 
-    expect(result.id).toMatch(/UserSession#/);
-    expect(result.createdAt.getTime()).not.toBeNaN();
-    expect(result.expires.getTime()).not.toBeNaN();
-    expect(result.updatedAt.getTime()).not.toBeNaN();
+    expect(result.item.id).toMatch(/UserSession#/);
+    expect(result.item.createdAt.getTime()).not.toBeNaN();
+    expect(result.item.expires.getTime()).not.toBeNaN();
+    expect(result.item.updatedAt.getTime()).not.toBeNaN();
 
     // cleanup, not part of test
-    await deleteUserSession(result.id);
+    await deleteUserSession(result.item.id);
   });
 });
 
@@ -50,12 +66,12 @@ describe('deleteUserSession()', () => {
   it('deletes a user session', async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
 
-    const deleteResult = await deleteUserSession(result.id);
+    const deleteResult = await deleteUserSession(result.item.id);
     expect(deleteResult).toMatchInlineSnapshot(
-      {ConsumedCapacity: {TableName: expect.any(String)}},
+      {capacity: {TableName: expect.any(String)}},
       `
       {
-        "ConsumedCapacity": {
+        "capacity": {
           "CapacityUnits": 1,
           "GlobalSecondaryIndexes": undefined,
           "LocalSecondaryIndexes": undefined,
@@ -68,14 +84,15 @@ describe('deleteUserSession()', () => {
           "TableName": Any<String>,
           "WriteCapacityUnits": undefined,
         },
-        "ItemCollectionMetrics": undefined,
+        "item": undefined,
+        "metrics": undefined,
       }
     `
     );
 
-    await expect(async () => await readUserSession(result.id)).rejects.toThrow(
-      NotFoundError
-    );
+    await expect(
+      async () => await readUserSession(result.item.id)
+    ).rejects.toThrow(NotFoundError);
   });
 
   it('throws an error if the user session does not exist', async () => {
@@ -89,25 +106,41 @@ describe('readUserSession()', () => {
   it('reads a user session', async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
 
-    const readResult = await readUserSession(result.id);
+    const readResult = await readUserSession(result.item.id);
     expect(readResult).toMatchInlineSnapshot(
       userSessionMatcher,
       `
       {
-        "createdAt": Any<Date>,
-        "expires": Any<Date>,
-        "id": Any<String>,
-        "session": {
-          "foo": "foo",
+        "capacity": {
+          "CapacityUnits": 1,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 1,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "WriteCapacityUnits": undefined,
         },
-        "updatedAt": Any<Date>,
-        "version": 1,
+        "item": {
+          "createdAt": Any<Date>,
+          "expires": Any<Date>,
+          "id": Any<String>,
+          "session": {
+            "foo": "foo",
+          },
+          "updatedAt": Any<Date>,
+          "version": 1,
+        },
+        "metrics": undefined,
       }
     `
     );
 
     // cleanup, not part of test
-    await deleteUserSession(result.id);
+    await deleteUserSession(result.item.id);
   });
 
   it('throws an error if the user session does not exist', async () => {
@@ -121,48 +154,80 @@ describe('touchUserSession()', () => {
   it("updates a user session's createdAt and extends its ttl", async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
 
-    const readResult = await readUserSession(result.id);
+    const readResult = await readUserSession(result.item.id);
     expect(readResult).toMatchInlineSnapshot(
       userSessionMatcher,
       `
       {
-        "createdAt": Any<Date>,
-        "expires": Any<Date>,
-        "id": Any<String>,
-        "session": {
-          "foo": "foo",
+        "capacity": {
+          "CapacityUnits": 1,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 1,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "WriteCapacityUnits": undefined,
         },
-        "updatedAt": Any<Date>,
-        "version": 1,
+        "item": {
+          "createdAt": Any<Date>,
+          "expires": Any<Date>,
+          "id": Any<String>,
+          "session": {
+            "foo": "foo",
+          },
+          "updatedAt": Any<Date>,
+          "version": 1,
+        },
+        "metrics": undefined,
       }
     `
     );
 
-    await touchUserSession(result.id);
-    const touchResult = await readUserSession(result.id);
+    await touchUserSession(result.item.id);
+    const touchResult = await readUserSession(result.item.id);
     expect(touchResult).toMatchInlineSnapshot(
       userSessionMatcher,
       `
       {
-        "createdAt": Any<Date>,
-        "expires": Any<Date>,
-        "id": Any<String>,
-        "session": {
-          "foo": "foo",
+        "capacity": {
+          "CapacityUnits": 1,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 1,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "WriteCapacityUnits": undefined,
         },
-        "updatedAt": Any<Date>,
-        "version": 2,
+        "item": {
+          "createdAt": Any<Date>,
+          "expires": Any<Date>,
+          "id": Any<String>,
+          "session": {
+            "foo": "foo",
+          },
+          "updatedAt": Any<Date>,
+          "version": 2,
+        },
+        "metrics": undefined,
       }
     `
     );
 
-    expect(readResult.createdAt).toEqual(touchResult.createdAt);
-    expect(readResult.updatedAt).toEqual(touchResult.updatedAt);
+    expect(readResult.item.createdAt).toEqual(touchResult.item.createdAt);
+    expect(readResult.item.updatedAt).toEqual(touchResult.item.updatedAt);
 
-    expect(readResult.expires).not.toEqual(touchResult.expires);
+    expect(readResult.item.expires).not.toEqual(touchResult.item.expires);
 
     // cleanup, not part of test
-    await deleteUserSession(result.id);
+    await deleteUserSession(result.item.id);
   });
 
   it('throws an error if the user session does not exist', async () => {
@@ -179,63 +244,111 @@ describe('updateUserSession()', () => {
       userSessionMatcher,
       `
       {
-        "createdAt": Any<Date>,
-        "expires": Any<Date>,
-        "id": Any<String>,
-        "session": {
-          "foo": "foo",
+        "capacity": {
+          "CapacityUnits": 1,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 1,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "WriteCapacityUnits": undefined,
         },
-        "updatedAt": Any<Date>,
-        "version": 1,
+        "item": {
+          "createdAt": Any<Date>,
+          "expires": Any<Date>,
+          "id": Any<String>,
+          "session": {
+            "foo": "foo",
+          },
+          "updatedAt": Any<Date>,
+          "version": 1,
+        },
+        "metrics": undefined,
       }
     `
     );
-    expect(createResult.session).toEqual({foo: 'foo'});
+    expect(createResult.item.session).toEqual({foo: 'foo'});
 
     const updateResult = await updateUserSession({
-      ...createResult,
+      ...createResult.item,
       session: {foo: 'bar'},
     });
     expect(updateResult).toMatchInlineSnapshot(
       userSessionMatcher,
       `
       {
-        "createdAt": Any<Date>,
-        "expires": Any<Date>,
-        "id": Any<String>,
-        "session": {
-          "foo": "bar",
+        "capacity": {
+          "CapacityUnits": 1,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 1,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "WriteCapacityUnits": undefined,
         },
-        "updatedAt": Any<Date>,
-        "version": 2,
+        "item": {
+          "createdAt": Any<Date>,
+          "expires": Any<Date>,
+          "id": Any<String>,
+          "session": {
+            "foo": "bar",
+          },
+          "updatedAt": Any<Date>,
+          "version": 2,
+        },
+        "metrics": undefined,
       }
     `
     );
-    expect(updateResult.session).toEqual({foo: 'bar'});
+    expect(updateResult.item.session).toEqual({foo: 'bar'});
 
-    const readResult = await readUserSession(createResult.id);
+    const readResult = await readUserSession(createResult.item.id);
     expect(readResult).toMatchInlineSnapshot(
       userSessionMatcher,
       `
       {
-        "createdAt": Any<Date>,
-        "expires": Any<Date>,
-        "id": Any<String>,
-        "session": {
-          "foo": "bar",
+        "capacity": {
+          "CapacityUnits": 1,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 1,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "WriteCapacityUnits": undefined,
         },
-        "updatedAt": Any<Date>,
-        "version": 2,
+        "item": {
+          "createdAt": Any<Date>,
+          "expires": Any<Date>,
+          "id": Any<String>,
+          "session": {
+            "foo": "bar",
+          },
+          "updatedAt": Any<Date>,
+          "version": 2,
+        },
+        "metrics": undefined,
       }
     `
     );
-    expect(updateResult.session).toEqual({foo: 'bar'});
+    expect(updateResult.item.session).toEqual({foo: 'bar'});
 
-    expect(readResult.createdAt).toEqual(updateResult.createdAt);
-    expect(readResult.updatedAt).toEqual(updateResult.updatedAt);
+    expect(readResult.item.createdAt).toEqual(updateResult.item.createdAt);
+    expect(readResult.item.updatedAt).toEqual(updateResult.item.updatedAt);
 
     // cleanup, not part of test
-    await deleteUserSession(createResult.id);
+    await deleteUserSession(createResult.item.id);
   });
 
   it('throws an error if the user session does not exist', async () => {
@@ -252,19 +365,19 @@ describe('updateUserSession()', () => {
   it('throws an error if the loaded session data is out of date', async () => {
     const createResult = await createUserSession({session: {foo: 'foo'}});
     await updateUserSession({
-      ...createResult,
+      ...createResult.item,
       session: {foo: 'bar'},
     });
 
     await expect(
       async () =>
         await updateUserSession({
-          ...createResult,
+          ...createResult.item,
           session: {foo: 'bar'},
         })
     ).rejects.toThrow(OptimisticLockingError);
 
     // cleanup, not part of test
-    await deleteUserSession(createResult.id);
+    await deleteUserSession(createResult.item.id);
   });
 });
