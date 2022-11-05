@@ -36,6 +36,8 @@ ${ensureTableTemplate(objType)}
       TableName: tableName,
     }));
 
+    assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
+
     return {
       capacity,
       item: undefined,

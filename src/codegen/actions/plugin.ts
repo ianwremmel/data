@@ -36,14 +36,10 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
       const type = typesMap[typeName];
       const {astNode} = type;
 
-      if (
+      return (
         astNode?.kind === 'ObjectTypeDefinition' &&
         astNode.interfaces?.map(({name}) => name.value).includes('SimpleModel')
-      ) {
-        return true;
-      }
-
-      return false;
+      );
     })
     .map((typeName) => {
       const objType = typesMap[typeName];
@@ -61,7 +57,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
         `export interface ResultType<T> {
   capacity: ConsumedCapacity;
   item: T;
-  metrics: ItemCollectionMetrics;
+  metrics: ItemCollectionMetrics | undefined;
 }`,
         createItemTemplate(objType),
         deleteItemTemplate(objType),
@@ -77,8 +73,8 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   return {
     content,
     prepend: [
-      `import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';`,
-      `import {ConsumedCapacity, DeleteCommand, GetCommand, ItemCollectionMetrics, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
+      `import {ConditionalCheckFailedException, ConsumedCapacity, ItemCollectionMetrics} from '@aws-sdk/client-dynamodb';`,
+      `import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
       `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '@ianwremmel/data'`,
       `import {v4 as uuidv4} from 'uuid'`,
       `import {ddbDocClient} from "${path.relative(

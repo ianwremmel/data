@@ -54,11 +54,15 @@ ${eav.map((e) => `        ${e},`).join('\n')}
         id: input.id,
       },
       ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
       UpdateExpression: 'SET ${updateExpressions.join(', ')}',
     }));
-    assert(data.Attributes?._et === '${typeName}', () => new DataIntegrityError(\`Expected \${id} to load a ${typeName} but loaded \${data.Attributes._et} instead\`));
+
+    assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
+
+    assert(data.Attributes?._et === '${typeName}', () => new DataIntegrityError(\`Expected \${input.id} to update a ${typeName} but updated \${data.Attributes._et} instead\`));
 
     return {
       capacity,

@@ -1,11 +1,9 @@
-import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
 import {
+  ConditionalCheckFailedException,
   ConsumedCapacity,
-  DeleteCommand,
-  GetCommand,
   ItemCollectionMetrics,
-  UpdateCommand,
-} from '@aws-sdk/lib-dynamodb';
+} from '@aws-sdk/client-dynamodb';
+import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
 import {
   assert,
   DataIntegrityError,
@@ -78,7 +76,7 @@ export type UserSession = Node &
 export interface ResultType<T> {
   capacity: ConsumedCapacity;
   item: T;
-  metrics: ItemCollectionMetrics;
+  metrics: ItemCollectionMetrics | undefined;
 }
 
 export type CreateUserSessionInput = Omit<
@@ -124,6 +122,7 @@ export async function createUserSession(
         id: `UserSession#${uuidv4()}`,
       },
       ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
       UpdateExpression:
@@ -132,10 +131,15 @@ export async function createUserSession(
   );
 
   assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(
     data.Attributes?._et === 'UserSession',
     () =>
       new DataIntegrityError(
-        `Expected write UserSession but wrote ${data.Attributes._et} instead`
+        `Expected to write UserSession but wrote ${data.Attributes?._et} instead`
       )
   );
 
@@ -186,6 +190,15 @@ export async function deleteUserSession(
       })
     );
 
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+    assert(
+      metrics,
+      'Expected ItemCollectionMetrics to be returned. This is a bug in codegen.'
+    );
+
     return {
       capacity,
       item: undefined,
@@ -225,6 +238,11 @@ export async function readUserSession(
     })
   );
 
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
   assert(data.Item, () => new NotFoundError('UserSession', id));
   assert(
     data.Item?._et === 'UserSession',
@@ -244,7 +262,7 @@ export async function readUserSession(
       updatedAt: new Date(data.Item?._md),
       version: data.Item?._v,
     },
-    metrics,
+    metrics: undefined,
   };
 }
 
@@ -275,12 +293,18 @@ export async function touchUserSession(
             id,
           },
           ReturnConsumedCapacity: 'INDEXES',
+          ReturnItemCollectionMetrics: 'SIZE',
           ReturnValues: 'ALL_NEW',
           TableName: tableName,
           UpdateExpression:
             'SET #ttl = #ttl + :ttlInc, #version = #version + :versionInc',
         })
       );
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
     return {
       capacity,
@@ -336,17 +360,24 @@ export async function updateUserSession(
           id: input.id,
         },
         ReturnConsumedCapacity: 'INDEXES',
+        ReturnItemCollectionMetrics: 'SIZE',
         ReturnValues: 'ALL_NEW',
         TableName: tableName,
         UpdateExpression:
           'SET #createdAt = :createdAt, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt, #version = :newVersion',
       })
     );
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
     assert(
       data.Attributes?._et === 'UserSession',
       () =>
         new DataIntegrityError(
-          `Expected ${id} to load a UserSession but loaded ${data.Attributes._et} instead`
+          `Expected ${input.id} to update a UserSession but updated ${data.Attributes._et} instead`
         )
     );
 

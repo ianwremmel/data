@@ -36,6 +36,8 @@ ${ensureTableTemplate(objType)}
     TableName: tableName,
   }));
 
+  assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
+
   assert(data.Item, () => new NotFoundError('${typeName}', id));
   assert(data.Item?._et === '${typeName}', () => new DataIntegrityError(\`Expected \${id} to load a ${typeName} but loaded \${data.Item._et} instead\`));
 
@@ -44,7 +46,7 @@ ${ensureTableTemplate(objType)}
     item: {
 ${unmarshall.map((item) => `      ${item},`).join('\n')}
     },
-    metrics,
+    metrics: undefined,
   }
 }`;
 }

@@ -44,10 +44,13 @@ ${ensureTableTemplate(objType)}
         id,
       },
       ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
       UpdateExpression: 'SET ${updateExpressions.join(', ')}',
     }));
+
+    assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
     return {
       capacity,

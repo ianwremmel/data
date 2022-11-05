@@ -56,12 +56,15 @@ ${eav.map((e) => `        ${e},`).join('\n')}
         id: \`${typeName}#\${uuidv4()}\`,
       },
       ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
       UpdateExpression: 'SET ${updateExpressions.join(', ')}',
   }));
 
-  assert(data.Attributes?._et === '${typeName}', () => new DataIntegrityError(\`Expected write ${typeName} but wrote \${data.Attributes._et} instead\`));
+  assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
+
+  assert(data.Attributes?._et === '${typeName}', () => new DataIntegrityError(\`Expected to write ${typeName} but wrote \${data.Attributes?._et} instead\`));
 
   return {
     capacity,
