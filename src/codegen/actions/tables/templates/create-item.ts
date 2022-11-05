@@ -44,7 +44,7 @@ ${ensureTableTemplate(objType)}
 
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
-  const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, ...data} = await ddbDocClient.send(new UpdateCommand({
+  const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#id)',
       ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
@@ -64,7 +64,8 @@ ${eav.map((e) => `        ${e},`).join('\n')}
 
   assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
-  assert(data.Attributes?._et === '${typeName}', () => new DataIntegrityError(\`Expected to write ${typeName} but wrote \${data.Attributes?._et} instead\`));
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected to write ${typeName} but wrote \${item?._et} instead\`));
 
   return {
     capacity,

@@ -22,7 +22,7 @@ export async function delete${typeName}(id: ${inputTypeName}): Promise<${outputT
 ${ensureTableTemplate(objType)}
 
   try {
-    const {$metadata, Attributes, ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, ...data} = await ddbDocClient.send(new DeleteCommand({
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new DeleteCommand({
       ConditionExpression: 'attribute_exists(#id)',
       ExpressionAttributeNames: {
         '#id': 'id',

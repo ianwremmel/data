@@ -97,7 +97,7 @@ export async function createUserSession(
   const {
     ConsumedCapacity: capacity,
     ItemCollectionMetrics: metrics,
-    ...data
+    Attributes: item,
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#id)',
@@ -135,23 +135,24 @@ export async function createUserSession(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
   assert(
-    data.Attributes?._et === 'UserSession',
+    item._et === 'UserSession',
     () =>
       new DataIntegrityError(
-        `Expected to write UserSession but wrote ${data.Attributes?._et} instead`
+        `Expected to write UserSession but wrote ${item?._et} instead`
       )
   );
 
   return {
     capacity,
     item: {
-      createdAt: new Date(data.Attributes?._ct),
-      expires: new Date(data.Attributes?.ttl),
-      id: data.Attributes?.id,
-      session: data.Attributes?.session,
-      updatedAt: new Date(data.Attributes?._md),
-      version: data.Attributes?._v,
+      createdAt: new Date(item._ct),
+      expires: new Date(item.ttl),
+      id: item.id,
+      session: item.session,
+      updatedAt: new Date(item._md),
+      version: item._v,
     },
     metrics,
   };
@@ -168,35 +169,26 @@ export async function deleteUserSession(
   assert(tableName, 'TABLE_USER_SESSION is not set');
 
   try {
-    const {
-      $metadata,
-      Attributes,
-      ConsumedCapacity: capacity,
-      ItemCollectionMetrics: metrics,
-      ...data
-    } = await ddbDocClient.send(
-      new DeleteCommand({
-        ConditionExpression: 'attribute_exists(#id)',
-        ExpressionAttributeNames: {
-          '#id': 'id',
-        },
-        Key: {
-          id,
-        },
-        ReturnConsumedCapacity: 'INDEXES',
-        ReturnItemCollectionMetrics: 'SIZE',
-        ReturnValues: 'NONE',
-        TableName: tableName,
-      })
-    );
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
+      await ddbDocClient.send(
+        new DeleteCommand({
+          ConditionExpression: 'attribute_exists(#id)',
+          ExpressionAttributeNames: {
+            '#id': 'id',
+          },
+          Key: {
+            id,
+          },
+          ReturnConsumedCapacity: 'INDEXES',
+          ReturnItemCollectionMetrics: 'SIZE',
+          ReturnValues: 'NONE',
+          TableName: tableName,
+        })
+      );
 
     assert(
       capacity,
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-    assert(
-      metrics,
-      'Expected ItemCollectionMetrics to be returned. This is a bug in codegen.'
     );
 
     return {
@@ -222,12 +214,7 @@ export async function readUserSession(
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
 
-  const {
-    $metadata,
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    ...data
-  } = await ddbDocClient.send(
+  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
     new GetCommand({
       ConsistentRead: true,
       Key: {
@@ -243,24 +230,84 @@ export async function readUserSession(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(data.Item, () => new NotFoundError('UserSession', id));
+  assert(item, () => new NotFoundError('UserSession', id));
   assert(
-    data.Item?._et === 'UserSession',
+    item._et === 'UserSession',
     () =>
       new DataIntegrityError(
-        `Expected ${id} to load a UserSession but loaded ${data.Item._et} instead`
+        `Expected ${id} to load a UserSession but loaded ${item._et} instead`
       )
   );
 
   return {
     capacity,
     item: {
-      createdAt: new Date(data.Item?._ct),
-      expires: new Date(data.Item?.ttl),
-      id: data.Item?.id,
-      session: data.Item?.session,
-      updatedAt: new Date(data.Item?._md),
-      version: data.Item?._v,
+      createdAt: (() => {
+        assert(
+          item._ct !== null,
+          () => new DataIntegrityError('Expected createdAt to be non-null')
+        );
+        assert(
+          typeof item._ct !== 'undefined',
+          () => new DataIntegrityError('Expected createdAt to be defined')
+        );
+        return item._ct ? new Date(item._ct) : null;
+      })(),
+      expires: (() => {
+        assert(
+          item.ttl !== null,
+          () => new DataIntegrityError('Expected expires to be non-null')
+        );
+        assert(
+          typeof item.ttl !== 'undefined',
+          () => new DataIntegrityError('Expected expires to be defined')
+        );
+        return item.ttl ? new Date(item.ttl) : null;
+      })(),
+      id: (() => {
+        assert(
+          item.id !== null,
+          () => new DataIntegrityError('Expected id to be non-null')
+        );
+        assert(
+          typeof item.id !== 'undefined',
+          () => new DataIntegrityError('Expected id to be defined')
+        );
+        return item.id;
+      })(),
+      session: (() => {
+        assert(
+          item.session !== null,
+          () => new DataIntegrityError('Expected session to be non-null')
+        );
+        assert(
+          typeof item.session !== 'undefined',
+          () => new DataIntegrityError('Expected session to be defined')
+        );
+        return item.session;
+      })(),
+      updatedAt: (() => {
+        assert(
+          item._md !== null,
+          () => new DataIntegrityError('Expected updatedAt to be non-null')
+        );
+        assert(
+          typeof item._md !== 'undefined',
+          () => new DataIntegrityError('Expected updatedAt to be defined')
+        );
+        return item._md ? new Date(item._md) : null;
+      })(),
+      version: (() => {
+        assert(
+          item._v !== null,
+          () => new DataIntegrityError('Expected version to be non-null')
+        );
+        assert(
+          typeof item._v !== 'undefined',
+          () => new DataIntegrityError('Expected version to be defined')
+        );
+        return item._v;
+      })(),
     },
     metrics: undefined,
   };
@@ -334,9 +381,9 @@ export async function updateUserSession(
   assert(tableName, 'TABLE_USER_SESSION is not set');
   try {
     const {
+      Attributes: item,
       ConsumedCapacity: capacity,
       ItemCollectionMetrics: metrics,
-      ...data
     } = await ddbDocClient.send(
       new UpdateCommand({
         ConditionExpression: '#version = :version AND attribute_exists(#id)',
@@ -373,23 +420,24 @@ export async function updateUserSession(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
     assert(
-      data.Attributes?._et === 'UserSession',
+      item._et === 'UserSession',
       () =>
         new DataIntegrityError(
-          `Expected ${input.id} to update a UserSession but updated ${data.Attributes._et} instead`
+          `Expected ${input.id} to update a UserSession but updated ${item._et} instead`
         )
     );
 
     return {
       capacity,
       item: {
-        createdAt: new Date(data.Attributes?._ct),
-        expires: new Date(data.Attributes?.ttl),
-        id: data.Attributes?.id,
-        session: data.Attributes?.session,
-        updatedAt: new Date(data.Attributes?._md),
-        version: data.Attributes?._v,
+        createdAt: new Date(item._ct),
+        expires: new Date(item.ttl),
+        id: item.id,
+        session: item.session,
+        updatedAt: new Date(item._md),
+        version: item._v,
       },
       metrics,
     };

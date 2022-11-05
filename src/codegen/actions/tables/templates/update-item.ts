@@ -42,7 +42,7 @@ export async function update${typeName}(input: Readonly<${inputTypeName}>): Prom
   const now = new Date();
 ${ensureTableTemplate(objType)}
   try {
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, ...data} = await ddbDocClient.send(new UpdateCommand({
+    const {Attributes: item, ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand({
       ConditionExpression: '#version = :version AND attribute_exists(#id)',
       ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
@@ -62,7 +62,8 @@ ${eav.map((e) => `        ${e},`).join('\n')}
 
     assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
-    assert(data.Attributes?._et === '${typeName}', () => new DataIntegrityError(\`Expected \${input.id} to update a ${typeName} but updated \${data.Attributes._et} instead\`));
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected \${input.id} to update a ${typeName} but updated \${item._et} instead\`));
 
     return {
       capacity,
