@@ -18,7 +18,7 @@ const userSessionMatcher = {
   },
 };
 describe('createUserSession()', () => {
-  it('creates a user session', async () => {
+  it('creates a record', async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
 
     expect(result).toMatchInlineSnapshot(
@@ -64,7 +64,7 @@ describe('createUserSession()', () => {
 });
 
 describe('deleteUserSession()', () => {
-  it('deletes a user session', async () => {
+  it('deletes a record', async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
 
     const deleteResult = await deleteUserSession(result.item.id);
@@ -96,7 +96,7 @@ describe('deleteUserSession()', () => {
     ).rejects.toThrow(NotFoundError);
   });
 
-  it('throws an error if the user session does not exist', async () => {
+  it('throws an error if the record does not exist', async () => {
     await expect(
       async () => await deleteUserSession('some-id')
     ).rejects.toThrow(NotFoundError);
@@ -104,7 +104,7 @@ describe('deleteUserSession()', () => {
 });
 
 describe('readUserSession()', () => {
-  it('reads a user session', async () => {
+  it('reads a record', async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
 
     const readResult = await readUserSession(result.item.id);
@@ -144,7 +144,7 @@ describe('readUserSession()', () => {
     await deleteUserSession(result.item.id);
   });
 
-  it('throws an error if the user session does not exist', async () => {
+  it('throws an error if the record does not exist', async () => {
     await expect(async () => await readUserSession('some-id')).rejects.toThrow(
       NotFoundError
     );
@@ -152,7 +152,7 @@ describe('readUserSession()', () => {
 });
 
 describe('touchUserSession()', () => {
-  it("updates a user session's createdAt and extends its ttl", async () => {
+  it("updates a record's createdAt and extends its ttl", async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
 
     const readResult = await readUserSession(result.item.id);
@@ -231,7 +231,7 @@ describe('touchUserSession()', () => {
     await deleteUserSession(result.item.id);
   });
 
-  it('throws an error if the user session does not exist', async () => {
+  it('throws an error if the record does not exist', async () => {
     await expect(async () => await touchUserSession('some-id')).rejects.toThrow(
       NotFoundError
     );
@@ -239,7 +239,7 @@ describe('touchUserSession()', () => {
 });
 
 describe('updateUserSession()', () => {
-  it('updates a user session', async () => {
+  it('updates a record', async () => {
     const createResult = await createUserSession({session: {foo: 'foo'}});
     expect(createResult).toMatchInlineSnapshot(
       userSessionMatcher,
@@ -352,7 +352,7 @@ describe('updateUserSession()', () => {
     await deleteUserSession(createResult.item.id);
   });
 
-  it('throws an error if the user session does not exist', async () => {
+  it('throws an error if the record does not exist', async () => {
     await expect(
       async () =>
         await updateUserSession({
@@ -363,7 +363,7 @@ describe('updateUserSession()', () => {
     ).rejects.toThrow(NotFoundError);
   });
 
-  it('throws an error if the loaded session data is out of date', async () => {
+  it('throws an error if the loaded record is out of date', async () => {
     const createResult = await createUserSession({session: {foo: 'foo'}});
     await updateUserSession({
       ...createResult.item,
