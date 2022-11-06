@@ -17,7 +17,7 @@ import {
   readItemTemplate,
   touchItemTemplate,
   updateItemTemplate,
-} from './tables/simple-table';
+} from './tables/table';
 
 /** @override */
 export function addToSchema(): AddToSchemaResult {

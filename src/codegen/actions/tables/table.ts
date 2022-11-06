@@ -11,7 +11,7 @@ import {touchItemTpl} from './templates/touch-item';
 import {updateItemTpl} from './templates/update-item';
 
 /**
- * Generates the createItem function for a simple table
+ * Generates the createItem function for a table
  */
 export function createItemTemplate(objType: GraphQLObjectType) {
   const ttlInfo = extractTtlInfo(objType);
@@ -78,14 +78,14 @@ export function createItemTemplate(objType: GraphQLObjectType) {
 }
 
 /**
- * Generates the deleteItem function for a simple table
+ * Generates the deleteItem function for a table
  */
 export function deleteItemTemplate(objType: GraphQLObjectType) {
   return deleteItemTpl({objType});
 }
 
 /**
- * Generates the readItem function for a simple table
+ * Generates the readItem function for a table
  */
 export function readItemTemplate(objType: GraphQLObjectType) {
   const ttlInfo = extractTtlInfo(objType);
@@ -120,7 +120,7 @@ export function readItemTemplate(objType: GraphQLObjectType) {
 }
 
 /**
- * Generates the updateItem function for a simple table
+ * Generates the updateItem function for a table
  */
 export function touchItemTemplate(objType: GraphQLObjectType) {
   const ttlInfo = extractTtlInfo(objType);
@@ -153,7 +153,7 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
 }
 
 /**
- * Generates the updateItem function for a simple table
+ * Generates the updateItem function for a table
  */
 export function updateItemTemplate(objType: GraphQLObjectType) {
   const ttlInfo = extractTtlInfo(objType);
