@@ -26,9 +26,14 @@
     "*.tsx",
     "*.js",
     "*.jsx",
+    "examples/**/*.js",
+    "examples/**/*.jsx",
+    "examples/**/*.ts",
+    "examples/**/*.tsx",
     "src/**/*.js",
     "src/**/*.jsx",
     "src/**/*.ts",
     "src/**/*.tsx",
+    ".graphqlrc.js",
   ]
 }

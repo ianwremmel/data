@@ -1,0 +1,39 @@
+"""
+JavaScript Date stored as a Number in DynamoDB
+"""
+scalar Date
+
+"""
+Arbitrary JSON stored as a Map in DynamoDB
+"""
+scalar JSONObject
+
+"""
+Indicates all reads for this type will be done using DynamoDB's
+strong-consistency mode. General discouraged, though certain user-facing flows
+might require it.
+"""
+directive @consistent on OBJECT
+
+"""
+Indicates the field will be configured as the DynamoDB ttl field for this type.
+Always gets saved to a column named "ttl" to avoid conflicts in single-table
+entities that all might use different names
+"""
+directive @ttl(duration: String!) on FIELD_DEFINITION
+
+"""
+SimpleModels are DynamoDB with a key schema that does not include a sort key.
+"""
+interface SimpleModel {
+  """
+  Set automatically when the item is first written
+  """
+  createdAt: Date!
+  id: ID!
+  """
+  Set automatically when the item is updated
+  """
+  updatedAt: Date!
+  version: Int!
+}

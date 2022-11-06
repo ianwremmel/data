@@ -9,11 +9,11 @@
 
 <!-- toc -->
 
-- [Install](#install)
-- [Usage](#usage)
-- [Maintainer](#maintainer)
-- [Contribute](#contribute)
-- [License](#license)
+-   [Install](#install)
+-   [Usage](#usage)
+-   [Maintainer](#maintainer)
+-   [Contribute](#contribute)
+-   [License](#license)
 
 <!-- tocstop -->
 

@@ -1,5 +1,8 @@
 'use strict';
 
+const {glob} = require('glob');
+const {camelCase, upperFirst} = require('lodash');
+
 const {commonProjectConfig} = require('./jest.common');
 
 // For a detailed explanation regarding each configuration property, visit:
@@ -20,6 +23,12 @@ module.exports = {
       // `(spec|test)`.
       testMatch: [`<rootDir>/src/**/?(*.)+(test).[tj]s?(x)`],
     },
+    ...glob.sync('examples/*/').map((example) => ({
+      ...commonProjectConfig,
+      displayName: `Example: ${upperFirst(camelCase(example.split('/')[1]))}`,
+      globalSetup: '<rootDir>/jest.d/global-setup/stack-env.ts',
+      testMatch: [`<rootDir>/${example}**/?(*.)+(test).[tj]s?(x)`],
+    })),
   ],
   reporters: [
     'default',

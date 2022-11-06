@@ -25,5 +25,12 @@ overrides:
     env:
       jest: true
 
+  - files:
+      - '**/*.graphql'
+      - '**/*.graphqls'
+    extends: 'plugin:@graphql-eslint/schema-recommended'
+    rules:
+      strict: off
+
 parserOptions:
   sourceType: 'script'

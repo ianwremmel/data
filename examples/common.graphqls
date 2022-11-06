@@ -1,0 +1,16 @@
+# This file isn't part of the project per-se, but things like ESLint are a lot
+# happier if Query is declared and contains at least one field
+
+"""
+The Query type
+"""
+type Query {
+  node(id: ID!): Node
+}
+
+"""
+The Node interface
+"""
+interface Node {
+  id: ID!
+}
