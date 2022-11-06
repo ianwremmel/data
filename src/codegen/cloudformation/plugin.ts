@@ -5,8 +5,10 @@ import {
   AddToSchemaResult,
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
-import {assertObjectType} from 'graphql';
+import {assertObjectType, isObjectType} from 'graphql';
 import {snakeCase} from 'lodash';
+
+import {hasInterface} from '../common/helpers';
 
 import {CloudformationPluginConfig} from './config';
 
@@ -22,16 +24,7 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (schema) => {
   const simpleTableTypes = Object.keys(typesMap)
     .filter((typeName) => {
       const type = typesMap[typeName];
-      const {astNode} = type;
-
-      if (
-        astNode?.kind === 'ObjectTypeDefinition' &&
-        astNode.interfaces?.map(({name}) => name.value).includes('SimpleModel')
-      ) {
-        return true;
-      }
-
-      return false;
+      return isObjectType(type) && hasInterface('SimpleModel', type);
     })
     .map((typeName) => {
       const objType = typesMap[typeName];

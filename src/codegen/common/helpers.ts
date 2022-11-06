@@ -16,6 +16,16 @@ export function hasDirective(
     .includes(directiveName);
 }
 
+/** Indicates if objType implements the specified interface */
+export function hasInterface(
+  interfaceName: string,
+  objType: GraphQLObjectType
+) {
+  return !!objType.astNode?.interfaces
+    ?.map(({name}) => name.value)
+    .includes(interfaceName);
+}
+
 /**
  * Indicates if field is the specified type. Does not care if field is NonNull
  */

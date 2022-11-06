@@ -6,7 +6,9 @@ import {
   AddToSchemaResult,
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
-import {assertObjectType, GraphQLObjectType} from 'graphql';
+import {assertObjectType, GraphQLObjectType, isObjectType} from 'graphql';
+
+import {hasInterface} from '../common/helpers';
 
 import {ActionPluginConfig} from './config';
 import {
@@ -34,12 +36,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   const simpleTableTypes = Object.keys(typesMap)
     .filter((typeName) => {
       const type = typesMap[typeName];
-      const {astNode} = type;
-
-      return (
-        astNode?.kind === 'ObjectTypeDefinition' &&
-        astNode.interfaces?.map(({name}) => name.value).includes('SimpleModel')
-      );
+      return isObjectType(type) && hasInterface('SimpleModel', type);
     })
     .map((typeName) => {
       const objType = typesMap[typeName];
