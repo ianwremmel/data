@@ -53,17 +53,29 @@ export interface QueryNodeArgs {
 
 /** SimpleModels are DynamoDB with a key schema that does not include a sort key. */
 export interface SimpleModel {
-  /** Set automatically when the item is first written */
   createdAt: Scalars['Date'];
   id: Scalars['ID'];
-  /** Set automatically when the item is updated */
   updatedAt: Scalars['Date'];
   version: Scalars['Int'];
 }
 
+/**
+ * Automatically adds a createdAt and updatedAt timestamp to the entity and sets
+ * them appropriately. The createdAt timestamp is only set on create, while the
+ * updatedAt timestamp is set on create and update.
+ */
+export interface Timestamped {
+  /** Set automatically when the item is first written */
+  createdAt: Scalars['Date'];
+  /** Set automatically when the item is updated */
+  updatedAt: Scalars['Date'];
+}
+
 /** A user session object. */
 export type UserSession = Node &
-  SimpleModel & {
+  SimpleModel &
+  Timestamped &
+  Versioned & {
     __typename?: 'UserSession';
     createdAt: Scalars['Date'];
     expires: Scalars['Date'];
@@ -72,6 +84,15 @@ export type UserSession = Node &
     updatedAt: Scalars['Date'];
     version: Scalars['Int'];
   };
+
+/**
+ * Automatically adds a column to enable optimistic locking. This field shouldn't
+ * be manipulated directly, but may need to be passed around by the runtime in
+ * order to make updates.
+ */
+export interface Versioned {
+  version: Scalars['Int'];
+}
 
 export interface ResultType<T> {
   capacity: ConsumedCapacity;
