@@ -9,6 +9,7 @@ import {
 } from './__generated__/actions';
 
 const userSessionMatcher = {
+  capacity: {TableName: expect.any(String)},
   item: {
     createdAt: expect.any(Date),
     expires: expect.any(Date),
@@ -34,7 +35,7 @@ describe('createUserSession()', () => {
             "ReadCapacityUnits": undefined,
             "WriteCapacityUnits": undefined,
           },
-          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "TableName": Any<String>,
           "WriteCapacityUnits": undefined,
         },
         "item": {
@@ -121,7 +122,7 @@ describe('readUserSession()', () => {
             "ReadCapacityUnits": undefined,
             "WriteCapacityUnits": undefined,
           },
-          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "TableName": Any<String>,
           "WriteCapacityUnits": undefined,
         },
         "item": {
@@ -169,7 +170,7 @@ describe('touchUserSession()', () => {
             "ReadCapacityUnits": undefined,
             "WriteCapacityUnits": undefined,
           },
-          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "TableName": Any<String>,
           "WriteCapacityUnits": undefined,
         },
         "item": {
@@ -203,7 +204,7 @@ describe('touchUserSession()', () => {
             "ReadCapacityUnits": undefined,
             "WriteCapacityUnits": undefined,
           },
-          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "TableName": Any<String>,
           "WriteCapacityUnits": undefined,
         },
         "item": {
@@ -254,7 +255,7 @@ describe('updateUserSession()', () => {
             "ReadCapacityUnits": undefined,
             "WriteCapacityUnits": undefined,
           },
-          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "TableName": Any<String>,
           "WriteCapacityUnits": undefined,
         },
         "item": {
@@ -291,7 +292,7 @@ describe('updateUserSession()', () => {
             "ReadCapacityUnits": undefined,
             "WriteCapacityUnits": undefined,
           },
-          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "TableName": Any<String>,
           "WriteCapacityUnits": undefined,
         },
         "item": {
@@ -325,7 +326,7 @@ describe('updateUserSession()', () => {
             "ReadCapacityUnits": undefined,
             "WriteCapacityUnits": undefined,
           },
-          "TableName": "UserSession-TableUserSession-a6b38d7a",
+          "TableName": Any<String>,
           "WriteCapacityUnits": undefined,
         },
         "item": {
