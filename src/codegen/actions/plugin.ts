@@ -41,7 +41,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
     .map((typeName) => {
       const objType = typesMap[typeName];
       assertObjectType(objType);
-      return objType;
+      return objType as GraphQLObjectType;
     });
 
   const content = `export interface ResultType<T> {
@@ -51,12 +51,8 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
 }
 
 ${tableTypes
-  .map((t) => {
-    assertObjectType(t);
-    // I don't know why this has to be cast here, but not 6 lines up.
-    const objType: GraphQLObjectType = t as GraphQLObjectType;
-
-    return [
+  .map((objType) =>
+    [
       `export interface ${objType.name}PrimaryKey {
         id: Scalars['ID'];
       }`,
@@ -65,8 +61,8 @@ ${tableTypes
       readItemTemplate(objType),
       touchItemTemplate(objType),
       updateItemTemplate(objType),
-    ].join('\n\n');
-  })
+    ].join('\n\n')
+  )
   .join('\n')}`;
 
   assert(info?.outputFile, 'info.outputFile is required');
