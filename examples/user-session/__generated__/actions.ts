@@ -4,14 +4,14 @@ import {
   ItemCollectionMetrics,
 } from '@aws-sdk/client-dynamodb';
 import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
+import {v4 as uuidv4} from 'uuid';
+
 import {
   assert,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
-} from '@ianwremmel/data';
-import {v4 as uuidv4} from 'uuid';
-
+} from '../../..';
 import {ddbDocClient} from '../../../src/client';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
@@ -147,12 +147,72 @@ export async function createUserSession(
   return {
     capacity,
     item: {
-      createdAt: new Date(item._ct),
-      expires: new Date(item.ttl),
-      id: item.id,
-      session: item.session,
-      updatedAt: new Date(item._md),
-      version: item._v,
+      createdAt: (() => {
+        assert(
+          item._ct !== null,
+          () => new DataIntegrityError('Expected createdAt to be non-null')
+        );
+        assert(
+          typeof item._ct !== 'undefined',
+          () => new DataIntegrityError('Expected createdAt to be defined')
+        );
+        return new Date(item._ct);
+      })(),
+      expires: (() => {
+        assert(
+          item.ttl !== null,
+          () => new DataIntegrityError('Expected expires to be non-null')
+        );
+        assert(
+          typeof item.ttl !== 'undefined',
+          () => new DataIntegrityError('Expected expires to be defined')
+        );
+        return new Date(item.ttl);
+      })(),
+      id: (() => {
+        assert(
+          item.id !== null,
+          () => new DataIntegrityError('Expected id to be non-null')
+        );
+        assert(
+          typeof item.id !== 'undefined',
+          () => new DataIntegrityError('Expected id to be defined')
+        );
+        return item.id;
+      })(),
+      session: (() => {
+        assert(
+          item.session !== null,
+          () => new DataIntegrityError('Expected session to be non-null')
+        );
+        assert(
+          typeof item.session !== 'undefined',
+          () => new DataIntegrityError('Expected session to be defined')
+        );
+        return item.session;
+      })(),
+      updatedAt: (() => {
+        assert(
+          item._md !== null,
+          () => new DataIntegrityError('Expected updatedAt to be non-null')
+        );
+        assert(
+          typeof item._md !== 'undefined',
+          () => new DataIntegrityError('Expected updatedAt to be defined')
+        );
+        return new Date(item._md);
+      })(),
+      version: (() => {
+        assert(
+          item._v !== null,
+          () => new DataIntegrityError('Expected version to be non-null')
+        );
+        assert(
+          typeof item._v !== 'undefined',
+          () => new DataIntegrityError('Expected version to be defined')
+        );
+        return item._v;
+      })(),
     },
     metrics,
   };
@@ -251,7 +311,7 @@ export async function readUserSession(
           typeof item._ct !== 'undefined',
           () => new DataIntegrityError('Expected createdAt to be defined')
         );
-        return item._ct ? new Date(item._ct) : null;
+        return new Date(item._ct);
       })(),
       expires: (() => {
         assert(
@@ -262,7 +322,7 @@ export async function readUserSession(
           typeof item.ttl !== 'undefined',
           () => new DataIntegrityError('Expected expires to be defined')
         );
-        return item.ttl ? new Date(item.ttl) : null;
+        return new Date(item.ttl);
       })(),
       id: (() => {
         assert(
@@ -295,7 +355,7 @@ export async function readUserSession(
           typeof item._md !== 'undefined',
           () => new DataIntegrityError('Expected updatedAt to be defined')
         );
-        return item._md ? new Date(item._md) : null;
+        return new Date(item._md);
       })(),
       version: (() => {
         assert(
@@ -432,12 +492,72 @@ export async function updateUserSession(
     return {
       capacity,
       item: {
-        createdAt: new Date(item._ct),
-        expires: new Date(item.ttl),
-        id: item.id,
-        session: item.session,
-        updatedAt: new Date(item._md),
-        version: item._v,
+        createdAt: (() => {
+          assert(
+            item._ct !== null,
+            () => new DataIntegrityError('Expected createdAt to be non-null')
+          );
+          assert(
+            typeof item._ct !== 'undefined',
+            () => new DataIntegrityError('Expected createdAt to be defined')
+          );
+          return new Date(item._ct);
+        })(),
+        expires: (() => {
+          assert(
+            item.ttl !== null,
+            () => new DataIntegrityError('Expected expires to be non-null')
+          );
+          assert(
+            typeof item.ttl !== 'undefined',
+            () => new DataIntegrityError('Expected expires to be defined')
+          );
+          return new Date(item.ttl);
+        })(),
+        id: (() => {
+          assert(
+            item.id !== null,
+            () => new DataIntegrityError('Expected id to be non-null')
+          );
+          assert(
+            typeof item.id !== 'undefined',
+            () => new DataIntegrityError('Expected id to be defined')
+          );
+          return item.id;
+        })(),
+        session: (() => {
+          assert(
+            item.session !== null,
+            () => new DataIntegrityError('Expected session to be non-null')
+          );
+          assert(
+            typeof item.session !== 'undefined',
+            () => new DataIntegrityError('Expected session to be defined')
+          );
+          return item.session;
+        })(),
+        updatedAt: (() => {
+          assert(
+            item._md !== null,
+            () => new DataIntegrityError('Expected updatedAt to be non-null')
+          );
+          assert(
+            typeof item._md !== 'undefined',
+            () => new DataIntegrityError('Expected updatedAt to be defined')
+          );
+          return new Date(item._md);
+        })(),
+        version: (() => {
+          assert(
+            item._v !== null,
+            () => new DataIntegrityError('Expected version to be non-null')
+          );
+          assert(
+            typeof item._v !== 'undefined',
+            () => new DataIntegrityError('Expected version to be defined')
+          );
+          return item._v;
+        })(),
       },
       metrics,
     };

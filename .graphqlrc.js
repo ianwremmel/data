@@ -4,6 +4,9 @@ const examples = glob('*/', {cwd: 'examples'}).map((pathName) =>
   pathName.replace(/\/$/, '')
 );
 
+/** @type {Record<string, import('graphql-config').IGraphQLProject>} */
+const init = {};
+
 /** @type {import('graphql-config').IGraphQLConfig } */
 const config = {
   projects: examples.reduce((acc, example) => {
@@ -30,12 +33,13 @@ const config = {
       },
       schema: [
         'examples/common.graphqls',
-        // 'src/codegen/schema.graphqls',
         `examples/${example}/schema/**/*.graphqls`,
+        // This line shouldn't be here, but addToSchema doesn't seem to work.
+        'src/codegen/schema.graphqls',
       ],
     };
     return acc;
-  }, {}),
+  }, init)
 };
 
 module.exports = config;

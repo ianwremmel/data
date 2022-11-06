@@ -45,7 +45,11 @@ export function unmarshalField(
 
   let out = `item.${columnName}`;
   if (isDateType) {
-    out = `${out} ? new Date(${out}) : null`;
+    if (isNonNullType(fieldType.type)) {
+      out = `new Date(${out})`;
+    } else {
+      out = `${out} ? new Date(${out}) : null`;
+    }
   }
 
   if (isNonNullType(fieldType.type)) {

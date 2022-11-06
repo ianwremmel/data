@@ -70,12 +70,16 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
 
   assert(info?.outputFile, 'info.outputFile is required');
 
+  const isExample = !!process.env.IS_EXAMPLE;
+
   return {
     content,
     prepend: [
       `import {ConditionalCheckFailedException, ConsumedCapacity, ItemCollectionMetrics} from '@aws-sdk/client-dynamodb';`,
       `import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
-      `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '@ianwremmel/data'`,
+      isExample
+        ? `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '../../..'`
+        : `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '@ianwremmel/data'`,
       `import {v4 as uuidv4} from 'uuid'`,
       `import {ddbDocClient} from "${path.relative(
         path.resolve(process.cwd(), path.dirname(info.outputFile)),
