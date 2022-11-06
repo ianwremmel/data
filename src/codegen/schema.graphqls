@@ -23,6 +23,16 @@ generated automatically on create.
 directive @autoKey(field: String!) on OBJECT
 
 """
+Indicates this Model has a composite key generated from the specified fields.
+"""
+directive @compositeKey(
+  pkFields: [String!]!
+  pkPrefix: String
+  skFields: [String!]!
+  skPrefix: String
+) on OBJECT
+
+"""
 Indicates the field will be configured as the DynamoDB ttl field for this type.
 Always gets saved to a column named "ttl" to avoid conflicts in single-table
 entities that all might use different names

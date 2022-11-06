@@ -24,6 +24,8 @@ overrides:
       - '**/__mocks__/**/*'
     env:
       jest: true
+    rules:
+      require-jsdoc: off
 
   - files:
       - '**/*.graphql'

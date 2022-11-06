@@ -1,0 +1,24 @@
+enum Vendor {
+  AZURE_DEV_OPS
+  GITHUB
+  GITLAB
+}
+
+"""
+An object to track a user's logins
+"""
+type UserLogin implements Model & Node & Timestamped & Versioned
+  @compositeKey(
+    pkFields: ["vendor", "externalId"]
+    pkPrefix: "USER"
+    skFields: ["login"]
+    skPrefix: "LOGIN"
+  ) {
+  createdAt: Date!
+  externalId: String!
+  id: ID!
+  login: String!
+  updatedAt: Date!
+  version: Int!
+  vendor: Vendor!
+}

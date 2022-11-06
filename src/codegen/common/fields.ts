@@ -1,6 +1,7 @@
 import assert from 'assert';
+import {Key} from 'readline';
 
-import {GraphQLObjectType} from 'graphql';
+import {GraphQLObjectType, ConstDirectiveNode} from 'graphql';
 
 import {Nullable} from '../../types';
 
@@ -12,14 +13,38 @@ export interface KeyInfo {
 }
 
 /**
+ * Returns the composite key info for the given object type.
+ */
+function extractCompositeKeyInfo(
+  type: GraphQLObjectType,
+  directive: ConstDirectiveNode
+): KeyInfo {
+  return {
+    fields: new Set([]),
+    keyForCreate: {},
+    keyForReadAndUpdate: {},
+    omitForCreate: [],
+  };
+}
+
+/**
  * Parses out a types key fields and generates the necessary code for
  * marshalling/unmarshalling them.
  */
 export function extractKeyInfo(type: GraphQLObjectType): KeyInfo {
   const directive = type.astNode?.directives?.find(
-    (d) => d.name.value === 'autoKey'
+    (d) => d.name.value === 'autoKey' || d.name.value === 'compositeKey'
   );
-  assert(directive, `Expected type ${type.name} to have @autoKey directive`);
+
+  assert(
+    directive,
+    `Expected type ${type.name} to have an @autoKey or @compositeKey directive`
+  );
+
+  if (directive.name.value === 'compositeKey') {
+    return extractCompositeKeyInfo(type, directive);
+  }
+
   assert(directive.arguments, `Expected @autoKey directive to have arguments`);
   const directiveField = directive.arguments.find(
     (a) => a.name.value === 'field'
