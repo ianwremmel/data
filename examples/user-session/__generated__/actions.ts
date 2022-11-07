@@ -53,17 +53,29 @@ export interface QueryNodeArgs {
 
 /** SimpleModels are DynamoDB with a key schema that does not include a sort key. */
 export interface SimpleModel {
-  /** Set automatically when the item is first written */
   createdAt: Scalars['Date'];
   id: Scalars['ID'];
-  /** Set automatically when the item is updated */
   updatedAt: Scalars['Date'];
   version: Scalars['Int'];
 }
 
+/**
+ * Automatically adds a createdAt and updatedAt timestamp to the entity and sets
+ * them appropriately. The createdAt timestamp is only set on create, while the
+ * updatedAt timestamp is set on create and update.
+ */
+export interface Timestamped {
+  /** Set automatically when the item is first written */
+  createdAt: Scalars['Date'];
+  /** Set automatically when the item is updated */
+  updatedAt: Scalars['Date'];
+}
+
 /** A user session object. */
 export type UserSession = Node &
-  SimpleModel & {
+  SimpleModel &
+  Timestamped &
+  Versioned & {
     __typename?: 'UserSession';
     createdAt: Scalars['Date'];
     expires: Scalars['Date'];
@@ -73,10 +85,23 @@ export type UserSession = Node &
     version: Scalars['Int'];
   };
 
+/**
+ * Automatically adds a column to enable optimistic locking. This field shouldn't
+ * be manipulated directly, but may need to be passed around by the runtime in
+ * order to make updates.
+ */
+export interface Versioned {
+  version: Scalars['Int'];
+}
+
 export interface ResultType<T> {
   capacity: ConsumedCapacity;
   item: T;
   metrics: ItemCollectionMetrics | undefined;
+}
+
+export interface UserSessionPrimaryKey {
+  id: Scalars['ID'];
 }
 
 export type CreateUserSessionInput = Omit<
@@ -223,7 +248,7 @@ export type DeleteUserSessionOutput = ResultType<void>;
 
 /**  */
 export async function deleteUserSession(
-  id: DeleteUserSessionInput
+  primaryKey: UserSessionPrimaryKey
 ): Promise<DeleteUserSessionOutput> {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
@@ -237,7 +262,7 @@ export async function deleteUserSession(
             '#id': 'id',
           },
           Key: {
-            id,
+            id: primaryKey.id,
           },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
@@ -258,7 +283,7 @@ export async function deleteUserSession(
     };
   } catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('UserSession', id);
+      throw new NotFoundError('UserSession', primaryKey);
     }
     throw err;
   }
@@ -269,7 +294,7 @@ export type ReadUserSessionOutput = ResultType<UserSession>;
 
 /**  */
 export async function readUserSession(
-  id: ReadUserSessionInput
+  primaryKey: UserSessionPrimaryKey
 ): Promise<Readonly<ReadUserSessionOutput>> {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
@@ -278,7 +303,7 @@ export async function readUserSession(
     new GetCommand({
       ConsistentRead: true,
       Key: {
-        id,
+        id: primaryKey.id,
       },
       ReturnConsumedCapacity: 'INDEXES',
       TableName: tableName,
@@ -290,12 +315,14 @@ export async function readUserSession(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, () => new NotFoundError('UserSession', id));
+  assert(item, () => new NotFoundError('UserSession', primaryKey));
   assert(
     item._et === 'UserSession',
     () =>
       new DataIntegrityError(
-        `Expected ${id} to load a UserSession but loaded ${item._et} instead`
+        `Expected ${JSON.stringify(
+          primaryKey
+        )} to load a UserSession but loaded ${item._et} instead`
       )
   );
 
@@ -373,12 +400,11 @@ export async function readUserSession(
   };
 }
 
-export type TouchUserSessionInput = Scalars['ID'];
 export type TouchUserSessionOutput = ResultType<void>;
 
 /**  */
 export async function touchUserSession(
-  id: TouchUserSessionInput
+  primaryKey: UserSessionPrimaryKey
 ): Promise<TouchUserSessionOutput> {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
@@ -397,7 +423,7 @@ export async function touchUserSession(
             ':versionInc': 1,
           },
           Key: {
-            id,
+            id: primaryKey.id,
           },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
@@ -420,7 +446,7 @@ export async function touchUserSession(
     };
   } catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('UserSession', id);
+      throw new NotFoundError('UserSession', primaryKey);
     }
     throw err;
   }
@@ -564,11 +590,15 @@ export async function updateUserSession(
   } catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
       try {
-        const readResult = await readUserSession(input.id);
+        const readResult = await readUserSession(input);
       } catch {
-        throw new NotFoundError('UserSession', input.id);
+        throw new NotFoundError('UserSession', {
+          id: input.id,
+        });
       }
-      throw new OptimisticLockingError('UserSession', input.id);
+      throw new OptimisticLockingError('UserSession', {
+        id: input.id,
+      });
     }
     throw err;
   }

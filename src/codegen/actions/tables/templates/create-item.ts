@@ -10,6 +10,7 @@ export interface CreateItemTplInput {
   readonly ttlInfo: Nullable<TtlInfo>;
   readonly ean: readonly string[];
   readonly eav: readonly string[];
+  readonly key: readonly string[];
   readonly unmarshall: readonly string[];
   readonly updateExpressions: readonly string[];
 }
@@ -19,6 +20,7 @@ export function createItemTpl({
   ttlInfo,
   ean,
   eav,
+  key,
   unmarshall,
   updateExpressions,
 }: CreateItemTplInput) {
@@ -53,7 +55,7 @@ ${ean.map((e) => `        ${e},`).join('\n')}
 ${eav.map((e) => `        ${e},`).join('\n')}
       },
       Key: {
-        id: \`${typeName}#\${uuidv4()}\`,
+${key.map((k) => `        ${k},`).join('\n')}
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',

@@ -6,7 +6,9 @@ import {
   AddToSchemaResult,
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
-import {assertObjectType, GraphQLObjectType} from 'graphql';
+import {assertObjectType, GraphQLObjectType, isObjectType} from 'graphql';
+
+import {hasInterface} from '../common/helpers';
 
 import {ActionPluginConfig} from './config';
 import {
@@ -15,7 +17,7 @@ import {
   readItemTemplate,
   touchItemTemplate,
   updateItemTemplate,
-} from './tables/simple-table';
+} from './tables/table';
 
 /** @override */
 export function addToSchema(): AddToSchemaResult {
@@ -34,12 +36,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   const simpleTableTypes = Object.keys(typesMap)
     .filter((typeName) => {
       const type = typesMap[typeName];
-      const {astNode} = type;
-
-      return (
-        astNode?.kind === 'ObjectTypeDefinition' &&
-        astNode.interfaces?.map(({name}) => name.value).includes('SimpleModel')
-      );
+      return isObjectType(type) && hasInterface('SimpleModel', type);
     })
     .map((typeName) => {
       const objType = typesMap[typeName];
@@ -47,26 +44,30 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
       return objType;
     });
 
-  const content = simpleTableTypes
-    .map((t) => {
-      assertObjectType(t);
-      // I don't know why this has to be cast here, but not 6 lines up.
-      const objType: GraphQLObjectType = t as GraphQLObjectType;
-
-      return [
-        `export interface ResultType<T> {
+  const content = `export interface ResultType<T> {
   capacity: ConsumedCapacity;
   item: T;
   metrics: ItemCollectionMetrics | undefined;
-}`,
-        createItemTemplate(objType),
-        deleteItemTemplate(objType),
-        readItemTemplate(objType),
-        touchItemTemplate(objType),
-        updateItemTemplate(objType),
-      ].join('\n\n');
-    })
-    .join('\n');
+}
+
+${simpleTableTypes
+  .map((t) => {
+    assertObjectType(t);
+    // I don't know why this has to be cast here, but not 6 lines up.
+    const objType: GraphQLObjectType = t as GraphQLObjectType;
+
+    return [
+      `export interface ${objType.name}PrimaryKey {
+        id: Scalars['ID'];
+      }`,
+      createItemTemplate(objType),
+      deleteItemTemplate(objType),
+      readItemTemplate(objType),
+      touchItemTemplate(objType),
+      updateItemTemplate(objType),
+    ].join('\n\n');
+  })
+  .join('\n')}`;
 
   assert(info?.outputFile, 'info.outputFile is required');
 

@@ -23,17 +23,36 @@ entities that all might use different names
 directive @ttl(duration: String!) on FIELD_DEFINITION
 
 """
-SimpleModels are DynamoDB with a key schema that does not include a sort key.
+Automatically adds a createdAt and updatedAt timestamp to the entity and sets
+them appropriately. The createdAt timestamp is only set on create, while the
+updatedAt timestamp is set on create and update.
 """
-interface SimpleModel {
+interface Timestamped {
   """
   Set automatically when the item is first written
   """
   createdAt: Date!
-  id: ID!
   """
   Set automatically when the item is updated
   """
+  updatedAt: Date!
+}
+
+"""
+Automatically adds a column to enable optimistic locking. This field shouldn't
+be manipulated directly, but may need to be passed around by the runtime in
+order to make updates.
+"""
+interface Versioned {
+  version: Int!
+}
+
+"""
+SimpleModels are DynamoDB with a key schema that does not include a sort key.
+"""
+interface SimpleModel implements Timestamped & Versioned {
+  createdAt: Date!
+  id: ID!
   updatedAt: Date!
   version: Int!
 }

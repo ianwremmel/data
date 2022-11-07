@@ -1,6 +1,6 @@
 import assert from 'assert';
 
-import {GraphQLObjectType} from 'graphql/index';
+import {GraphQLObjectType} from 'graphql';
 
 import {Nullable} from '../../types';
 

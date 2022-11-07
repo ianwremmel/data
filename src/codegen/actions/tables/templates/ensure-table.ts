@@ -1,4 +1,4 @@
-import {GraphQLObjectType} from 'graphql/index';
+import {GraphQLObjectType} from 'graphql';
 import {snakeCase} from 'lodash';
 
 /**
