@@ -59,7 +59,7 @@ describe('createUserSession()', () => {
     expect(result.item.updatedAt.getTime()).not.toBeNaN();
 
     // cleanup, not part of test
-    await deleteUserSession(result.item.id);
+    await deleteUserSession(result.item);
   });
 });
 
@@ -67,7 +67,7 @@ describe('deleteUserSession()', () => {
   it('deletes a record', async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
 
-    const deleteResult = await deleteUserSession(result.item.id);
+    const deleteResult = await deleteUserSession(result.item);
     expect(deleteResult).toMatchInlineSnapshot(
       {capacity: {TableName: expect.any(String)}},
       `
@@ -92,13 +92,13 @@ describe('deleteUserSession()', () => {
     );
 
     await expect(
-      async () => await readUserSession(result.item.id)
+      async () => await readUserSession(result.item)
     ).rejects.toThrow(NotFoundError);
   });
 
   it('throws an error if the record does not exist', async () => {
     await expect(
-      async () => await deleteUserSession('some-id')
+      async () => await deleteUserSession({id: 'some-id'})
     ).rejects.toThrow(NotFoundError);
   });
 });
@@ -107,7 +107,7 @@ describe('readUserSession()', () => {
   it('reads a record', async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
 
-    const readResult = await readUserSession(result.item.id);
+    const readResult = await readUserSession(result.item);
     expect(readResult).toMatchInlineSnapshot(
       userSessionMatcher,
       `
@@ -141,13 +141,13 @@ describe('readUserSession()', () => {
     );
 
     // cleanup, not part of test
-    await deleteUserSession(result.item.id);
+    await deleteUserSession(result.item);
   });
 
   it('throws an error if the record does not exist', async () => {
-    await expect(async () => await readUserSession('some-id')).rejects.toThrow(
-      NotFoundError
-    );
+    await expect(
+      async () => await readUserSession({id: 'some-id'})
+    ).rejects.toThrow(NotFoundError);
   });
 });
 
@@ -155,7 +155,7 @@ describe('touchUserSession()', () => {
   it("updates a record's createdAt and extends its ttl", async () => {
     const result = await createUserSession({session: {foo: 'foo'}});
 
-    const readResult = await readUserSession(result.item.id);
+    const readResult = await readUserSession(result.item);
     expect(readResult).toMatchInlineSnapshot(
       userSessionMatcher,
       `
@@ -188,8 +188,8 @@ describe('touchUserSession()', () => {
     `
     );
 
-    await touchUserSession(result.item.id);
-    const touchResult = await readUserSession(result.item.id);
+    await touchUserSession(result.item);
+    const touchResult = await readUserSession(result.item);
     expect(touchResult).toMatchInlineSnapshot(
       userSessionMatcher,
       `
@@ -228,13 +228,13 @@ describe('touchUserSession()', () => {
     expect(readResult.item.expires).not.toEqual(touchResult.item.expires);
 
     // cleanup, not part of test
-    await deleteUserSession(result.item.id);
+    await deleteUserSession(result.item);
   });
 
   it('throws an error if the record does not exist', async () => {
-    await expect(async () => await touchUserSession('some-id')).rejects.toThrow(
-      NotFoundError
-    );
+    await expect(
+      async () => await touchUserSession({id: 'some-id'})
+    ).rejects.toThrow(NotFoundError);
   });
 });
 
@@ -311,7 +311,7 @@ describe('updateUserSession()', () => {
     );
     expect(updateResult.item.session).toEqual({foo: 'bar'});
 
-    const readResult = await readUserSession(createResult.item.id);
+    const readResult = await readUserSession(createResult.item);
     expect(readResult).toMatchInlineSnapshot(
       userSessionMatcher,
       `
@@ -349,7 +349,7 @@ describe('updateUserSession()', () => {
     expect(readResult.item.updatedAt).toEqual(updateResult.item.updatedAt);
 
     // cleanup, not part of test
-    await deleteUserSession(createResult.item.id);
+    await deleteUserSession(createResult.item);
   });
 
   it('throws an error if the record does not exist', async () => {
@@ -379,6 +379,6 @@ describe('updateUserSession()', () => {
     ).rejects.toThrow(OptimisticLockingError);
 
     // cleanup, not part of test
-    await deleteUserSession(createResult.item.id);
+    await deleteUserSession(createResult.item);
   });
 });

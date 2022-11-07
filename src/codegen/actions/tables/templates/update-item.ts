@@ -10,6 +10,8 @@ export interface UpdateItemTplInput {
   readonly ttlInfo: Nullable<TtlInfo>;
   readonly ean: readonly string[];
   readonly eav: readonly string[];
+  readonly key: readonly string[];
+  readonly inputToPrimaryKey: readonly string[];
   readonly unmarshall: readonly string[];
   readonly updateExpressions: readonly string[];
 }
@@ -20,6 +22,8 @@ export function updateItemTpl({
   ttlInfo,
   ean,
   eav,
+  inputToPrimaryKey,
+  key,
   unmarshall,
   updateExpressions,
 }: UpdateItemTplInput) {
@@ -51,7 +55,7 @@ ${ean.map((e) => `        ${e},`).join('\n')}
 ${eav.map((e) => `        ${e},`).join('\n')}
       },
       Key: {
-        id: input.id,
+${key.map((k) => `        ${k},`).join('\n')}
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -76,12 +80,16 @@ ${unmarshall.map((item) => `        ${item},`).join('\n')}
   catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
       try {
-        const readResult = await read${typeName}(input.id);
+        const readResult = await read${typeName}(input);
       }
       catch {
-        throw new NotFoundError('${typeName}', input.id);
+        throw new NotFoundError('${typeName}', {
+${inputToPrimaryKey.map((item) => `        ${item},`).join('\n')}
+        });
       }
-      throw new OptimisticLockingError('${typeName}', input.id);
+      throw new OptimisticLockingError('${typeName}', {
+${inputToPrimaryKey.map((item) => `      ${item},`).join('\n')}
+      });
     }
     throw err;
   }

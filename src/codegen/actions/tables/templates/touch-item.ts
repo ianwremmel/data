@@ -5,6 +5,7 @@ import {ensureTableTemplate} from './ensure-table';
 export interface TouchItemTplInput {
   readonly ean: readonly string[];
   readonly eav: readonly string[];
+  readonly key: readonly string[];
   readonly objType: GraphQLObjectType;
   readonly updateExpressions: readonly string[];
 }
@@ -13,35 +14,35 @@ export interface TouchItemTplInput {
 export function touchItemTpl({
   ean,
   eav,
+  key,
   objType,
   updateExpressions,
 }: TouchItemTplInput) {
   const typeName = objType.name;
 
-  const inputTypeName = `Touch${typeName}Input`;
   const outputTypeName = `Touch${typeName}Output`;
+  const primaryKeyType = `${objType.name}PrimaryKey`;
 
-  // Note that if we want this to return the updated item, we'll 1. want do run
+  // Note that if we want this to return the updated item, we'll 1. want to run
   // in a transaction (if possible) and 2. use  a consistent read (even
   // @consistent hasn't been applied to this Model).
   return `
-export type ${inputTypeName} = Scalars['ID'];
 export type ${outputTypeName} = ResultType<void>;
 
 /**  */
-export async function touch${typeName}(id: ${inputTypeName}): Promise<${outputTypeName}> {
+export async function touch${typeName}(primaryKey: ${primaryKeyType}): Promise<${outputTypeName}> {
 ${ensureTableTemplate(objType)}
   try {
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand({
       ConditionExpression: 'attribute_exists(#id)',
       ExpressionAttributeNames: {
-  ${ean.map((e) => `        ${e},`).join('\n')}
+${ean.map((e) => `        ${e},`).join('\n')}
       },
       ExpressionAttributeValues: {
-  ${eav.map((e) => `        ${e},`).join('\n')}
+${eav.map((e) => `        ${e},`).join('\n')}
       },
       Key: {
-        id,
+${key.map((k) => `        ${k},`).join('\n')}
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -60,7 +61,7 @@ ${ensureTableTemplate(objType)}
   }
   catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('${typeName}', id);
+      throw new NotFoundError('${typeName}', primaryKey);
     }
     throw err;
   }

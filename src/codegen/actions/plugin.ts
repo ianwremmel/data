@@ -44,26 +44,30 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
       return objType;
     });
 
-  const content = simpleTableTypes
-    .map((t) => {
-      assertObjectType(t);
-      // I don't know why this has to be cast here, but not 6 lines up.
-      const objType: GraphQLObjectType = t as GraphQLObjectType;
-
-      return [
-        `export interface ResultType<T> {
+  const content = `export interface ResultType<T> {
   capacity: ConsumedCapacity;
   item: T;
   metrics: ItemCollectionMetrics | undefined;
-}`,
-        createItemTemplate(objType),
-        deleteItemTemplate(objType),
-        readItemTemplate(objType),
-        touchItemTemplate(objType),
-        updateItemTemplate(objType),
-      ].join('\n\n');
-    })
-    .join('\n');
+}
+
+${simpleTableTypes
+  .map((t) => {
+    assertObjectType(t);
+    // I don't know why this has to be cast here, but not 6 lines up.
+    const objType: GraphQLObjectType = t as GraphQLObjectType;
+
+    return [
+      `export interface ${objType.name}PrimaryKey {
+        id: Scalars['ID'];
+      }`,
+      createItemTemplate(objType),
+      deleteItemTemplate(objType),
+      readItemTemplate(objType),
+      touchItemTemplate(objType),
+      updateItemTemplate(objType),
+    ].join('\n\n');
+  })
+  .join('\n')}`;
 
   assert(info?.outputFile, 'info.outputFile is required');
 

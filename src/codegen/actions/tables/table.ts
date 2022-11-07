@@ -18,6 +18,7 @@ export function createItemTemplate(objType: GraphQLObjectType) {
 
   const ean: string[] = [];
   const eav: string[] = [];
+  const key: string[] = [`id: \`${objType.name}#\${uuidv4()}\``];
   const unmarshall: string[] = [];
   const updateExpressions: string[] = [];
 
@@ -70,6 +71,7 @@ export function createItemTemplate(objType: GraphQLObjectType) {
   return createItemTpl({
     ean,
     eav,
+    key,
     objType,
     ttlInfo,
     unmarshall,
@@ -81,7 +83,9 @@ export function createItemTemplate(objType: GraphQLObjectType) {
  * Generates the deleteItem function for a table
  */
 export function deleteItemTemplate(objType: GraphQLObjectType) {
-  return deleteItemTpl({objType});
+  const ean: string[] = [`'#id': 'id'`];
+  const key = [`id: primaryKey.id`];
+  return deleteItemTpl({ean, key, objType});
 }
 
 /**
@@ -91,6 +95,7 @@ export function readItemTemplate(objType: GraphQLObjectType) {
   const ttlInfo = extractTtlInfo(objType);
   const consistent = hasDirective('consistent', objType);
 
+  const key = [`id: primaryKey.id`];
   const unmarshall: string[] = [];
 
   const fields = objType.getFields();
@@ -116,7 +121,7 @@ export function readItemTemplate(objType: GraphQLObjectType) {
 
   unmarshall.sort();
 
-  return readItemTpl({consistent, objType, unmarshall});
+  return readItemTpl({consistent, key, objType, unmarshall});
 }
 
 /**
@@ -127,6 +132,7 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
 
   const ean: string[] = [];
   const eav: string[] = [];
+  const key: string[] = [`id: primaryKey.id`];
   const updateExpressions: string[] = [];
 
   const fieldNames = Object.keys(objType.getFields()).sort();
@@ -149,7 +155,7 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
   eav.sort();
   updateExpressions.sort();
 
-  return touchItemTpl({ean, eav, objType, updateExpressions});
+  return touchItemTpl({ean, eav, key, objType, updateExpressions});
 }
 
 /**
@@ -160,6 +166,8 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
 
   const ean: string[] = [];
   const eav: string[] = [];
+  const inputToPrimaryKey = [`id: input.id`];
+  const key: string[] = [`id: input.id`];
   const unmarshall: string[] = [];
   const updateExpressions: string[] = [];
 
@@ -208,6 +216,8 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
   return updateItemTpl({
     ean,
     eav,
+    inputToPrimaryKey,
+    key,
     objType,
     ttlInfo,
     unmarshall,

@@ -2,11 +2,13 @@
  * Thrown when the requested item is out of date. use readUserSession to ge the
  * latest version
  */
-export class OptimisticLockingError extends Error {
+export class OptimisticLockingError<PK extends object> extends Error {
   /** constructor */
-  constructor(typeName: string, id: string) {
+  constructor(typeName: string, primaryKey: PK) {
     super(
-      `${typeName} with id ${id} is out of date. Please refresh and try again.`
+      `${typeName} with id ${JSON.stringify(
+        primaryKey
+      )} is out of date. Please refresh and try again.`
     );
   }
 }
