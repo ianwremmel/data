@@ -30,7 +30,7 @@ export function touchItemTpl({
 export type ${outputTypeName} = ResultType<void>;
 
 /**  */
-export async function touch${typeName}(primaryKey: ${primaryKeyType}): Promise<${outputTypeName}> {
+export async function touch${typeName}(input: ${primaryKeyType}): Promise<${outputTypeName}> {
 ${ensureTableTemplate(objType)}
   try {
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand({
@@ -61,7 +61,7 @@ ${key.map((k) => `        ${k},`).join('\n')}
   }
   catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('${typeName}', primaryKey);
+      throw new NotFoundError('${typeName}', input);
     }
     throw err;
   }

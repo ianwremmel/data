@@ -84,7 +84,7 @@ export function createItemTemplate(objType: GraphQLObjectType) {
  */
 export function deleteItemTemplate(objType: GraphQLObjectType) {
   const ean: string[] = [`'#id': 'id'`];
-  const key = [`id: primaryKey.id`];
+  const key = [`id: input.id`];
   return deleteItemTpl({ean, key, objType});
 }
 
@@ -95,7 +95,7 @@ export function readItemTemplate(objType: GraphQLObjectType) {
   const ttlInfo = extractTtlInfo(objType);
   const consistent = hasDirective('consistent', objType);
 
-  const key = [`id: primaryKey.id`];
+  const key = [`id: input.id`];
   const unmarshall: string[] = [];
 
   const fields = objType.getFields();
@@ -132,7 +132,7 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
 
   const ean: string[] = [];
   const eav: string[] = [];
-  const key: string[] = [`id: primaryKey.id`];
+  const key: string[] = [`id: input.id`];
   const updateExpressions: string[] = [];
 
   const fieldNames = Object.keys(objType.getFields()).sort();

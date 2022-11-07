@@ -248,7 +248,7 @@ export type DeleteUserSessionOutput = ResultType<void>;
 
 /**  */
 export async function deleteUserSession(
-  primaryKey: UserSessionPrimaryKey
+  input: UserSessionPrimaryKey
 ): Promise<DeleteUserSessionOutput> {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
@@ -262,7 +262,7 @@ export async function deleteUserSession(
             '#id': 'id',
           },
           Key: {
-            id: primaryKey.id,
+            id: input.id,
           },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
@@ -283,7 +283,7 @@ export async function deleteUserSession(
     };
   } catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('UserSession', primaryKey);
+      throw new NotFoundError('UserSession', input);
     }
     throw err;
   }
@@ -294,7 +294,7 @@ export type ReadUserSessionOutput = ResultType<UserSession>;
 
 /**  */
 export async function readUserSession(
-  primaryKey: UserSessionPrimaryKey
+  input: UserSessionPrimaryKey
 ): Promise<Readonly<ReadUserSessionOutput>> {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
@@ -303,7 +303,7 @@ export async function readUserSession(
     new GetCommand({
       ConsistentRead: true,
       Key: {
-        id: primaryKey.id,
+        id: input.id,
       },
       ReturnConsumedCapacity: 'INDEXES',
       TableName: tableName,
@@ -315,14 +315,14 @@ export async function readUserSession(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, () => new NotFoundError('UserSession', primaryKey));
+  assert(item, () => new NotFoundError('UserSession', input));
   assert(
     item._et === 'UserSession',
     () =>
       new DataIntegrityError(
-        `Expected ${JSON.stringify(
-          primaryKey
-        )} to load a UserSession but loaded ${item._et} instead`
+        `Expected ${JSON.stringify(input)} to load a UserSession but loaded ${
+          item._et
+        } instead`
       )
   );
 
@@ -404,7 +404,7 @@ export type TouchUserSessionOutput = ResultType<void>;
 
 /**  */
 export async function touchUserSession(
-  primaryKey: UserSessionPrimaryKey
+  input: UserSessionPrimaryKey
 ): Promise<TouchUserSessionOutput> {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
@@ -423,7 +423,7 @@ export async function touchUserSession(
             ':versionInc': 1,
           },
           Key: {
-            id: primaryKey.id,
+            id: input.id,
           },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
@@ -446,7 +446,7 @@ export async function touchUserSession(
     };
   } catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('UserSession', primaryKey);
+      throw new NotFoundError('UserSession', input);
     }
     throw err;
   }
