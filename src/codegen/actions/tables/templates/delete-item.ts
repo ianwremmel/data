@@ -12,12 +12,10 @@ export interface DeleteItemTplInput {
 export function deleteItemTpl({ean, key, objType}: DeleteItemTplInput) {
   const typeName = objType.name;
 
-  const inputTypeName = `Delete${typeName}Input`;
   const outputTypeName = `Delete${typeName}Output`;
   const primaryKeyType = `${objType.name}PrimaryKey`;
 
   return `
-export type ${inputTypeName} = Scalars['ID'];
 export type ${outputTypeName} = ResultType<void>;
 
 /**  */

@@ -18,12 +18,10 @@ export function readItemTpl({
 }: ReadItemTplInput) {
   const typeName = objType.name;
 
-  const inputTypeName = `Read${typeName}Input`;
   const outputTypeName = `Read${typeName}Output`;
   const primaryKeyType = `${objType.name}PrimaryKey`;
 
   return `
-export type ${inputTypeName} = Scalars['ID'];
 export type ${outputTypeName} = ResultType<${typeName}>;
 
 /**  */

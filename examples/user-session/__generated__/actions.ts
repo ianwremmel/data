@@ -242,7 +242,6 @@ export async function createUserSession(
   };
 }
 
-export type DeleteUserSessionInput = Scalars['ID'];
 export type DeleteUserSessionOutput = ResultType<void>;
 
 /**  */
@@ -288,7 +287,6 @@ export async function deleteUserSession(
   }
 }
 
-export type ReadUserSessionInput = Scalars['ID'];
 export type ReadUserSessionOutput = ResultType<UserSession>;
 
 /**  */
