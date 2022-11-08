@@ -27,7 +27,7 @@ export type ${inputTypeName} = Scalars['ID'];
 export type ${outputTypeName} = ResultType<${typeName}>;
 
 /**  */
-export async function read${typeName}(primaryKey: ${primaryKeyType}): Promise<Readonly<${outputTypeName}>> {
+export async function read${typeName}(input: ${primaryKeyType}): Promise<Readonly<${outputTypeName}>> {
 ${ensureTableTemplate(objType)}
 
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(new GetCommand({
@@ -41,8 +41,8 @@ ${key.map((k) => `        ${k},`).join('\n')}
 
   assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
-  assert(item, () => new NotFoundError('${typeName}', primaryKey));
-  assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected \${JSON.stringify(primaryKey)} to load a ${typeName} but loaded \${item._et} instead\`));
+  assert(item, () => new NotFoundError('${typeName}', input));
+  assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected \${JSON.stringify(input)} to load a ${typeName} but loaded \${item._et} instead\`));
 
   return {
     capacity,

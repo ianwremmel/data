@@ -16,11 +16,27 @@ might require it.
 directive @consistent on OBJECT
 
 """
+Indicates the Model in question must use a partition key without a primary key,
+have exactly one field as its main identifier, and that that field will be
+generated automatically on create.
+"""
+directive @autoKey(field: String!) on OBJECT
+
+"""
 Indicates the field will be configured as the DynamoDB ttl field for this type.
 Always gets saved to a column named "ttl" to avoid conflicts in single-table
 entities that all might use different names
 """
 directive @ttl(duration: String!) on FIELD_DEFINITION
+
+"""
+Models are DynamoDB with a key schema that does not include a sort key.
+"""
+interface Model implements Timestamped & Versioned {
+  createdAt: Date!
+  updatedAt: Date!
+  version: Int!
+}
 
 """
 Automatically adds a createdAt and updatedAt timestamp to the entity and sets
@@ -44,15 +60,5 @@ be manipulated directly, but may need to be passed around by the runtime in
 order to make updates.
 """
 interface Versioned {
-  version: Int!
-}
-
-"""
-SimpleModels are DynamoDB with a key schema that does not include a sort key.
-"""
-interface SimpleModel implements Timestamped & Versioned {
-  createdAt: Date!
-  id: ID!
-  updatedAt: Date!
   version: Int!
 }

@@ -21,7 +21,7 @@ export type ${inputTypeName} = Scalars['ID'];
 export type ${outputTypeName} = ResultType<void>;
 
 /**  */
-export async function delete${typeName}(primaryKey: ${primaryKeyType}): Promise<${outputTypeName}> {
+export async function delete${typeName}(input: ${primaryKeyType}): Promise<${outputTypeName}> {
 ${ensureTableTemplate(objType)}
 
   try {
@@ -49,7 +49,7 @@ ${key.map((k) => `        ${k},`).join('\n')}
   }
   catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('${typeName}', primaryKey);
+      throw new NotFoundError('${typeName}', input);
     }
     throw err;
   }
