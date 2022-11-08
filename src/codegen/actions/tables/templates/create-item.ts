@@ -1,7 +1,7 @@
 import {GraphQLObjectType} from 'graphql';
 
 import {Nullable} from '../../../../types';
-import {TtlInfo} from '../../../common/fields';
+import {KeyInfo, TtlInfo} from '../../../common/fields';
 
 import {ensureTableTemplate} from './ensure-table';
 
@@ -11,6 +11,7 @@ export interface CreateItemTplInput {
   readonly ean: readonly string[];
   readonly eav: readonly string[];
   readonly key: readonly string[];
+  readonly keyInfo: KeyInfo;
   readonly unmarshall: readonly string[];
   readonly updateExpressions: readonly string[];
 }
@@ -21,6 +22,7 @@ export function createItemTpl({
   ean,
   eav,
   key,
+  keyInfo,
   unmarshall,
   updateExpressions,
 }: CreateItemTplInput) {
@@ -29,11 +31,13 @@ export function createItemTpl({
   const inputTypeName = `Create${typeName}Input`;
   const omitInputFields = [
     'createdAt',
-    'id',
     'updatedAt',
+    ...keyInfo.omitForCreate,
     ...(ttlInfo ? [ttlInfo.fieldName] : []),
     'version',
-  ].map((f) => `'${f}'`);
+  ]
+    .map((f) => `'${f}'`)
+    .sort();
   const outputTypeName = `Create${typeName}Output`;
 
   return `

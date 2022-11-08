@@ -33,10 +33,10 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
 ) => {
   const typesMap = schema.getTypeMap();
 
-  const simpleTableTypes = Object.keys(typesMap)
+  const tableTypes = Object.keys(typesMap)
     .filter((typeName) => {
       const type = typesMap[typeName];
-      return isObjectType(type) && hasInterface('SimpleModel', type);
+      return isObjectType(type) && hasInterface('Model', type);
     })
     .map((typeName) => {
       const objType = typesMap[typeName];
@@ -50,7 +50,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   metrics: ItemCollectionMetrics | undefined;
 }
 
-${simpleTableTypes
+${tableTypes
   .map((t) => {
     assertObjectType(t);
     // I don't know why this has to be cast here, but not 6 lines up.

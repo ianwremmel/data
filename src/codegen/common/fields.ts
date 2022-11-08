@@ -4,6 +4,47 @@ import {GraphQLObjectType} from 'graphql';
 
 import {Nullable} from '../../types';
 
+export interface KeyInfo {
+  readonly fields: Set<string>;
+  readonly omitForCreate: readonly string[];
+  readonly keyForCreate: Record<string, string>;
+  readonly keyForReadAndUpdate: Record<string, string>;
+}
+
+/**
+ * Parses out a types key fields and generates the necessary code for
+ * marshalling/unmarshalling them.
+ */
+export function extractKeyInfo(type: GraphQLObjectType): KeyInfo {
+  const directive = type.astNode?.directives?.find(
+    (d) => d.name.value === 'autoKey'
+  );
+  assert(directive, `Expected type ${type.name} to have @autoKey directive`);
+  assert(directive.arguments, `Expected @autoKey directive to have arguments`);
+  const directiveField = directive.arguments.find(
+    (a) => a.name.value === 'field'
+  );
+  assert(
+    directiveField,
+    `Expected @autoKey directive to have argument "fields"`
+  );
+
+  const field =
+    directiveField.value.kind === 'StringValue' && directiveField.value.value;
+  assert(field, `Expected @autoKey directive to have argument "field"`);
+
+  return {
+    fields: new Set([field]),
+    keyForCreate: {
+      [field]: `id: \`${type.name}#\${uuidv4()}\``,
+    },
+    keyForReadAndUpdate: {
+      [field]: `${field}: input.${field}`,
+    },
+    omitForCreate: [field],
+  };
+}
+
 export interface TtlInfo {
   readonly duration: number;
   readonly fieldName: string;

@@ -21,10 +21,10 @@ export function addToSchema(): AddToSchemaResult {
 export const plugin: PluginFunction<CloudformationPluginConfig> = (schema) => {
   const typesMap = schema.getTypeMap();
 
-  const simpleTableTypes = Object.keys(typesMap)
+  const tableTypes = Object.keys(typesMap)
     .filter((typeName) => {
       const type = typesMap[typeName];
-      return isObjectType(type) && hasInterface('SimpleModel', type);
+      return isObjectType(type) && hasInterface('Model', type);
     })
     .map((typeName) => {
       const objType = typesMap[typeName];
@@ -48,7 +48,7 @@ Globals:
     Environment:
       Variables:
         ### Generated Simple Table Name Environment Variables ###
-${simpleTableTypes
+${tableTypes
   .map(
     (type) =>
       `        TABLE_${snakeCase(type.name).toUpperCase()}: !Ref Table${
@@ -60,7 +60,7 @@ ${simpleTableTypes
 
 Outputs:
   ### Generated Simple Table Name Outputs ###
-${simpleTableTypes
+${tableTypes
   .map(
     (type) => `  Table${type.name}:
     Description: The name of the DynamoDB table for ${type.name}
@@ -84,7 +84,7 @@ Parameters:
 
 Resources:
   ### Generated Simple Table Resources ###
-${simpleTableTypes
+${tableTypes
   .map((type) => {
     const tableName = `Table${type.name}`;
     const idField = 'id';

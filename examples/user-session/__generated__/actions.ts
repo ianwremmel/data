@@ -35,6 +35,13 @@ export interface Scalars {
   JSONObject: Record<string, unknown>;
 }
 
+/** Models are DynamoDB with a key schema that does not include a sort key. */
+export interface Model {
+  createdAt: Scalars['Date'];
+  updatedAt: Scalars['Date'];
+  version: Scalars['Int'];
+}
+
 /** The Node interface */
 export interface Node {
   id: Scalars['ID'];
@@ -51,14 +58,6 @@ export interface QueryNodeArgs {
   id: Scalars['ID'];
 }
 
-/** SimpleModels are DynamoDB with a key schema that does not include a sort key. */
-export interface SimpleModel {
-  createdAt: Scalars['Date'];
-  id: Scalars['ID'];
-  updatedAt: Scalars['Date'];
-  version: Scalars['Int'];
-}
-
 /**
  * Automatically adds a createdAt and updatedAt timestamp to the entity and sets
  * them appropriately. The createdAt timestamp is only set on create, while the
@@ -72,8 +71,8 @@ export interface Timestamped {
 }
 
 /** A user session object. */
-export type UserSession = Node &
-  SimpleModel &
+export type UserSession = Model &
+  Node &
   Timestamped &
   Versioned & {
     __typename?: 'UserSession';
@@ -106,7 +105,7 @@ export interface UserSessionPrimaryKey {
 
 export type CreateUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'id' | 'updatedAt' | 'expires' | 'version'
+  'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
 >;
 export type CreateUserSessionOutput = ResultType<UserSession>;
 /**  */
@@ -454,7 +453,7 @@ export async function touchUserSession(
 
 export type UpdateUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'updatedAt' | 'expires'
+  'createdAt' | 'expires' | 'updatedAt'
 >;
 export type UpdateUserSessionOutput = ResultType<UserSession>;
 

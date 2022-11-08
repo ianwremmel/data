@@ -1,7 +1,7 @@
 import {GraphQLObjectType} from 'graphql';
 import {snakeCase} from 'lodash';
 
-import {extractTtlInfo} from '../../common/fields';
+import {extractKeyInfo, extractTtlInfo} from '../../common/fields';
 import {hasDirective, unmarshalField} from '../../common/helpers';
 
 import {createItemTpl} from './templates/create-item';
@@ -18,7 +18,7 @@ export function createItemTemplate(objType: GraphQLObjectType) {
 
   const ean: string[] = [];
   const eav: string[] = [];
-  const key: string[] = [`id: \`${objType.name}#\${uuidv4()}\``];
+  const key: string[] = [];
   const unmarshall: string[] = [];
   const updateExpressions: string[] = [];
 
@@ -29,11 +29,14 @@ export function createItemTemplate(objType: GraphQLObjectType) {
   eav.push(`':entity': '${objType.name}'`);
   updateExpressions.push(`#entity = :entity`);
 
+  const keyInfo = extractKeyInfo(objType);
+
   for (const fieldName of fieldNames) {
     const field = fields[fieldName];
 
-    if (fieldName === 'id') {
-      ean.push(`'#id': 'id'`);
+    if (keyInfo.fields.has(fieldName)) {
+      ean.push(`'#${fieldName}': '${fieldName}'`);
+      key.push(keyInfo.keyForCreate[fieldName]);
       unmarshall.push(unmarshalField(field));
     } else if (fieldName === 'version') {
       ean.push(`'#version': '_v'`);
@@ -72,6 +75,7 @@ export function createItemTemplate(objType: GraphQLObjectType) {
     ean,
     eav,
     key,
+    keyInfo,
     objType,
     ttlInfo,
     unmarshall,
@@ -101,10 +105,12 @@ export function readItemTemplate(objType: GraphQLObjectType) {
   const fields = objType.getFields();
   const fieldNames = Object.keys(fields).sort();
 
+  const keyInfo = extractKeyInfo(objType);
+
   for (const fieldName of fieldNames) {
     const field = fields[fieldName];
 
-    if (fieldName === 'id') {
+    if (keyInfo.fields.has(fieldName)) {
       unmarshall.push(unmarshalField(field));
     } else if (fieldName === 'version') {
       unmarshall.push(unmarshalField(field, '_v'));
@@ -137,9 +143,11 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
 
   const fieldNames = Object.keys(objType.getFields()).sort();
 
+  const keyInfo = extractKeyInfo(objType);
+
   for (const fieldName of fieldNames) {
-    if (fieldName === 'id') {
-      ean.push(`'#id': 'id'`);
+    if (keyInfo.fields.has(fieldName)) {
+      ean.push(`'#${fieldName}': '${fieldName}'`);
     } else if (fieldName === 'version') {
       ean.push(`'#version': '_v'`);
       eav.push(`':versionInc': 1`);
@@ -166,19 +174,23 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
 
   const ean: string[] = [];
   const eav: string[] = [];
-  const inputToPrimaryKey = [`id: input.id`];
-  const key: string[] = [`id: input.id`];
+  const inputToPrimaryKey: string[] = [];
+  const key: string[] = [];
   const unmarshall: string[] = [];
   const updateExpressions: string[] = [];
 
   const fields = objType.getFields();
   const fieldNames = Object.keys(fields).sort();
 
+  const keyInfo = extractKeyInfo(objType);
+
   for (const fieldName of fieldNames) {
     const field = fields[fieldName];
 
-    if (fieldName === 'id') {
-      ean.push(`'#id': 'id'`);
+    if (keyInfo.fields.has(fieldName)) {
+      ean.push(`'#${fieldName}': '${fieldName}'`);
+      inputToPrimaryKey.push(keyInfo.keyForReadAndUpdate[fieldName]);
+      key.push(keyInfo.keyForReadAndUpdate[fieldName]);
       unmarshall.push(unmarshalField(field));
     } else if (fieldName === ttlInfo?.fieldName) {
       ean.push(`'#ttl': 'ttl'`);

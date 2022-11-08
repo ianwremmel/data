@@ -34,7 +34,9 @@ export function updateItemTpl({
     'createdAt',
     'updatedAt',
     ...(ttlInfo ? [ttlInfo.fieldName] : []),
-  ].map((f) => `'${f}'`);
+  ]
+    .map((f) => `'${f}'`)
+    .sort();
   const outputTypeName = `Update${typeName}Output`;
 
   return `
