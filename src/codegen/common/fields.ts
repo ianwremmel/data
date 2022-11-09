@@ -4,6 +4,8 @@ import {GraphQLObjectType} from 'graphql';
 
 import {Nullable} from '../../types';
 
+import {getOptionalArg} from './helpers';
+
 export interface TtlInfo {
   readonly duration: number;
   readonly fieldName: string;
@@ -29,9 +31,12 @@ export function extractTtlInfo(type: GraphQLObjectType): Nullable<TtlInfo> {
   const fieldName = field?.name.value;
   const directive = field.directives?.find((d) => d.name.value === 'ttl');
 
-  const arg = directive?.arguments?.find((a) => a.name.value === 'duration');
+  const arg = getOptionalArg('duration', directive);
 
-  assert(arg?.value.kind === 'StringValue', 'ttl duration must be a string');
+  assert(
+    arg?.value.kind === 'StringValue',
+    `ttl duration must be a string, got ${arg?.value.kind}`
+  );
   const duration = arg.value.value;
 
   const durationUnit = duration?.slice(-1);

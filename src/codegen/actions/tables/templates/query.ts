@@ -8,7 +8,12 @@ import {
 } from 'graphql';
 
 import {extractTtlInfo} from '../../../common/fields';
-import {hasDirective, unmarshalField} from '../../../common/helpers';
+import {
+  getArg,
+  getOptionalArg,
+  hasDirective,
+  unmarshalField,
+} from '../../../common/helpers';
 import {extractKeyInfo} from '../../../common/keys';
 
 import {ensureTableTemplate} from './ensure-table';
@@ -26,8 +31,7 @@ function fieldNamesToTypes(
     `Expected type ${type.name} to have an @compositeKey directive`
   );
 
-  const arg = directive?.arguments?.find((a) => a.name.value === argName);
-  assert(arg, `Expected @compositeKey directive to have argument "${argName}"`);
+  const arg = getArg(argName, directive);
   assert(
     arg.value.kind === 'ListValue',
     `Expected @compositeKey directive argument "${argName}" to be a list`
@@ -71,9 +75,7 @@ function getPrefix(keyName: string, type: GraphQLObjectType): string {
     `Expected type ${type.name} to have an @compositeKey directive`
   );
 
-  const prefix = directive.arguments?.find(
-    (arg) => arg.name.value === `${keyName}Prefix`
-  );
+  const prefix = getOptionalArg(`${keyName}Prefix`, directive);
 
   if (!prefix) {
     return '';
@@ -81,7 +83,7 @@ function getPrefix(keyName: string, type: GraphQLObjectType): string {
 
   assert(
     prefix.value.kind === 'StringValue',
-    `Expected @compositeKey directive argument "${keyName}Prefix" to be a string`
+    `Expected @compositeKey directive argument "${keyName}Prefix" to be a string, but got ${prefix.value.kind}`
   );
 
   return prefix.value.value;

@@ -1,10 +1,29 @@
+import assert from 'assert';
+
 import {
   GraphQLField,
   GraphQLObjectType,
   isNonNullType,
   isScalarType,
 } from 'graphql';
+import {ConstDirectiveNode} from 'graphql/index';
 import {snakeCase} from 'lodash';
+
+/** Gets the specified argument from the given directive. */
+export function getArg(name: string, directive: ConstDirectiveNode) {
+  assert(
+    directive.arguments,
+    `Expected @${directive} directive to have arguments`
+  );
+  const arg = directive.arguments?.find((a) => a.name.value === name);
+  assert(arg, `${name} argument is required`);
+  return arg;
+}
+
+/** Gets the specified argument from the given directive. */
+export function getOptionalArg(name: string, directive: ConstDirectiveNode) {
+  return directive.arguments?.find((arg) => arg.name.value === name);
+}
 
 /** Indicates if objType contains the specified directive */
 export function hasDirective(

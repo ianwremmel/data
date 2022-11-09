@@ -3,7 +3,7 @@ import assert from 'assert';
 import {isNonNullType, isScalarType} from 'graphql';
 import {ConstDirectiveNode, GraphQLObjectType} from 'graphql/index';
 
-import {hasInterface, unmarshalField} from './helpers';
+import {getArg, getOptionalArg, hasInterface, unmarshalField} from './helpers';
 
 export interface KeyInfo {
   readonly conditionField: string;
@@ -26,33 +26,23 @@ function extractCompositeKeyInfo(
 ): KeyInfo {
   const isNode = hasInterface('Node', type);
 
-  const pkFields = directive.arguments?.find(
-    (arg) => arg.name.value === 'pkFields'
-  );
-  assert(pkFields, 'pkFields argument is required');
+  const pkFields = getArg('pkFields', directive);
   assert(pkFields.value.kind === 'ListValue');
   const pkFieldNames = pkFields.value.values.map((v) => {
     assert(v.kind === 'StringValue');
     return v.value;
   });
 
-  const pkPrefix = directive.arguments?.find(
-    (arg) => arg.name.value === 'pkPrefix'
-  );
+  const pkPrefix = getOptionalArg('pkPrefix', directive);
 
-  const skFields = directive.arguments?.find(
-    (arg) => arg.name.value === 'skFields'
-  );
-  assert(skFields, 'skFields argument is required');
+  const skFields = getArg('skFields', directive);
   assert(skFields.value.kind === 'ListValue');
   const skFieldNames = skFields.value.values.map((v) => {
     assert(v.kind === 'StringValue');
     return v.value;
   });
 
-  const skPrefix = directive.arguments?.find(
-    (arg) => arg.name.value === 'skPrefix'
-  );
+  const skPrefix = getOptionalArg('skPrefix', directive);
 
   const pkPrefixValue =
     pkPrefix?.value.kind === 'StringValue' ? pkPrefix.value.value : '';
@@ -122,10 +112,8 @@ export function extractKeyInfo(type: GraphQLObjectType): KeyInfo {
     return extractCompositeKeyInfo(type, directive);
   }
 
-  assert(directive.arguments, `Expected @autoKey directive to have arguments`);
-  const directiveField = directive.arguments.find(
-    (a) => a.name.value === 'field'
-  );
+  const directiveField = getArg('field', directive);
+
   assert(
     directiveField,
     `Expected @autoKey directive to have argument "fields"`
