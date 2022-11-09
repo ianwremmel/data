@@ -13,6 +13,13 @@ type UserLogin implements Model & Node & Timestamped & Versioned
     pkPrefix: "USER"
     skFields: ["login"]
     skPrefix: "LOGIN"
+  )
+  @compositeIndex(
+    name: "gsi1"
+    pkFields: ["vendor", "login"]
+    pkPrefix: "LOGIN"
+    skFields: ["updatedAt"]
+    skPrefix: "MODIFIED"
   ) {
   createdAt: Date!
   externalId: String!
