@@ -16,6 +16,7 @@ const config = {
           generates: {
             [`examples/${example}/__generated__/actions.ts`]: {
               config: {
+                enumsAsTypes: true,
                 pathToDocumentClient: './src/client',
                 scalars: {
                   Date: 'Date',
@@ -26,6 +27,9 @@ const config = {
               plugins: ['typescript', './src/codegen/actions'],
             },
             [`examples/${example}/__generated__/template.yml`]: {
+              config: {
+                enumsAsTypes: true,
+              },
               plugins: ['./src/codegen/cloudformation'],
             },
           },
