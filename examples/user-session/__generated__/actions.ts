@@ -3,7 +3,12 @@ import {
   ConsumedCapacity,
   ItemCollectionMetrics,
 } from '@aws-sdk/client-dynamodb';
-import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
+import {
+  DeleteCommand,
+  GetCommand,
+  QueryCommand,
+  UpdateCommand,
+} from '@aws-sdk/lib-dynamodb';
 import {v4 as uuidv4} from 'uuid';
 
 import {
@@ -97,6 +102,11 @@ export interface ResultType<T> {
   capacity: ConsumedCapacity;
   item: T;
   metrics: ItemCollectionMetrics | undefined;
+}
+
+export interface MultiResultType<T> {
+  capacity: ConsumedCapacity;
+  items: T[];
 }
 
 export interface UserSessionPrimaryKey {
@@ -508,7 +518,7 @@ export async function updateUserSession(
       item._et === 'UserSession',
       () =>
         new DataIntegrityError(
-          `Expected ${input.id} to update a UserSession but updated ${item._et} instead`
+          `Expected JSON.stringify({        id: input.id,}) to update a UserSession but updated ${item._et} instead`
         )
     );
 

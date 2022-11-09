@@ -8,7 +8,7 @@ import {
 } from '@graphql-codegen/plugin-helpers';
 import {assertObjectType, GraphQLObjectType, isObjectType} from 'graphql';
 
-import {hasInterface} from '../common/helpers';
+import {hasDirective, hasInterface} from '../common/helpers';
 import {extractKeyInfo} from '../common/keys';
 
 import {ActionPluginConfig} from './config';
@@ -19,6 +19,7 @@ import {
   touchItemTemplate,
   updateItemTemplate,
 } from './tables/table';
+import {queryTpl} from './tables/templates/query';
 
 /** @override */
 export function addToSchema(): AddToSchemaResult {
@@ -51,9 +52,16 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   metrics: ItemCollectionMetrics | undefined;
 }
 
+export interface MultiResultType<T> {
+  capacity: ConsumedCapacity;
+  items: T[];
+}
+
+
 ${tableTypes
   .map((objType) => {
     const keyInfo = extractKeyInfo(objType);
+    const isCompositeKey = hasDirective('compositeKey', objType);
 
     return [
       `export interface ${objType.name}PrimaryKey {
@@ -64,7 +72,10 @@ ${tableTypes
       readItemTemplate(objType),
       touchItemTemplate(objType),
       updateItemTemplate(objType),
-    ].join('\n\n');
+      isCompositeKey && queryTpl({type: objType}),
+    ]
+      .filter(Boolean)
+      .join('\n\n');
   })
   .join('\n')}`;
 
@@ -76,7 +87,7 @@ ${tableTypes
     content,
     prepend: [
       `import {ConditionalCheckFailedException, ConsumedCapacity, ItemCollectionMetrics} from '@aws-sdk/client-dynamodb';`,
-      `import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
+      `import {DeleteCommand, GetCommand, QueryCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
       isExample
         ? `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '../../..'`
         : `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '@ianwremmel/data'`,

@@ -3,7 +3,12 @@ import {
   ConsumedCapacity,
   ItemCollectionMetrics,
 } from '@aws-sdk/client-dynamodb';
-import {DeleteCommand, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
+import {
+  DeleteCommand,
+  GetCommand,
+  QueryCommand,
+  UpdateCommand,
+} from '@aws-sdk/lib-dynamodb';
 import {v4 as uuidv4} from 'uuid';
 
 import {
@@ -100,6 +105,11 @@ export interface ResultType<T> {
   capacity: ConsumedCapacity;
   item: T;
   metrics: ItemCollectionMetrics | undefined;
+}
+
+export interface MultiResultType<T> {
+  capacity: ConsumedCapacity;
+  items: T[];
 }
 
 export interface UserLoginPrimaryKey {
@@ -517,9 +527,9 @@ export async function updateUserLogin(
     assert(
       item._et === 'UserLogin',
       () =>
-        new DataIntegrityError(
-          `Expected ${input.id} to update a UserLogin but updated ${item._et} instead`
-        )
+        new DataIntegrityError(`Expected JSON.stringify({        externalId: input.externalId,
+        login: input.login,
+        vendor: input.vendor,}) to update a UserLogin but updated ${item._et} instead`)
     );
 
     return {
@@ -614,4 +624,135 @@ export async function updateUserLogin(
     }
     throw err;
   }
+}
+
+export type QueryUserLoginInput =
+  | {
+      vendor: Vendor;
+      externalId: Scalars['String'];
+    }
+  | {
+      vendor: Vendor;
+      externalId: Scalars['String'];
+      login?: Scalars['String'];
+    };
+
+export type QueryUserLoginOutput = MultiResultType<UserLogin>;
+
+/** queryUserLogin */
+export async function queryUserLogin(
+  input: Readonly<QueryUserLoginInput>
+): Promise<Readonly<QueryUserLoginOutput>> {
+  const tableName = process.env.TABLE_USER_LOGIN;
+  assert(tableName, 'TABLE_USER_LOGIN is not set');
+
+  const pk = `USER#${input.vendor}#${input.externalId}`;
+  const sk = ['LOGIN', 'login' in input && input.login]
+    .filter(Boolean)
+    .join('#');
+
+  const {ConsumedCapacity: capacity, Items: items = []} =
+    await ddbDocClient.send(
+      new QueryCommand({
+        ConsistentRead: false,
+        ExpressionAttributeNames: {
+          '#pk': 'pk',
+          '#sk': 'sk',
+        },
+        ExpressionAttributeValues: {
+          ':pk': pk,
+          ':sk': sk,
+        },
+        KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        ReturnConsumedCapacity: 'INDEXES',
+        TableName: tableName,
+      })
+    );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  return {
+    capacity,
+    items: items.map((item) => {
+      assert(
+        item._et === 'UserLogin',
+        () =>
+          new DataIntegrityError(`Expected JSON.stringify({        externalId: input.externalId,
+        login: input.login,
+        vendor: input.vendor,}) to to load items of type UserLogin but got at ${item._et} instead`)
+      );
+      return {
+        createdAt: (() => {
+          assert(
+            item._ct !== null,
+            () => new DataIntegrityError('Expected createdAt to be non-null')
+          );
+          assert(
+            typeof item._ct !== 'undefined',
+            () => new DataIntegrityError('Expected createdAt to be defined')
+          );
+          return new Date(item._ct);
+        })(),
+        externalId: (() => {
+          assert(
+            item.external_id !== null,
+            () => new DataIntegrityError('Expected externalId to be non-null')
+          );
+          assert(
+            typeof item.external_id !== 'undefined',
+            () => new DataIntegrityError('Expected externalId to be defined')
+          );
+          return item.external_id;
+        })(),
+        id: `${item.pk}#${item.sk}`,
+        login: (() => {
+          assert(
+            item.login !== null,
+            () => new DataIntegrityError('Expected login to be non-null')
+          );
+          assert(
+            typeof item.login !== 'undefined',
+            () => new DataIntegrityError('Expected login to be defined')
+          );
+          return item.login;
+        })(),
+        updatedAt: (() => {
+          assert(
+            item._md !== null,
+            () => new DataIntegrityError('Expected updatedAt to be non-null')
+          );
+          assert(
+            typeof item._md !== 'undefined',
+            () => new DataIntegrityError('Expected updatedAt to be defined')
+          );
+          return new Date(item._md);
+        })(),
+        vendor: (() => {
+          assert(
+            item.vendor !== null,
+            () => new DataIntegrityError('Expected vendor to be non-null')
+          );
+          assert(
+            typeof item.vendor !== 'undefined',
+            () => new DataIntegrityError('Expected vendor to be defined')
+          );
+          return item.vendor;
+        })(),
+        version: (() => {
+          assert(
+            item._v !== null,
+            () => new DataIntegrityError('Expected version to be non-null')
+          );
+          assert(
+            typeof item._v !== 'undefined',
+            () => new DataIntegrityError('Expected version to be defined')
+          );
+          return item._v;
+        })(),
+      };
+    }),
+  };
 }
