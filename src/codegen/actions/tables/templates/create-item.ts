@@ -1,42 +1,33 @@
 import {GraphQLObjectType} from 'graphql';
 
-import {Nullable} from '../../../../types';
-import {TtlInfo} from '../../../common/fields';
-import {KeyInfo} from '../../../common/keys';
-
 import {ensureTableTemplate} from './ensure-table';
 
 export interface CreateItemTplInput {
-  readonly objType: GraphQLObjectType;
-  readonly ttlInfo: Nullable<TtlInfo>;
+  readonly conditionField: string;
   readonly ean: readonly string[];
   readonly eav: readonly string[];
   readonly key: readonly string[];
-  readonly keyInfo: KeyInfo;
+  readonly objType: GraphQLObjectType;
+  readonly omit: readonly string[];
   readonly unmarshall: readonly string[];
   readonly updateExpressions: readonly string[];
 }
+
 /** template */
 export function createItemTpl({
-  objType,
-  ttlInfo,
+  conditionField,
   ean,
   eav,
   key,
-  keyInfo,
+  objType,
+  omit,
   unmarshall,
   updateExpressions,
 }: CreateItemTplInput) {
   const typeName = objType.name;
 
   const inputTypeName = `Create${typeName}Input`;
-  const omitInputFields = [
-    'createdAt',
-    'updatedAt',
-    ...keyInfo.omitForCreate,
-    ...(ttlInfo ? [ttlInfo.fieldName] : []),
-    'version',
-  ]
+  const omitInputFields = ['createdAt', 'updatedAt', 'version', ...omit]
     .map((f) => `'${f}'`)
     .sort();
   const outputTypeName = `Create${typeName}Output`;
@@ -52,7 +43,7 @@ ${ensureTableTemplate(objType)}
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand({
-      ConditionExpression: 'attribute_not_exists(#id)',
+      ConditionExpression: 'attribute_not_exists(#${conditionField})',
       ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
       },

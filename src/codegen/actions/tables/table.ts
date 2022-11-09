@@ -15,11 +15,11 @@ import {updateItemTpl} from './templates/update-item';
  * Generates the createItem function for a table
  */
 export function createItemTemplate(objType: GraphQLObjectType) {
+  const keyInfo = extractKeyInfo(objType);
   const ttlInfo = extractTtlInfo(objType);
 
   const ean: string[] = [];
   const eav: string[] = [];
-  const key: string[] = [];
   const unmarshall: string[] = [];
   const updateExpressions: string[] = [];
 
@@ -30,15 +30,12 @@ export function createItemTemplate(objType: GraphQLObjectType) {
   eav.push(`':entity': '${objType.name}'`);
   updateExpressions.push(`#entity = :entity`);
 
-  const keyInfo = extractKeyInfo(objType);
-
   for (const fieldName of fieldNames) {
     const field = fields[fieldName];
 
     if (keyInfo.fields.has(fieldName)) {
-      ean.push(`'#${fieldName}': '${fieldName}'`);
-      key.push(keyInfo.keyForCreate[fieldName]);
-      unmarshall.push(unmarshalField(field));
+      // intentionally empty. if key fields need to do anything, they'll be
+      // handled after the loop
     } else if (fieldName === 'version') {
       ean.push(`'#version': '_v'`);
       eav.push(`':version': 1`);
@@ -67,18 +64,21 @@ export function createItemTemplate(objType: GraphQLObjectType) {
     }
   }
 
+  ean.push(...keyInfo.ean);
+  unmarshall.push(...keyInfo.unmarshall);
+
   ean.sort();
   eav.sort();
   unmarshall.sort();
   updateExpressions.sort();
 
   return createItemTpl({
+    conditionField: keyInfo.conditionField,
     ean,
     eav,
-    key,
-    keyInfo,
+    key: keyInfo.keyForCreate,
     objType,
-    ttlInfo,
+    omit: [...keyInfo.omitForCreate, ttlInfo?.fieldName ?? ''].filter(Boolean),
     unmarshall,
     updateExpressions,
   });
@@ -88,31 +88,36 @@ export function createItemTemplate(objType: GraphQLObjectType) {
  * Generates the deleteItem function for a table
  */
 export function deleteItemTemplate(objType: GraphQLObjectType) {
-  const ean: string[] = [`'#id': 'id'`];
-  const key = [`id: input.id`];
-  return deleteItemTpl({ean, key, objType});
+  const keyInfo = extractKeyInfo(objType);
+
+  return deleteItemTpl({
+    conditionField: keyInfo.conditionField,
+    ean: keyInfo.ean,
+    key: keyInfo.keyForReadAndUpdate,
+    objType,
+  });
 }
 
 /**
  * Generates the readItem function for a table
  */
 export function readItemTemplate(objType: GraphQLObjectType) {
+  const keyInfo = extractKeyInfo(objType);
   const ttlInfo = extractTtlInfo(objType);
+
   const consistent = hasDirective('consistent', objType);
 
-  const key = [`id: input.id`];
   const unmarshall: string[] = [];
 
   const fields = objType.getFields();
   const fieldNames = Object.keys(fields).sort();
 
-  const keyInfo = extractKeyInfo(objType);
-
   for (const fieldName of fieldNames) {
     const field = fields[fieldName];
 
     if (keyInfo.fields.has(fieldName)) {
-      unmarshall.push(unmarshalField(field));
+      // intentionally empty. if key fields need to do anything, they'll be
+      // handled after the loop
     } else if (fieldName === 'version') {
       unmarshall.push(unmarshalField(field, '_v'));
     } else if (fieldName === ttlInfo?.fieldName) {
@@ -126,29 +131,35 @@ export function readItemTemplate(objType: GraphQLObjectType) {
     }
   }
 
+  unmarshall.push(...keyInfo.unmarshall);
+
   unmarshall.sort();
 
-  return readItemTpl({consistent, key, objType, unmarshall});
+  return readItemTpl({
+    consistent,
+    key: keyInfo.keyForReadAndUpdate,
+    objType,
+    unmarshall,
+  });
 }
 
 /**
  * Generates the updateItem function for a table
  */
 export function touchItemTemplate(objType: GraphQLObjectType) {
+  const keyInfo = extractKeyInfo(objType);
   const ttlInfo = extractTtlInfo(objType);
 
   const ean: string[] = [];
   const eav: string[] = [];
-  const key: string[] = [`id: input.id`];
   const updateExpressions: string[] = [];
 
   const fieldNames = Object.keys(objType.getFields()).sort();
 
-  const keyInfo = extractKeyInfo(objType);
-
   for (const fieldName of fieldNames) {
     if (keyInfo.fields.has(fieldName)) {
-      ean.push(`'#${fieldName}': '${fieldName}'`);
+      // intentionally empty. if key fields need to do anything, they'll be
+      // handled after the loop
     } else if (fieldName === 'version') {
       ean.push(`'#version': '_v'`);
       eav.push(`':versionInc': 1`);
@@ -160,39 +171,43 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
     }
   }
 
+  ean.push(...keyInfo.ean);
+
   ean.sort();
   eav.sort();
   updateExpressions.sort();
 
-  return touchItemTpl({ean, eav, key, objType, updateExpressions});
+  return touchItemTpl({
+    conditionField: keyInfo.conditionField,
+    ean,
+    eav,
+    key: keyInfo.keyForReadAndUpdate,
+    objType,
+    updateExpressions,
+  });
 }
 
 /**
  * Generates the updateItem function for a table
  */
 export function updateItemTemplate(objType: GraphQLObjectType) {
+  const keyInfo = extractKeyInfo(objType);
   const ttlInfo = extractTtlInfo(objType);
 
   const ean: string[] = [];
   const eav: string[] = [];
-  const inputToPrimaryKey: string[] = [];
-  const key: string[] = [];
   const unmarshall: string[] = [];
   const updateExpressions: string[] = [];
 
   const fields = objType.getFields();
   const fieldNames = Object.keys(fields).sort();
 
-  const keyInfo = extractKeyInfo(objType);
-
   for (const fieldName of fieldNames) {
     const field = fields[fieldName];
 
     if (keyInfo.fields.has(fieldName)) {
-      ean.push(`'#${fieldName}': '${fieldName}'`);
-      inputToPrimaryKey.push(keyInfo.keyForReadAndUpdate[fieldName]);
-      key.push(keyInfo.keyForReadAndUpdate[fieldName]);
-      unmarshall.push(unmarshalField(field));
+      // intentionally empty. if key fields need to do anything, they'll be
+      // handled after the loop
     } else if (fieldName === ttlInfo?.fieldName) {
       ean.push(`'#ttl': 'ttl'`);
       eav.push(`':ttl': now.getTime() + ${ttlInfo.duration}`);
@@ -222,15 +237,20 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
     }
   }
 
+  ean.push(...keyInfo.ean);
+  unmarshall.push(...keyInfo.unmarshall);
+
   ean.sort();
   eav.sort();
+  unmarshall.sort();
   updateExpressions.sort();
 
   return updateItemTpl({
+    conditionField: keyInfo.conditionField,
     ean,
     eav,
-    inputToPrimaryKey,
-    key,
+    inputToPrimaryKey: keyInfo.inputToPrimaryKey,
+    key: keyInfo.keyForReadAndUpdate,
     objType,
     ttlInfo,
     unmarshall,

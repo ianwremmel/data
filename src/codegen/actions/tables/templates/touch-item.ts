@@ -3,6 +3,7 @@ import {GraphQLObjectType} from 'graphql';
 import {ensureTableTemplate} from './ensure-table';
 
 export interface TouchItemTplInput {
+  readonly conditionField: string;
   readonly ean: readonly string[];
   readonly eav: readonly string[];
   readonly key: readonly string[];
@@ -12,6 +13,7 @@ export interface TouchItemTplInput {
 
 /** template */
 export function touchItemTpl({
+  conditionField,
   ean,
   eav,
   key,
@@ -34,7 +36,7 @@ export async function touch${typeName}(input: ${primaryKeyType}): Promise<${outp
 ${ensureTableTemplate(objType)}
   try {
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand({
-      ConditionExpression: 'attribute_exists(#id)',
+      ConditionExpression: 'attribute_exists(#${conditionField})',
       ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
       },

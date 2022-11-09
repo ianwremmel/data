@@ -2,11 +2,17 @@ import assert from 'assert';
 
 import {ConstDirectiveNode, GraphQLObjectType} from 'graphql/index';
 
+import {unmarshalField} from './helpers';
+
 export interface KeyInfo {
+  readonly conditionField: string;
+  readonly ean: readonly string[];
   readonly fields: Set<string>;
+  readonly inputToPrimaryKey: readonly string[];
+  readonly keyForCreate: readonly string[];
+  readonly keyForReadAndUpdate: readonly string[];
   readonly omitForCreate: readonly string[];
-  readonly keyForCreate: Record<string, string>;
-  readonly keyForReadAndUpdate: Record<string, string>;
+  readonly unmarshall: readonly string[];
 }
 
 /**
@@ -17,10 +23,14 @@ function extractCompositeKeyInfo(
   directive: ConstDirectiveNode
 ): KeyInfo {
   return {
+    conditionField: 'pk',
+    ean: [],
     fields: new Set([]),
-    keyForCreate: {},
-    keyForReadAndUpdate: {},
+    inputToPrimaryKey: [],
+    keyForCreate: [],
+    keyForReadAndUpdate: [],
     omitForCreate: [],
+    unmarshall: [],
   };
 }
 
@@ -56,13 +66,13 @@ export function extractKeyInfo(type: GraphQLObjectType): KeyInfo {
   assert(field, `Expected @autoKey directive to have argument "field"`);
 
   return {
+    conditionField: field,
+    ean: [`'#${field}': '${field}'`],
     fields: new Set([field]),
-    keyForCreate: {
-      [field]: `id: \`${type.name}#\${uuidv4()}\``,
-    },
-    keyForReadAndUpdate: {
-      [field]: `${field}: input.${field}`,
-    },
+    inputToPrimaryKey: [`${field}: input.${field}`],
+    keyForCreate: [`${field}: \`${type.name}#\${uuidv4()}\``],
+    keyForReadAndUpdate: [`${field}: input.${field}`],
     omitForCreate: [field],
+    unmarshall: [unmarshalField(type.getFields().id)],
   };
 }
