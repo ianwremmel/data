@@ -1,7 +1,8 @@
 import {GraphQLObjectType} from 'graphql';
 
 import {Nullable} from '../../../../types';
-import {KeyInfo, TtlInfo} from '../../../common/fields';
+import {TtlInfo} from '../../../common/fields';
+import {KeyInfo} from '../../../common/keys';
 
 import {ensureTableTemplate} from './ensure-table';
 

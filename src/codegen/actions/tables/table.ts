@@ -1,8 +1,9 @@
 import {GraphQLObjectType} from 'graphql';
 import {snakeCase} from 'lodash';
 
-import {extractKeyInfo, extractTtlInfo} from '../../common/fields';
+import {extractTtlInfo} from '../../common/fields';
 import {hasDirective, unmarshalField} from '../../common/helpers';
+import {extractKeyInfo} from '../../common/keys';
 
 import {createItemTpl} from './templates/create-item';
 import {deleteItemTpl} from './templates/delete-item';
