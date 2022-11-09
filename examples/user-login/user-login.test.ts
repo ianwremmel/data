@@ -30,9 +30,40 @@ describe('createUserLogin()', () => {
       vendor: 'GITHUB',
     });
 
-    expect(result).toMatchInlineSnapshot(userLoginMatcher);
+    expect(result).toMatchInlineSnapshot(
+      userLoginMatcher,
+      `
+      {
+        "capacity": {
+          "CapacityUnits": 1,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 1,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": Any<String>,
+          "WriteCapacityUnits": undefined,
+        },
+        "item": {
+          "createdAt": Any<Date>,
+          "externalId": "8943",
+          "id": Any<String>,
+          "login": "Joshuah_Buckridge53",
+          "updatedAt": Any<Date>,
+          "vendor": "GITHUB",
+          "version": 1,
+        },
+        "metrics": undefined,
+      }
+    `
+    );
 
-    expect(result.item).toMatch(/UserLogin#/);
+    expect(result.item.id).toMatchInlineSnapshot(
+      `"USER#GITHUB#8943#LOGIN#Joshuah_Buckridge53"`
+    );
     expect(result.item.createdAt.getTime()).not.toBeNaN();
 
     expect(result.item.updatedAt.getTime()).not.toBeNaN();
@@ -51,9 +82,30 @@ describe('deleteUserLogin()', () => {
     });
 
     const deleteResult = await deleteUserLogin(result.item);
-    expect(deleteResult).toMatchInlineSnapshot({
-      capacity: {TableName: expect.any(String)},
-    });
+    expect(deleteResult).toMatchInlineSnapshot(
+      {
+        capacity: {TableName: expect.any(String)},
+      },
+      `
+      {
+        "capacity": {
+          "CapacityUnits": 1,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 1,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": Any<String>,
+          "WriteCapacityUnits": undefined,
+        },
+        "item": undefined,
+        "metrics": undefined,
+      }
+    `
+    );
 
     await expect(async () => await readUserLogin(result.item)).rejects.toThrow(
       NotFoundError
@@ -62,7 +114,12 @@ describe('deleteUserLogin()', () => {
 
   it('throws an error if the record does not exist', async () => {
     await expect(
-      async () => await deleteUserLogin({pk: 'some-pk', sk: 'some-sk'})
+      async () =>
+        await deleteUserLogin({
+          externalId: 'does-not-exist',
+          login: 'does-not-exist',
+          vendor: 'GITHUB',
+        })
     ).rejects.toThrow(NotFoundError);
   });
 });
@@ -76,7 +133,36 @@ describe('readUserLogin()', () => {
     });
 
     const readResult = await readUserLogin(result.item);
-    expect(readResult).toMatchInlineSnapshot(userLoginMatcher);
+    expect(readResult).toMatchInlineSnapshot(
+      userLoginMatcher,
+      `
+      {
+        "capacity": {
+          "CapacityUnits": 0.5,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 0.5,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": Any<String>,
+          "WriteCapacityUnits": undefined,
+        },
+        "item": {
+          "createdAt": Any<Date>,
+          "externalId": "94988",
+          "id": Any<String>,
+          "login": "Craig59",
+          "updatedAt": Any<Date>,
+          "vendor": "GITHUB",
+          "version": 1,
+        },
+        "metrics": undefined,
+      }
+    `
+    );
 
     // cleanup, not part of test
     await deleteUserLogin(result.item);
@@ -84,7 +170,12 @@ describe('readUserLogin()', () => {
 
   it('throws an error if the record does not exist', async () => {
     await expect(
-      async () => await readUserLogin({pk: 'some-pk', sk: 'some-sk'})
+      async () =>
+        await readUserLogin({
+          externalId: 'does-not-exist',
+          login: 'does-not-exist',
+          vendor: 'GITHUB',
+        })
     ).rejects.toThrow(NotFoundError);
   });
 });
@@ -98,11 +189,69 @@ describe('touchUserLogin()', () => {
     });
 
     const readResult = await readUserLogin(result.item);
-    expect(readResult).toMatchInlineSnapshot(userLoginMatcher);
+    expect(readResult).toMatchInlineSnapshot(
+      userLoginMatcher,
+      `
+      {
+        "capacity": {
+          "CapacityUnits": 0.5,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 0.5,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": Any<String>,
+          "WriteCapacityUnits": undefined,
+        },
+        "item": {
+          "createdAt": Any<Date>,
+          "externalId": "97362",
+          "id": Any<String>,
+          "login": "Moses.Parker",
+          "updatedAt": Any<Date>,
+          "vendor": "GITHUB",
+          "version": 1,
+        },
+        "metrics": undefined,
+      }
+    `
+    );
 
     await touchUserLogin(result.item);
     const touchResult = await readUserLogin(result.item);
-    expect(touchResult).toMatchInlineSnapshot(userLoginMatcher);
+    expect(touchResult).toMatchInlineSnapshot(
+      userLoginMatcher,
+      `
+      {
+        "capacity": {
+          "CapacityUnits": 0.5,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 0.5,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": Any<String>,
+          "WriteCapacityUnits": undefined,
+        },
+        "item": {
+          "createdAt": Any<Date>,
+          "externalId": "97362",
+          "id": Any<String>,
+          "login": "Moses.Parker",
+          "updatedAt": Any<Date>,
+          "vendor": "GITHUB",
+          "version": 2,
+        },
+        "metrics": undefined,
+      }
+    `
+    );
 
     expect(readResult.item.createdAt).toEqual(touchResult.item.createdAt);
     expect(readResult.item.updatedAt).toEqual(touchResult.item.updatedAt);
@@ -113,7 +262,12 @@ describe('touchUserLogin()', () => {
 
   it('throws an error if the record does not exist', async () => {
     await expect(
-      async () => await touchUserLogin({pk: 'some-pk', sk: 'some-sk'})
+      async () =>
+        await touchUserLogin({
+          externalId: 'does-not-exist',
+          login: 'does-not-exist',
+          vendor: 'GITHUB',
+        })
     ).rejects.toThrow(NotFoundError);
   });
 });
@@ -125,19 +279,102 @@ describe('updateUserLogin()', () => {
       login: faker.internet.userName(),
       vendor: 'GITHUB',
     });
-    expect(createResult).toMatchInlineSnapshot(userLoginMatcher);
-    expect(createResult.item.session).toEqual({foo: 'foo'});
+    expect(createResult).toMatchInlineSnapshot(
+      userLoginMatcher,
+      `
+      {
+        "capacity": {
+          "CapacityUnits": 1,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 1,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": Any<String>,
+          "WriteCapacityUnits": undefined,
+        },
+        "item": {
+          "createdAt": Any<Date>,
+          "externalId": "82326",
+          "id": Any<String>,
+          "login": "Cecile55",
+          "updatedAt": Any<Date>,
+          "vendor": "GITHUB",
+          "version": 1,
+        },
+        "metrics": undefined,
+      }
+    `
+    );
 
     const updateResult = await updateUserLogin({
       ...createResult.item,
-      session: {foo: 'bar'},
     });
-    expect(updateResult).toMatchInlineSnapshot(userLoginMatcher);
-    expect(updateResult.item.session).toEqual({foo: 'bar'});
+    expect(updateResult).toMatchInlineSnapshot(
+      userLoginMatcher,
+      `
+      {
+        "capacity": {
+          "CapacityUnits": 1,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 1,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": Any<String>,
+          "WriteCapacityUnits": undefined,
+        },
+        "item": {
+          "createdAt": Any<Date>,
+          "externalId": "82326",
+          "id": Any<String>,
+          "login": "Cecile55",
+          "updatedAt": Any<Date>,
+          "vendor": "GITHUB",
+          "version": 2,
+        },
+        "metrics": undefined,
+      }
+    `
+    );
 
     const readResult = await readUserLogin(createResult.item);
-    expect(readResult).toMatchInlineSnapshot(userLoginMatcher);
-    expect(updateResult.item.session).toEqual({foo: 'bar'});
+    expect(readResult).toMatchInlineSnapshot(
+      userLoginMatcher,
+      `
+      {
+        "capacity": {
+          "CapacityUnits": 0.5,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 0.5,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": Any<String>,
+          "WriteCapacityUnits": undefined,
+        },
+        "item": {
+          "createdAt": Any<Date>,
+          "externalId": "82326",
+          "id": Any<String>,
+          "login": "Cecile55",
+          "updatedAt": Any<Date>,
+          "vendor": "GITHUB",
+          "version": 2,
+        },
+        "metrics": undefined,
+      }
+    `
+    );
 
     expect(readResult.item.createdAt).toEqual(updateResult.item.createdAt);
     expect(readResult.item.updatedAt).toEqual(updateResult.item.updatedAt);
@@ -150,8 +387,10 @@ describe('updateUserLogin()', () => {
     await expect(
       async () =>
         await updateUserLogin({
-          id: 'some-id',
-          session: {foo: 'foo'},
+          externalId: 'does-not-exist',
+          id: 'does-not-exist',
+          login: 'does-not-exist',
+          vendor: 'GITHUB',
           version: 0,
         })
     ).rejects.toThrow(NotFoundError);
@@ -165,14 +404,12 @@ describe('updateUserLogin()', () => {
     });
     await updateUserLogin({
       ...createResult.item,
-      session: {foo: 'bar'},
     });
 
     await expect(
       async () =>
         await updateUserLogin({
           ...createResult.item,
-          session: {foo: 'bar'},
         })
     ).rejects.toThrow(OptimisticLockingError);
 

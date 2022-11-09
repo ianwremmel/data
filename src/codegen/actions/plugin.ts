@@ -9,6 +9,7 @@ import {
 import {assertObjectType, GraphQLObjectType, isObjectType} from 'graphql';
 
 import {hasInterface} from '../common/helpers';
+import {extractKeyInfo} from '../common/keys';
 
 import {ActionPluginConfig} from './config';
 import {
@@ -51,18 +52,20 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
 }
 
 ${tableTypes
-  .map((objType) =>
-    [
+  .map((objType) => {
+    const keyInfo = extractKeyInfo(objType);
+
+    return [
       `export interface ${objType.name}PrimaryKey {
-        id: Scalars['ID'];
-      }`,
+          ${keyInfo.primaryKeyType.join('\n')}
+        }`,
       createItemTemplate(objType),
       deleteItemTemplate(objType),
       readItemTemplate(objType),
       touchItemTemplate(objType),
       updateItemTemplate(objType),
-    ].join('\n\n')
-  )
+    ].join('\n\n');
+  })
   .join('\n')}`;
 
   assert(info?.outputFile, 'info.outputFile is required');

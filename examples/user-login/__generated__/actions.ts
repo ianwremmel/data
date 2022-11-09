@@ -103,12 +103,14 @@ export interface ResultType<T> {
 }
 
 export interface UserLoginPrimaryKey {
-  id: Scalars['ID'];
+  externalId: Scalars['String'];
+  login: Scalars['String'];
+  vendor: Vendor;
 }
 
 export type CreateUserLoginInput = Omit<
   UserLogin,
-  'createdAt' | 'updatedAt' | 'version'
+  'createdAt' | 'id' | 'updatedAt' | 'version'
 >;
 export type CreateUserLoginOutput = ResultType<UserLogin>;
 /**  */
@@ -132,8 +134,8 @@ export async function createUserLogin(
         '#createdAt': '_ct',
         '#entity': '_et',
         '#externalId': 'external_id',
-        '#id': 'id',
         '#login': 'login',
+        '#pk': 'pk',
         '#updatedAt': '_md',
         '#vendor': 'vendor',
         '#version': '_v',
@@ -142,19 +144,21 @@ export async function createUserLogin(
         ':createdAt': now.getTime(),
         ':entity': 'UserLogin',
         ':externalId': input.externalId,
-        ':id': input.id,
         ':login': input.login,
         ':updatedAt': now.getTime(),
         ':vendor': input.vendor,
         ':version': 1,
       },
-      Key: {},
+      Key: {
+        pk: `USER#${input.vendor}#${input.externalId}`,
+        sk: `LOGIN#${input.login}`,
+      },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
       UpdateExpression:
-        'SET #createdAt = :createdAt, #entity = :entity, #externalId = :externalId, #id = :id, #login = :login, #updatedAt = :updatedAt, #vendor = :vendor, #version = :version',
+        'SET #createdAt = :createdAt, #entity = :entity, #externalId = :externalId, #login = :login, #updatedAt = :updatedAt, #vendor = :vendor, #version = :version',
     })
   );
 
@@ -197,17 +201,7 @@ export async function createUserLogin(
         );
         return item.external_id;
       })(),
-      id: (() => {
-        assert(
-          item.id !== null,
-          () => new DataIntegrityError('Expected id to be non-null')
-        );
-        assert(
-          typeof item.id !== 'undefined',
-          () => new DataIntegrityError('Expected id to be defined')
-        );
-        return item.id;
-      })(),
+      id: `${item.pk}#${item.sk}`,
       login: (() => {
         assert(
           item.login !== null,
@@ -271,8 +265,13 @@ export async function deleteUserLogin(
       await ddbDocClient.send(
         new DeleteCommand({
           ConditionExpression: 'attribute_exists(#pk)',
-          ExpressionAttributeNames: {},
-          Key: {},
+          ExpressionAttributeNames: {
+            '#pk': 'pk',
+          },
+          Key: {
+            pk: `USER#${input.vendor}#${input.externalId}`,
+            sk: `LOGIN#${input.login}`,
+          },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
           ReturnValues: 'NONE',
@@ -310,7 +309,10 @@ export async function readUserLogin(
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
     new GetCommand({
       ConsistentRead: false,
-      Key: {},
+      Key: {
+        pk: `USER#${input.vendor}#${input.externalId}`,
+        sk: `LOGIN#${input.login}`,
+      },
       ReturnConsumedCapacity: 'INDEXES',
       TableName: tableName,
     })
@@ -357,17 +359,7 @@ export async function readUserLogin(
         );
         return item.external_id;
       })(),
-      id: (() => {
-        assert(
-          item.id !== null,
-          () => new DataIntegrityError('Expected id to be non-null')
-        );
-        assert(
-          typeof item.id !== 'undefined',
-          () => new DataIntegrityError('Expected id to be defined')
-        );
-        return item.id;
-      })(),
+      id: `${item.pk}#${item.sk}`,
       login: (() => {
         assert(
           item.login !== null,
@@ -431,12 +423,16 @@ export async function touchUserLogin(
         new UpdateCommand({
           ConditionExpression: 'attribute_exists(#pk)',
           ExpressionAttributeNames: {
+            '#pk': 'pk',
             '#version': '_v',
           },
           ExpressionAttributeValues: {
             ':versionInc': 1,
           },
-          Key: {},
+          Key: {
+            pk: `USER#${input.vendor}#${input.externalId}`,
+            sk: `LOGIN#${input.login}`,
+          },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
           ReturnValues: 'ALL_NEW',
@@ -484,8 +480,8 @@ export async function updateUserLogin(
         ExpressionAttributeNames: {
           '#createdAt': '_ct',
           '#externalId': 'external_id',
-          '#id': 'id',
           '#login': 'login',
+          '#pk': 'pk',
           '#updatedAt': '_md',
           '#vendor': 'vendor',
           '#version': '_v',
@@ -493,20 +489,22 @@ export async function updateUserLogin(
         ExpressionAttributeValues: {
           ':createdAt': now.getTime(),
           ':externalId': input.externalId,
-          ':id': input.id,
           ':login': input.login,
           ':newVersion': input.version + 1,
           ':updatedAt': now.getTime(),
           ':vendor': input.vendor,
           ':version': input.version,
         },
-        Key: {},
+        Key: {
+          pk: `USER#${input.vendor}#${input.externalId}`,
+          sk: `LOGIN#${input.login}`,
+        },
         ReturnConsumedCapacity: 'INDEXES',
         ReturnItemCollectionMetrics: 'SIZE',
         ReturnValues: 'ALL_NEW',
         TableName: tableName,
         UpdateExpression:
-          'SET #createdAt = :createdAt, #externalId = :externalId, #id = :id, #login = :login, #updatedAt = :updatedAt, #vendor = :vendor, #version = :newVersion',
+          'SET #createdAt = :createdAt, #externalId = :externalId, #login = :login, #updatedAt = :updatedAt, #vendor = :vendor, #version = :newVersion',
       })
     );
 
@@ -549,17 +547,7 @@ export async function updateUserLogin(
           );
           return item.external_id;
         })(),
-        id: (() => {
-          assert(
-            item.id !== null,
-            () => new DataIntegrityError('Expected id to be non-null')
-          );
-          assert(
-            typeof item.id !== 'undefined',
-            () => new DataIntegrityError('Expected id to be defined')
-          );
-          return item.id;
-        })(),
+        id: `${item.pk}#${item.sk}`,
         login: (() => {
           assert(
             item.login !== null,
@@ -612,9 +600,17 @@ export async function updateUserLogin(
       try {
         const readResult = await readUserLogin(input);
       } catch {
-        throw new NotFoundError('UserLogin', {});
+        throw new NotFoundError('UserLogin', {
+          externalId: input.externalId,
+          login: input.login,
+          vendor: input.vendor,
+        });
       }
-      throw new OptimisticLockingError('UserLogin', {});
+      throw new OptimisticLockingError('UserLogin', {
+        externalId: input.externalId,
+        login: input.login,
+        vendor: input.vendor,
+      });
     }
     throw err;
   }
