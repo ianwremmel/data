@@ -37,8 +37,14 @@ describe('createUserLogin()', () => {
       `
       {
         "capacity": {
-          "CapacityUnits": 1,
-          "GlobalSecondaryIndexes": undefined,
+          "CapacityUnits": 2,
+          "GlobalSecondaryIndexes": {
+            "gsi1": {
+              "CapacityUnits": 1,
+              "ReadCapacityUnits": undefined,
+              "WriteCapacityUnits": undefined,
+            },
+          },
           "LocalSecondaryIndexes": undefined,
           "ReadCapacityUnits": undefined,
           "Table": {
@@ -91,8 +97,14 @@ describe('deleteUserLogin()', () => {
       `
       {
         "capacity": {
-          "CapacityUnits": 1,
-          "GlobalSecondaryIndexes": undefined,
+          "CapacityUnits": 2,
+          "GlobalSecondaryIndexes": {
+            "gsi1": {
+              "CapacityUnits": 1,
+              "ReadCapacityUnits": undefined,
+              "WriteCapacityUnits": undefined,
+            },
+          },
           "LocalSecondaryIndexes": undefined,
           "ReadCapacityUnits": undefined,
           "Table": {
@@ -286,8 +298,14 @@ describe('updateUserLogin()', () => {
       `
       {
         "capacity": {
-          "CapacityUnits": 1,
-          "GlobalSecondaryIndexes": undefined,
+          "CapacityUnits": 2,
+          "GlobalSecondaryIndexes": {
+            "gsi1": {
+              "CapacityUnits": 1,
+              "ReadCapacityUnits": undefined,
+              "WriteCapacityUnits": undefined,
+            },
+          },
           "LocalSecondaryIndexes": undefined,
           "ReadCapacityUnits": undefined,
           "Table": {
@@ -320,8 +338,14 @@ describe('updateUserLogin()', () => {
       `
       {
         "capacity": {
-          "CapacityUnits": 1,
-          "GlobalSecondaryIndexes": undefined,
+          "CapacityUnits": 3,
+          "GlobalSecondaryIndexes": {
+            "gsi1": {
+              "CapacityUnits": 2,
+              "ReadCapacityUnits": undefined,
+              "WriteCapacityUnits": undefined,
+            },
+          },
           "LocalSecondaryIndexes": undefined,
           "ReadCapacityUnits": undefined,
           "Table": {
@@ -621,6 +645,7 @@ describe('queryUserLogin()', () => {
     const {login2a, ...rest} = await prepare();
 
     const queryResult = await queryUserLogin({
+      index: 'gsi1',
       login: login2a,
       vendor: 'GITHUB',
     });
@@ -633,8 +658,14 @@ describe('queryUserLogin()', () => {
       `
       {
         "capacity": {
-          "CapacityUnits": 0,
-          "GlobalSecondaryIndexes": undefined,
+          "CapacityUnits": 0.5,
+          "GlobalSecondaryIndexes": {
+            "gsi1": {
+              "CapacityUnits": 0.5,
+              "ReadCapacityUnits": undefined,
+              "WriteCapacityUnits": undefined,
+            },
+          },
           "LocalSecondaryIndexes": undefined,
           "ReadCapacityUnits": undefined,
           "Table": {
@@ -642,10 +673,20 @@ describe('queryUserLogin()', () => {
             "ReadCapacityUnits": undefined,
             "WriteCapacityUnits": undefined,
           },
-          "TableName": "UserLogin-TableUserLogin-fda893a2",
+          "TableName": Any<String>,
           "WriteCapacityUnits": undefined,
         },
-        "items": [],
+        "items": [
+          {
+            "createdAt": Any<Date>,
+            "externalId": "36807",
+            "id": Any<String>,
+            "login": "Lamont61",
+            "updatedAt": Any<Date>,
+            "vendor": "GITHUB",
+            "version": 1,
+          },
+        ],
       }
     `
     );

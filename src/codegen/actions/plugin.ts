@@ -15,6 +15,7 @@ import {ActionPluginConfig} from './config';
 import {
   createItemTemplate,
   deleteItemTemplate,
+  queryTemplate,
   readItemTemplate,
   touchItemTemplate,
   updateItemTemplate,
@@ -62,7 +63,6 @@ export interface MultiResultType<T> {
 ${tableTypes
   .map((objType) => {
     const keyInfo = extractKeyInfo(objType);
-    const isCompositeKey = hasDirective('compositeKey', objType);
 
     return [
       `export interface ${objType.name}PrimaryKey {
@@ -73,7 +73,7 @@ ${tableTypes
       readItemTemplate(objType),
       touchItemTemplate(objType),
       updateItemTemplate(objType),
-      isCompositeKey && queryTpl({type: objType}),
+      queryTemplate(objType),
     ]
       .filter(Boolean)
       .join('\n\n');

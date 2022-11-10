@@ -1,114 +1,117 @@
-import {GraphQLObjectType} from 'graphql';
+import {GraphQLField, GraphQLObjectType} from 'graphql';
 
-import {extractTtlInfo} from '../../../common/fields';
-import {
-  getArgFieldTypeValues,
-  getOptionalArgStringValue,
-  getDirective,
-  getTypeScriptTypeForField,
-  hasDirective,
-  unmarshalField,
-} from '../../../common/helpers';
-import {extractKeyInfo, makeKeyTemplate} from '../../../common/keys';
+import {getTypeScriptTypeForField} from '../../../common/helpers';
+import {IndexFieldInfo} from '../../../common/indexes';
+import {makeKeyTemplate} from '../../../common/keys';
 
 import {ensureTableTemplate} from './ensure-table';
 
 export interface QueryTplInput {
-  type: GraphQLObjectType;
+  readonly consistent: boolean;
+  readonly indexes: readonly IndexFieldInfo[];
+  readonly objType: GraphQLObjectType;
+  readonly unmarshall: readonly string[];
+}
+
+/** helper */
+function makePartialKeyTemplate(
+  prefix: string,
+  fields: readonly GraphQLField<unknown, unknown>[]
+): string {
+  return `['${prefix}', ${fields
+    .map((f) => `'${f.name}' in input && input.${f.name}`)
+    .join(', ')}].filter(Boolean).join('#')`;
+}
+
+/** helper */
+function renderFieldAsType(field: GraphQLField<unknown, unknown>): string {
+  return `  ${field.name}: ${getTypeScriptTypeForField(field)};`;
 }
 
 /** template */
-export function queryTpl({type}: QueryTplInput) {
-  const keyInfo = extractKeyInfo(type);
-  const ttlInfo = extractTtlInfo(type);
-
-  const consistent = hasDirective('consistent', type);
-
-  const unmarshall: string[] = [];
-
-  const fields = type.getFields();
-  const fieldNames = Object.keys(fields).sort();
-
-  for (const fieldName of fieldNames) {
-    const field = fields[fieldName];
-
-    if (keyInfo.fields.has(fieldName)) {
-      // intentionally empty. if key fields need to do anything, they'll be
-      // handled after the loop
-    } else if (fieldName === 'version') {
-      unmarshall.push(unmarshalField(field, '_v'));
-    } else if (fieldName === ttlInfo?.fieldName) {
-      unmarshall.push(unmarshalField(field, 'ttl'));
-    } else if (fieldName === 'createdAt') {
-      unmarshall.push(unmarshalField(field, '_ct'));
-    } else if (fieldName === 'updatedAt') {
-      unmarshall.push(unmarshalField(field, '_md'));
-    } else {
-      unmarshall.push(unmarshalField(field));
-    }
-  }
-
-  unmarshall.push(...keyInfo.unmarshall);
-
-  unmarshall.sort();
-
-  const typeName = type.name;
-
-  const directive = getDirective('compositeKey', type);
-
-  const pkFields = getArgFieldTypeValues('pkFields', type, directive);
-  const skFields = getArgFieldTypeValues('skFields', type, directive);
-  const pkPrefix = getOptionalArgStringValue('pkPrefix', directive);
-  const skPrefix = getOptionalArgStringValue('skPrefix', directive);
+export function queryTpl({
+  consistent,
+  indexes,
+  objType,
+  unmarshall,
+}: QueryTplInput) {
+  const typeName = objType.name;
 
   const inputTypeName = `Query${typeName}Input`;
   const outputTypeName = `Query${typeName}Output`;
 
+  const typeSignature = indexes
+    .flatMap(({name, pkFields, skFields}) =>
+      [undefined, ...skFields].map((_, index) =>
+        [
+          name ? `index: '${name}'` : '',
+          ...[
+            ...pkFields.map(renderFieldAsType),
+            ...skFields.slice(0, index).map(renderFieldAsType),
+          ].sort(),
+        ].join('\n')
+      )
+    )
+    .map((t) => `{${t}}`)
+    .join(' | ');
+
   return `
-export type ${inputTypeName} =
-${[undefined, ...skFields]
-  .map(
-    (_, index) => `
-{
-${pkFields
-  .map((f) => `  ${f.name}: ${getTypeScriptTypeForField(f)};`)
-  .join('\n')}
-${skFields
-  .slice(0, index)
-  .map(
-    (f, __, all) =>
-      `  ${f.name}${
-        index === all.length ? '?' : ''
-      }: ${getTypeScriptTypeForField(f)};`
-  )
-  .join('\n')}
-}`
-  )
-  .join('|')}
+export type ${inputTypeName} = ${typeSignature};
+export type ${outputTypeName} = MultiResultType<${typeName}>;
 
+/** helper */
+function makePartitionKeyForQuery${typeName}(input: ${inputTypeName}): string {
+  ${indexes
+    .map(({name, pkFields, pkPrefix}) => {
+      if (name) {
+        return `
+if ('index' in input && input.index === '${name}') {
+  return \`${makeKeyTemplate(pkPrefix ?? '', pkFields)}\`;
+}`;
+      }
+      return `if (!('index' in input)) {
+  return \`${makeKeyTemplate(pkPrefix ?? '', pkFields)}\`
+}`;
+    })
+    .join('\n else ')};
 
+  throw new Error('Could not construct partition key from input');
+}
 
-export type ${outputTypeName} = MultiResultType<${typeName}>
+/** helper */
+function makeSortKeyForQuery${typeName}(input: ${inputTypeName}): string | undefined {
+${indexes
+  .map(({name, skFields, skPrefix}) => {
+    if (name) {
+      return `
+if ('index' in input && input.index === '${name}') {
+  return ${makePartialKeyTemplate(skPrefix ?? '', skFields)};
+}`;
+    }
+    return `if (!('index' in input)) {
+  return ${makePartialKeyTemplate(skPrefix ?? '', skFields)}
+}`;
+  })
+  .join('\n else ')};
+
+  throw new Error('Could not construct sort key from input');
+}
 
 /** query${typeName} */
 export async function query${typeName}(input: Readonly<Query${typeName}Input>): Promise<Readonly<${outputTypeName}>> {
-  ${ensureTableTemplate(type)}
-
-  const pk = \`${makeKeyTemplate(pkPrefix, pkFields)}\`;
-  const sk = ['${skPrefix}', ${skFields.map(
-    (f) => `'${f.name}' in input && input.${f.name}`
-  )}].filter(Boolean).join('#');
+  ${ensureTableTemplate(objType)}
 
   const {ConsumedCapacity: capacity, Items: items = []} = await ddbDocClient.send(new QueryCommand({
-    ConsistentRead: ${consistent},
+    ConsistentRead: ${consistent ? `!('index' in input)` : 'false'},
     ExpressionAttributeNames: {
-      '#pk': 'pk',
-      '#sk': 'sk',
+      '#pk': \`\${'index' in input ? input.index : ''}pk\`,
+      '#sk': \`\${'index' in input ? input.index : ''}sk\`,
     },
     ExpressionAttributeValues: {
-      ':pk': pk,
-      ':sk': sk,
+      ':pk': makePartitionKeyForQuery${typeName}(input),
+      ':sk': makeSortKeyForQuery${typeName}(input),
     },
+    IndexName: 'index' in input ? input.index : undefined,
     KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
@@ -119,11 +122,7 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>): 
   return {
     capacity,
     items: items.map((item) => {
-        assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected \${JSON.stringify({${keyInfo.inputToPrimaryKey
-    .map((item) => `        ${item},`)
-    .join(
-      '\n'
-    )}})} to load items of type ${typeName} but got at \${item._et} instead\`));
+        assert(item._et === '${typeName}', () => new DataIntegrityError('TODO'));
       return {
 ${unmarshall.map((item) => `            ${item},`).join('\n')}
       };

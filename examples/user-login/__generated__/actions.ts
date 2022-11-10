@@ -640,16 +640,48 @@ export async function updateUserLogin(
 
 export type QueryUserLoginInput =
   | {
-      vendor: Vendor;
       externalId: Scalars['String'];
+      vendor: Vendor;
     }
   | {
-      vendor: Vendor;
       externalId: Scalars['String'];
-      login?: Scalars['String'];
+      login: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {index: 'gsi1'; login: Scalars['String']; vendor: Vendor}
+  | {
+      index: 'gsi1';
+      login: Scalars['String'];
+      updatedAt: Scalars['Date'];
+      vendor: Vendor;
     };
-
 export type QueryUserLoginOutput = MultiResultType<UserLogin>;
+
+/** helper */
+function makePartitionKeyForQueryUserLogin(input: QueryUserLoginInput): string {
+  if (!('index' in input)) {
+    return `USER#${input.vendor}#${input.externalId}`;
+  } else if ('index' in input && input.index === 'gsi1') {
+    return `LOGIN#${input.vendor}#${input.login}`;
+  }
+
+  throw new Error('Could not construct partition key from input');
+}
+
+/** helper */
+function makeSortKeyForQueryUserLogin(
+  input: QueryUserLoginInput
+): string | undefined {
+  if (!('index' in input)) {
+    return ['LOGIN', 'login' in input && input.login].filter(Boolean).join('#');
+  } else if ('index' in input && input.index === 'gsi1') {
+    return ['MODIFIED', 'updatedAt' in input && input.updatedAt]
+      .filter(Boolean)
+      .join('#');
+  }
+
+  throw new Error('Could not construct sort key from input');
+}
 
 /** queryUserLogin */
 export async function queryUserLogin(
@@ -658,23 +690,19 @@ export async function queryUserLogin(
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
 
-  const pk = `USER#${input.vendor}#${input.externalId}`;
-  const sk = ['LOGIN', 'login' in input && input.login]
-    .filter(Boolean)
-    .join('#');
-
   const {ConsumedCapacity: capacity, Items: items = []} =
     await ddbDocClient.send(
       new QueryCommand({
         ConsistentRead: false,
         ExpressionAttributeNames: {
-          '#pk': 'pk',
-          '#sk': 'sk',
+          '#pk': `${'index' in input ? input.index : ''}pk`,
+          '#sk': `${'index' in input ? input.index : ''}sk`,
         },
         ExpressionAttributeValues: {
-          ':pk': pk,
-          ':sk': sk,
+          ':pk': makePartitionKeyForQueryUserLogin(input),
+          ':sk': makeSortKeyForQueryUserLogin(input),
         },
+        IndexName: 'index' in input ? input.index : undefined,
         KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
         ReturnConsumedCapacity: 'INDEXES',
         TableName: tableName,
@@ -689,17 +717,7 @@ export async function queryUserLogin(
   return {
     capacity,
     items: items.map((item) => {
-      assert(
-        item._et === 'UserLogin',
-        () =>
-          new DataIntegrityError(
-            `Expected ${JSON.stringify({
-              externalId: input.externalId,
-              login: input.login,
-              vendor: input.vendor,
-            })} to load items of type UserLogin but got at ${item._et} instead`
-          )
-      );
+      assert(item._et === 'UserLogin', () => new DataIntegrityError('TODO'));
       return {
         createdAt: (() => {
           assert(

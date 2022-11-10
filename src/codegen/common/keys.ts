@@ -15,6 +15,7 @@ import {
   hasInterface,
   unmarshalField,
 } from './helpers';
+import {IndexFieldInfo} from './indexes';
 
 /** Generates the template for producing the desired primary key or index column */
 export function makeKeyTemplate(
@@ -38,6 +39,7 @@ export function makeKeyTemplate(
 export interface KeyInfo {
   readonly conditionField: string;
   readonly ean: readonly string[];
+  readonly index?: IndexFieldInfo;
   readonly fields: Set<string>;
   readonly inputToPrimaryKey: readonly string[];
   readonly keyForCreate: readonly string[];
@@ -60,6 +62,7 @@ function extractCompositeKeyInfo(
   const skFields = getArgFieldTypeValues('skFields', type, directive);
   const pkPrefix = getOptionalArgStringValue('pkPrefix', directive);
   const skPrefix = getOptionalArgStringValue('skPrefix', directive);
+
   const pkTemplate = makeKeyTemplate(pkPrefix, pkFields);
   const skTemplate = makeKeyTemplate(skPrefix, skFields);
 
@@ -74,6 +77,12 @@ function extractCompositeKeyInfo(
     conditionField: 'pk',
     ean: [`'#pk': 'pk'`],
     fields: new Set(['pk', 'sk', isNode ? 'id' : ''].filter(Boolean)),
+    index: {
+      pkFields,
+      pkPrefix,
+      skFields,
+      skPrefix,
+    },
     inputToPrimaryKey: fieldNames.map((f) => `${f}: input.${f}`),
     keyForCreate: [`pk: \`${pkTemplate}\``, `sk: \`${skTemplate}\``],
     keyForReadAndUpdate: [`pk: \`${pkTemplate}\``, `sk: \`${skTemplate}\``],

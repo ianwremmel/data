@@ -3,11 +3,12 @@ import {snakeCase} from 'lodash';
 
 import {extractTtlInfo} from '../../common/fields';
 import {hasDirective, unmarshalField} from '../../common/helpers';
-import {extractIndexInfo} from '../../common/indexes';
+import {extractIndexInfo, IndexFieldInfo} from '../../common/indexes';
 import {extractKeyInfo} from '../../common/keys';
 
 import {createItemTpl} from './templates/create-item';
 import {deleteItemTpl} from './templates/delete-item';
+import {queryTpl} from './templates/query';
 import {readItemTpl} from './templates/read-item';
 import {touchItemTpl} from './templates/touch-item';
 import {updateItemTpl} from './templates/update-item';
@@ -100,6 +101,58 @@ export function deleteItemTemplate(objType: GraphQLObjectType) {
     ean: keyInfo.ean,
     key: keyInfo.keyForReadAndUpdate,
     objType,
+  });
+}
+
+/**
+ * Generates the query function for a table
+ */
+export function queryTemplate(objType: GraphQLObjectType) {
+  const indexInfo = extractIndexInfo(objType);
+  const keyInfo = extractKeyInfo(objType);
+  const ttlInfo = extractTtlInfo(objType);
+
+  if (!hasDirective('compositeKey', objType)) {
+    return '';
+  }
+
+  const consistent = hasDirective('consistent', objType);
+
+  const unmarshall: string[] = [];
+
+  const fields = objType.getFields();
+  const fieldNames = Object.keys(fields).sort();
+
+  for (const fieldName of fieldNames) {
+    const field = fields[fieldName];
+
+    if (keyInfo.fields.has(fieldName)) {
+      // intentionally empty. if key fields need to do anything, they'll be
+      // handled after the loop
+    } else if (fieldName === 'version') {
+      unmarshall.push(unmarshalField(field, '_v'));
+    } else if (fieldName === ttlInfo?.fieldName) {
+      unmarshall.push(unmarshalField(field, 'ttl'));
+    } else if (fieldName === 'createdAt') {
+      unmarshall.push(unmarshalField(field, '_ct'));
+    } else if (fieldName === 'updatedAt') {
+      unmarshall.push(unmarshalField(field, '_md'));
+    } else {
+      unmarshall.push(unmarshalField(field));
+    }
+  }
+
+  unmarshall.push(...keyInfo.unmarshall);
+
+  unmarshall.sort();
+
+  return queryTpl({
+    consistent,
+    indexes: [keyInfo.index, ...indexInfo.indexes].filter(
+      Boolean
+    ) as IndexFieldInfo[],
+    objType,
+    unmarshall,
   });
 }
 

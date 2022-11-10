@@ -9,6 +9,7 @@ import {assertObjectType, GraphQLObjectType, isObjectType} from 'graphql';
 import {snakeCase} from 'lodash';
 
 import {hasDirective, hasInterface} from '../common/helpers';
+import {extractIndexInfo} from '../common/indexes';
 
 import {CloudformationPluginConfig} from './config';
 
@@ -125,6 +126,36 @@ ${tableTypes
           },
         ];
 
+    const globalSecondaryIndexes = [];
+
+    const indexInfo = extractIndexInfo(type);
+    for (const index of indexInfo.indexes) {
+      attributeDefinitions.push(
+        {
+          AttributeName: `${index.name}pk`,
+          AttributeType: 'S',
+        },
+        {
+          AttributeName: `${index.name}sk`,
+          AttributeType: 'S',
+        }
+      );
+
+      globalSecondaryIndexes.push({
+        IndexName: index.name,
+        KeySchema: [
+          {
+            AttributeName: `${index.name}pk`,
+            KeyType: 'HASH',
+          },
+          {
+            AttributeName: `${index.name}sk`,
+            KeyType: 'RANGE',
+          },
+        ],
+      });
+    }
+
     const ttlField =
       type.astNode?.kind === 'ObjectTypeDefinition' &&
       type.astNode.fields?.find((field) =>
@@ -145,7 +176,24 @@ ${attributeDefinitions
           AttributeType: ${AttributeType}`
   )
   .join('\n')}
-      BillingMode: PAY_PER_REQUEST
+      BillingMode: PAY_PER_REQUEST${
+        globalSecondaryIndexes.length > 0
+          ? `
+      GlobalSecondaryIndexes:
+${globalSecondaryIndexes
+  .map(
+    (gsi) => `        - IndexName: ${gsi.IndexName}
+          KeySchema:
+${gsi.KeySchema.map(
+  (ks) => `            - AttributeName: ${ks.AttributeName}
+              KeyType: ${ks.KeyType}`
+).join('\n')}
+          Projection:
+            ProjectionType: ALL`
+  )
+  .join('\n')}`
+          : ''
+      }
       KeySchema:
 ${keySchema
   .map(
