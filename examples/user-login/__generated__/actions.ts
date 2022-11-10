@@ -697,9 +697,7 @@ export async function queryUserLogin(
               externalId: input.externalId,
               login: input.login,
               vendor: input.vendor,
-            })} to to load items of type UserLogin but got at ${
-              item._et
-            } instead`
+            })} to load items of type UserLogin but got at ${item._et} instead`
           )
       );
       return {

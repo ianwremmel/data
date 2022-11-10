@@ -123,7 +123,7 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>): 
     .map((item) => `        ${item},`)
     .join(
       '\n'
-    )}})} to to load items of type ${typeName} but got at \${item._et} instead\`));
+    )}})} to load items of type ${typeName} but got at \${item._et} instead\`));
       return {
 ${unmarshall.map((item) => `            ${item},`).join('\n')}
       };
