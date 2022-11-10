@@ -6,6 +6,7 @@ import {TtlInfo} from '../../../common/fields';
 import {ensureTableTemplate} from './ensure-table';
 
 export interface UpdateItemTplInput {
+  readonly conditionField: string;
   readonly objType: GraphQLObjectType;
   readonly ttlInfo: Nullable<TtlInfo>;
   readonly ean: readonly string[];
@@ -18,6 +19,7 @@ export interface UpdateItemTplInput {
 
 /** template */
 export function updateItemTpl({
+  conditionField,
   objType,
   ttlInfo,
   ean,
@@ -49,7 +51,7 @@ export async function update${typeName}(input: Readonly<${inputTypeName}>): Prom
 ${ensureTableTemplate(objType)}
   try {
     const {Attributes: item, ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand({
-      ConditionExpression: '#version = :version AND attribute_exists(#id)',
+      ConditionExpression: '#version = :version AND attribute_exists(#${conditionField})',
       ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
       },
@@ -69,7 +71,11 @@ ${key.map((k) => `        ${k},`).join('\n')}
     assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
     assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-    assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected \${input.id} to update a ${typeName} but updated \${item._et} instead\`));
+    assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected \${JSON.stringify({${inputToPrimaryKey
+    .map((item) => `        ${item},`)
+    .join(
+      '\n'
+    )}})} to update a ${typeName} but updated \${item._et} instead\`));
 
     return {
       capacity,

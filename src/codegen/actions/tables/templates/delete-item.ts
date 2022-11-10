@@ -3,21 +3,25 @@ import {GraphQLObjectType} from 'graphql';
 import {ensureTableTemplate} from './ensure-table';
 
 export interface DeleteItemTplInput {
+  readonly conditionField: string;
   readonly ean: readonly string[];
   readonly key: readonly string[];
   readonly objType: GraphQLObjectType;
 }
 
 /** template */
-export function deleteItemTpl({ean, key, objType}: DeleteItemTplInput) {
+export function deleteItemTpl({
+  conditionField,
+  ean,
+  key,
+  objType,
+}: DeleteItemTplInput) {
   const typeName = objType.name;
 
-  const inputTypeName = `Delete${typeName}Input`;
   const outputTypeName = `Delete${typeName}Output`;
   const primaryKeyType = `${objType.name}PrimaryKey`;
 
   return `
-export type ${inputTypeName} = Scalars['ID'];
 export type ${outputTypeName} = ResultType<void>;
 
 /**  */
@@ -26,7 +30,7 @@ ${ensureTableTemplate(objType)}
 
   try {
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new DeleteCommand({
-      ConditionExpression: 'attribute_exists(#id)',
+      ConditionExpression: 'attribute_exists(#${conditionField})',
       ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
       },

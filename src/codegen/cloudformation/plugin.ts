@@ -5,10 +5,11 @@ import {
   AddToSchemaResult,
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
-import {assertObjectType, isObjectType} from 'graphql';
+import {assertObjectType, GraphQLObjectType, isObjectType} from 'graphql';
 import {snakeCase} from 'lodash';
 
-import {hasInterface} from '../common/helpers';
+import {hasDirective, hasInterface} from '../common/helpers';
+import {extractIndexInfo} from '../common/indexes';
 
 import {CloudformationPluginConfig} from './config';
 
@@ -29,8 +30,10 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (schema) => {
     .map((typeName) => {
       const objType = typesMap[typeName];
       assertObjectType(objType);
-      return objType;
+      return objType as GraphQLObjectType;
     });
+
+  const tableNames = tableTypes.map((type) => type.name).sort();
 
   // Eventually, this should modifiy an existing file by using Guard comments
   // and adding/replacing sections as relevant, but for now, we'll just do the
@@ -47,30 +50,30 @@ Globals:
   Function:
     Environment:
       Variables:
-        ### Generated Simple Table Name Environment Variables ###
-${tableTypes
+        ### Generated Table Name Environment Variables ###
+${tableNames
   .map(
-    (type) =>
-      `        TABLE_${snakeCase(type.name).toUpperCase()}: !Ref Table${
-        type.name
-      }`
+    (tableName) =>
+      `        TABLE_${snakeCase(
+        tableName
+      ).toUpperCase()}: !Ref Table${tableName}`
   )
   .join('\n')}
-        ### End Generated Simple Table Name Environment Variables ###
+        ### End Generated Table Name Environment Variables ###
 
 Outputs:
-  ### Generated Simple Table Name Outputs ###
-${tableTypes
+  ### Generated Table Name Outputs ###
+${tableNames
   .map(
-    (type) => `  Table${type.name}:
-    Description: The name of the DynamoDB table for ${type.name}
-    Value: !Ref Table${type.name}
+    (typeName) => `  Table${typeName}:
+    Description: The name of the DynamoDB table for ${typeName}
+    Value: !Ref Table${typeName}
     Export:
-      Name: !Sub \${AWS::StackName}-Table${type.name}
-      Value: !Ref Table${type.name}`
+      Name: !Sub \${AWS::StackName}-Table${typeName}
+      Value: !Ref Table${typeName}`
   )
   .join('\n')}
-  ### End Generated Simple Table Name Outputs ###
+  ### End Generated Table Name Outputs ###
 
 Parameters:
   StageName:
@@ -83,11 +86,75 @@ Parameters:
     Default: development
 
 Resources:
-  ### Generated Simple Table Resources ###
+  ### Generated Table Resources ###
 ${tableTypes
   .map((type) => {
     const tableName = `Table${type.name}`;
-    const idField = 'id';
+
+    assertObjectType(type);
+    // Again, I don't know why I need to cast this.
+    const isCompositeKey = hasDirective(`compositeKey`, type);
+
+    const attributeDefinitions = isCompositeKey
+      ? [
+          {
+            AttributeName: 'pk',
+            AttributeType: 'S',
+          },
+          {
+            AttributeName: 'sk',
+            AttributeType: 'S',
+          },
+        ]
+      : [{AttributeName: 'id', AttributeType: 'S'}];
+
+    const keySchema = isCompositeKey
+      ? [
+          {
+            AttributeName: 'pk',
+            KeyType: 'HASH',
+          },
+          {
+            AttributeName: 'sk',
+            KeyType: 'RANGE',
+          },
+        ]
+      : [
+          {
+            AttributeName: 'id',
+            KeyType: 'HASH',
+          },
+        ];
+
+    const globalSecondaryIndexes = [];
+
+    const indexInfo = extractIndexInfo(type);
+    for (const index of indexInfo.indexes) {
+      attributeDefinitions.push(
+        {
+          AttributeName: `${index.name}pk`,
+          AttributeType: 'S',
+        },
+        {
+          AttributeName: `${index.name}sk`,
+          AttributeType: 'S',
+        }
+      );
+
+      globalSecondaryIndexes.push({
+        IndexName: index.name,
+        KeySchema: [
+          {
+            AttributeName: `${index.name}pk`,
+            KeyType: 'HASH',
+          },
+          {
+            AttributeName: `${index.name}sk`,
+            KeyType: 'RANGE',
+          },
+        ],
+      });
+    }
 
     const ttlField =
       type.astNode?.kind === 'ObjectTypeDefinition' &&
@@ -100,12 +167,40 @@ ${tableTypes
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: ${idField}
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
+${attributeDefinitions
+  .map(
+    ({
+      AttributeName,
+      AttributeType,
+    }) => `        - AttributeName: ${AttributeName}
+          AttributeType: ${AttributeType}`
+  )
+  .join('\n')}
+      BillingMode: PAY_PER_REQUEST${
+        globalSecondaryIndexes.length > 0
+          ? `
+      GlobalSecondaryIndexes:
+${globalSecondaryIndexes
+  .map(
+    (gsi) => `        - IndexName: ${gsi.IndexName}
+          KeySchema:
+${gsi.KeySchema.map(
+  (ks) => `            - AttributeName: ${ks.AttributeName}
+              KeyType: ${ks.KeyType}`
+).join('\n')}
+          Projection:
+            ProjectionType: ALL`
+  )
+  .join('\n')}`
+          : ''
+      }
       KeySchema:
-        - AttributeName: ${idField}
-          KeyType: HASH
+${keySchema
+  .map(
+    ({AttributeName, KeyType}) => `        - AttributeName: ${AttributeName}
+          KeyType: ${KeyType}`
+  )
+  .join('\n')}
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       SSESpecification:
@@ -122,17 +217,16 @@ ${tableTypes
           Value: !Ref StageName
         - Key: TableName
           Value: ${tableName}
-        - Key: TableType
-          Value: SimpleTable
       ${
-        ttlField &&
-        `TimeToLiveSpecification:
+        ttlField
+          ? `TimeToLiveSpecification:
           AttributeName: ttl
           Enabled: true`
+          : ''
       }`;
   })
   .join('\n')}
 
-  ### End Generated Simple Table Resources ###
+  ### End Generated Table Resources ###
     `;
 };

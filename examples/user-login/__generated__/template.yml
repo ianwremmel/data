@@ -11,17 +11,17 @@ Globals:
     Environment:
       Variables:
         ### Generated Table Name Environment Variables ###
-        TABLE_USER_SESSION: !Ref TableUserSession
+        TABLE_USER_LOGIN: !Ref TableUserLogin
         ### End Generated Table Name Environment Variables ###
 
 Outputs:
   ### Generated Table Name Outputs ###
-  TableUserSession:
-    Description: The name of the DynamoDB table for UserSession
-    Value: !Ref TableUserSession
+  TableUserLogin:
+    Description: The name of the DynamoDB table for UserLogin
+    Value: !Ref TableUserLogin
     Export:
-      Name: !Sub ${AWS::StackName}-TableUserSession
-      Value: !Ref TableUserSession
+      Name: !Sub ${AWS::StackName}-TableUserLogin
+      Value: !Ref TableUserLogin
   ### End Generated Table Name Outputs ###
 
 Parameters:
@@ -37,16 +37,33 @@ Parameters:
 Resources:
   ### Generated Table Resources ###
 
-  TableUserSession:
+  TableUserLogin:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: id
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: gsi1pk
+          AttributeType: S
+        - AttributeName: gsi1sk
           AttributeType: S
       BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi1
+          KeySchema:
+            - AttributeName: gsi1pk
+              KeyType: HASH
+            - AttributeName: gsi1sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       KeySchema:
-        - AttributeName: id
+        - AttributeName: pk
           KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       SSESpecification:
@@ -62,10 +79,8 @@ Resources:
         - Key: StageName
           Value: !Ref StageName
         - Key: TableName
-          Value: TableUserSession
-      TimeToLiveSpecification:
-          AttributeName: ttl
-          Enabled: true
+          Value: TableUserLogin
+      
 
   ### End Generated Table Resources ###
     
