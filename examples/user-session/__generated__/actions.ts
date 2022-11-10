@@ -518,7 +518,9 @@ export async function updateUserSession(
       item._et === 'UserSession',
       () =>
         new DataIntegrityError(
-          `Expected JSON.stringify({        id: input.id,}) to update a UserSession but updated ${item._et} instead`
+          `Expected ${JSON.stringify({
+            id: input.id,
+          })} to update a UserSession but updated ${item._et} instead`
         )
     );
 

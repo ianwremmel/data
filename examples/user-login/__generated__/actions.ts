@@ -527,9 +527,13 @@ export async function updateUserLogin(
     assert(
       item._et === 'UserLogin',
       () =>
-        new DataIntegrityError(`Expected JSON.stringify({        externalId: input.externalId,
-        login: input.login,
-        vendor: input.vendor,}) to update a UserLogin but updated ${item._et} instead`)
+        new DataIntegrityError(
+          `Expected ${JSON.stringify({
+            externalId: input.externalId,
+            login: input.login,
+            vendor: input.vendor,
+          })} to update a UserLogin but updated ${item._et} instead`
+        )
     );
 
     return {
@@ -680,9 +684,15 @@ export async function queryUserLogin(
       assert(
         item._et === 'UserLogin',
         () =>
-          new DataIntegrityError(`Expected JSON.stringify({        externalId: input.externalId,
-        login: input.login,
-        vendor: input.vendor,}) to to load items of type UserLogin but got at ${item._et} instead`)
+          new DataIntegrityError(
+            `Expected ${JSON.stringify({
+              externalId: input.externalId,
+              login: input.login,
+              vendor: input.vendor,
+            })} to to load items of type UserLogin but got at ${
+              item._et
+            } instead`
+          )
       );
       return {
         createdAt: (() => {

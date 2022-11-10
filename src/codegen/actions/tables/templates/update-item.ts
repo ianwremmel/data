@@ -71,9 +71,11 @@ ${key.map((k) => `        ${k},`).join('\n')}
     assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
     assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-    assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected JSON.stringify({${inputToPrimaryKey
+    assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected \${JSON.stringify({${inputToPrimaryKey
     .map((item) => `        ${item},`)
-    .join('\n')}}) to update a ${typeName} but updated \${item._et} instead\`));
+    .join(
+      '\n'
+    )}})} to update a ${typeName} but updated \${item._et} instead\`));
 
     return {
       capacity,

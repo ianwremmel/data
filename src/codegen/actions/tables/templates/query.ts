@@ -119,11 +119,11 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>): 
   return {
     capacity,
     items: items.map((item) => {
-        assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected JSON.stringify({${keyInfo.inputToPrimaryKey
+        assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected \${JSON.stringify({${keyInfo.inputToPrimaryKey
     .map((item) => `        ${item},`)
     .join(
       '\n'
-    )}}) to to load items of type ${typeName} but got at \${item._et} instead\`));
+    )}})} to to load items of type ${typeName} but got at \${item._et} instead\`));
       return {
 ${unmarshall.map((item) => `            ${item},`).join('\n')}
       };
