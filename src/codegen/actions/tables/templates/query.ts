@@ -1,93 +1,17 @@
-import assert from 'assert';
-
-import {
-  GraphQLObjectType,
-  isListType,
-  isNonNullType,
-  isScalarType,
-} from 'graphql';
+import {GraphQLObjectType} from 'graphql';
 
 import {extractTtlInfo} from '../../../common/fields';
 import {
-  getArg,
-  getOptionalArg,
+  getArgFieldTypeValues,
+  getOptionalArgStringValue,
+  getDirective,
+  getTypeScriptTypeForField,
   hasDirective,
   unmarshalField,
 } from '../../../common/helpers';
-import {extractKeyInfo} from '../../../common/keys';
+import {extractKeyInfo, makeKeyTemplate} from '../../../common/keys';
 
 import {ensureTableTemplate} from './ensure-table';
-
-/** helper */
-function fieldNamesToTypes(
-  type: GraphQLObjectType,
-  argName: string
-): {name: string; type: string}[] {
-  const directive = type.astNode?.directives?.find(
-    (d) => d.name.value === 'compositeKey'
-  );
-  assert(
-    directive,
-    `Expected type ${type.name} to have an @compositeKey directive`
-  );
-
-  const arg = getArg(argName, directive);
-  assert(
-    arg.value.kind === 'ListValue',
-    `Expected @compositeKey directive argument "${argName}" to be a list`
-  );
-  return arg.value.values.map((v) => {
-    assert(
-      v.kind === 'StringValue',
-      `Expected @compositeKey directive argument "${argName}" to be a list of strings`
-    );
-    const field = type.getFields()[v.value];
-    assert(
-      field,
-      `Expected @compositeKey directive argument "${argName}" to be a list of fields on the object type`
-    );
-
-    let fieldType = field.type;
-    if (isNonNullType(fieldType)) {
-      fieldType = fieldType.ofType;
-    }
-
-    if (isScalarType(fieldType)) {
-      return {name: v.value, type: `Scalars['${fieldType.name}']`};
-    }
-
-    assert(!isListType(fieldType), 'List types are not supported');
-
-    return {
-      name: field.name,
-      type: fieldType.name,
-    };
-  });
-}
-
-/** helper */
-function getPrefix(keyName: string, type: GraphQLObjectType): string {
-  const directive = type.astNode?.directives?.find(
-    (d) => d.name.value === 'compositeKey'
-  );
-  assert(
-    directive,
-    `Expected type ${type.name} to have an @compositeKey directive`
-  );
-
-  const prefix = getOptionalArg(`${keyName}Prefix`, directive);
-
-  if (!prefix) {
-    return '';
-  }
-
-  assert(
-    prefix.value.kind === 'StringValue',
-    `Expected @compositeKey directive argument "${keyName}Prefix" to be a string, but got ${prefix.value.kind}`
-  );
-
-  return prefix.value.value;
-}
 
 export interface QueryTplInput {
   type: GraphQLObjectType;
@@ -130,18 +54,15 @@ export function queryTpl({type}: QueryTplInput) {
 
   const typeName = type.name;
 
-  const pkFields = fieldNamesToTypes(type, 'pkFields');
-  const skFields = fieldNamesToTypes(type, 'skFields');
-  const pkPrefix = getPrefix('pk', type);
-  const skPrefix = getPrefix('sk', type);
+  const directive = getDirective('compositeKey', type);
+
+  const pkFields = getArgFieldTypeValues('pkFields', type, directive);
+  const skFields = getArgFieldTypeValues('skFields', type, directive);
+  const pkPrefix = getOptionalArgStringValue('pkPrefix', directive);
+  const skPrefix = getOptionalArgStringValue('skPrefix', directive);
 
   const inputTypeName = `Query${typeName}Input`;
   const outputTypeName = `Query${typeName}Output`;
-
-  const pkTemplate = [
-    pkPrefix,
-    ...pkFields.map((field) => `\${input.${field.name}}`),
-  ].join('#');
 
   return `
 export type ${inputTypeName} =
@@ -149,11 +70,16 @@ ${[undefined, ...skFields]
   .map(
     (_, index) => `
 {
-${pkFields.map((f) => `  ${f.name}: ${f.type};`).join('\n')}
+${pkFields
+  .map((f) => `  ${f.name}: ${getTypeScriptTypeForField(f)};`)
+  .join('\n')}
 ${skFields
   .slice(0, index)
   .map(
-    (f, __, all) => `  ${f.name}${index === all.length ? '?' : ''}: ${f.type};`
+    (f, __, all) =>
+      `  ${f.name}${
+        index === all.length ? '?' : ''
+      }: ${getTypeScriptTypeForField(f)};`
   )
   .join('\n')}
 }`
@@ -168,7 +94,7 @@ export type ${outputTypeName} = MultiResultType<${typeName}>
 export async function query${typeName}(input: Readonly<Query${typeName}Input>): Promise<Readonly<${outputTypeName}>> {
   ${ensureTableTemplate(type)}
 
-  const pk = \`${pkTemplate}\`;
+  const pk = \`${makeKeyTemplate(pkPrefix, pkFields)}\`;
   const sk = ['${skPrefix}', ${skFields.map(
     (f) => `'${f.name}' in input && input.${f.name}`
   )}].filter(Boolean).join('#');

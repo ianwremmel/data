@@ -4,7 +4,7 @@ import {GraphQLObjectType} from 'graphql';
 
 import {Nullable} from '../../types';
 
-import {getOptionalArg} from './helpers';
+import {getDirective, getOptionalArg} from './helpers';
 
 export interface TtlInfo {
   readonly duration: number;
@@ -29,7 +29,7 @@ export function extractTtlInfo(type: GraphQLObjectType): Nullable<TtlInfo> {
   const field = fields?.[0];
 
   const fieldName = field?.name.value;
-  const directive = field.directives?.find((d) => d.name.value === 'ttl');
+  const directive = getDirective('ttl', field);
 
   const arg = getOptionalArg('duration', directive);
 

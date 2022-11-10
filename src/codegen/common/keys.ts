@@ -1,9 +1,30 @@
 import assert from 'assert';
 
-import {isNonNullType, isScalarType} from 'graphql';
-import {ConstDirectiveNode, GraphQLObjectType} from 'graphql/index';
+import {
+  ConstDirectiveNode,
+  GraphQLField,
+  GraphQLObjectType,
+  isNonNullType,
+  isScalarType,
+} from 'graphql';
 
-import {getArg, getOptionalArg, hasInterface, unmarshalField} from './helpers';
+import {
+  getArg,
+  getArgFieldTypeValues,
+  getOptionalArgStringValue,
+  hasInterface,
+  unmarshalField,
+} from './helpers';
+
+/** Generates the template for producing the desired primary key or index column */
+export function makeKeyTemplate(
+  prefix: string,
+  fields: readonly GraphQLField<unknown, unknown>[]
+): string {
+  return [prefix, ...fields.map((field) => `\${input.${field.name}}`)].join(
+    '#'
+  );
+}
 
 export interface KeyInfo {
   readonly conditionField: string;
@@ -26,40 +47,17 @@ function extractCompositeKeyInfo(
 ): KeyInfo {
   const isNode = hasInterface('Node', type);
 
-  const pkFields = getArg('pkFields', directive);
-  assert(pkFields.value.kind === 'ListValue');
-  const pkFieldNames = pkFields.value.values.map((v) => {
-    assert(v.kind === 'StringValue');
-    return v.value;
-  });
+  const pkFields = getArgFieldTypeValues('pkFields', type, directive);
+  const skFields = getArgFieldTypeValues('skFields', type, directive);
+  const pkPrefix = getOptionalArgStringValue('pkPrefix', directive);
+  const skPrefix = getOptionalArgStringValue('skPrefix', directive);
+  const pkTemplate = makeKeyTemplate(pkPrefix, pkFields);
+  const skTemplate = makeKeyTemplate(skPrefix, skFields);
 
-  const pkPrefix = getOptionalArg('pkPrefix', directive);
-
-  const skFields = getArg('skFields', directive);
-  assert(skFields.value.kind === 'ListValue');
-  const skFieldNames = skFields.value.values.map((v) => {
-    assert(v.kind === 'StringValue');
-    return v.value;
-  });
-
-  const skPrefix = getOptionalArg('skPrefix', directive);
-
-  const pkPrefixValue =
-    pkPrefix?.value.kind === 'StringValue' ? pkPrefix.value.value : '';
-  const skPrefixValue =
-    skPrefix?.value.kind === 'StringValue' ? skPrefix.value.value : '';
-
-  const pkTemplate = [
-    pkPrefixValue,
-    ...pkFieldNames.map((field) => `\${input.${field}}`),
-  ].join('#');
-
-  const skTemplate = [
-    skPrefixValue,
-    ...skFieldNames.map((field) => `\${input.${field}}`),
-  ].join('#');
-
-  const fieldNames = [...pkFieldNames, ...skFieldNames].sort();
+  const fieldNames = [
+    ...pkFields.map((f) => f.name),
+    ...skFields.map((f) => f.name),
+  ].sort();
 
   const fields = type.getFields();
 
