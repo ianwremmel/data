@@ -33,20 +33,21 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   config,
   info
 ) => {
-  const typesMap = schema.getTypeMap();
+  try {
+    const typesMap = schema.getTypeMap();
 
-  const tableTypes = Object.keys(typesMap)
-    .filter((typeName) => {
-      const type = typesMap[typeName];
-      return isObjectType(type) && hasInterface('Model', type);
-    })
-    .map((typeName) => {
-      const objType = typesMap[typeName];
-      assertObjectType(objType);
-      return objType as GraphQLObjectType;
-    });
+    const tableTypes = Object.keys(typesMap)
+      .filter((typeName) => {
+        const type = typesMap[typeName];
+        return isObjectType(type) && hasInterface('Model', type);
+      })
+      .map((typeName) => {
+        const objType = typesMap[typeName];
+        assertObjectType(objType);
+        return objType as GraphQLObjectType;
+      });
 
-  const content = `export interface ResultType<T> {
+    const content = `export interface ResultType<T> {
   capacity: ConsumedCapacity;
   item: T;
   metrics: ItemCollectionMetrics | undefined;
@@ -79,23 +80,28 @@ ${tableTypes
   })
   .join('\n')}`;
 
-  assert(info?.outputFile, 'info.outputFile is required');
+    assert(info?.outputFile, 'info.outputFile is required');
 
-  const isExample = !!process.env.IS_EXAMPLE;
+    const isExample = !!process.env.IS_EXAMPLE;
 
-  return {
-    content,
-    prepend: [
-      `import {ConditionalCheckFailedException, ConsumedCapacity, ItemCollectionMetrics} from '@aws-sdk/client-dynamodb';`,
-      `import {DeleteCommand, GetCommand, QueryCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
-      isExample
-        ? `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '../../..'`
-        : `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '@ianwremmel/data'`,
-      `import {v4 as uuidv4} from 'uuid'`,
-      `import {ddbDocClient} from "${path.relative(
-        path.resolve(process.cwd(), path.dirname(info.outputFile)),
-        path.resolve(process.cwd(), config.pathToDocumentClient)
-      )}"`,
-    ],
-  };
+    return {
+      content,
+      prepend: [
+        `import {ConditionalCheckFailedException, ConsumedCapacity, ItemCollectionMetrics} from '@aws-sdk/client-dynamodb';`,
+        `import {DeleteCommand, GetCommand, QueryCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
+        isExample
+          ? `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '../../..'`
+          : `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '@ianwremmel/data'`,
+        `import {v4 as uuidv4} from 'uuid'`,
+        `import {ddbDocClient} from "${path.relative(
+          path.resolve(process.cwd(), path.dirname(info.outputFile)),
+          path.resolve(process.cwd(), config.pathToDocumentClient)
+        )}"`,
+      ],
+    };
+  } catch (err) {
+    // graphql-codegen suppresses stack traces, so we have to re-log here.
+    console.error(err);
+    throw err;
+  }
 };
