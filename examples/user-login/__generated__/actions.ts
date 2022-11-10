@@ -144,6 +144,8 @@ export async function createUserLogin(
         '#createdAt': '_ct',
         '#entity': '_et',
         '#externalId': 'external_id',
+        '#gsi1pk': 'gsi1pk',
+        '#gsi1sk': 'gsi1sk',
         '#login': 'login',
         '#pk': 'pk',
         '#updatedAt': '_md',
@@ -154,6 +156,8 @@ export async function createUserLogin(
         ':createdAt': now.getTime(),
         ':entity': 'UserLogin',
         ':externalId': input.externalId,
+        ':gsi1pk': `LOGIN#${input.vendor}#${input.login}`,
+        ':gsi1sk': `MODIFIED#${now.getTime()}`,
         ':login': input.login,
         ':updatedAt': now.getTime(),
         ':vendor': input.vendor,
@@ -168,7 +172,7 @@ export async function createUserLogin(
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
       UpdateExpression:
-        'SET #createdAt = :createdAt, #entity = :entity, #externalId = :externalId, #login = :login, #updatedAt = :updatedAt, #vendor = :vendor, #version = :version',
+        'SET #createdAt = :createdAt, #entity = :entity, #externalId = :externalId, #gsi1pk = :gsi1pk, #gsi1sk = :gsi1sk, #login = :login, #updatedAt = :updatedAt, #vendor = :vendor, #version = :version',
     })
   );
 
@@ -490,6 +494,8 @@ export async function updateUserLogin(
         ExpressionAttributeNames: {
           '#createdAt': '_ct',
           '#externalId': 'external_id',
+          '#gsi1pk': 'gsi1pk',
+          '#gsi1sk': 'gsi1sk',
           '#login': 'login',
           '#pk': 'pk',
           '#updatedAt': '_md',
@@ -499,6 +505,8 @@ export async function updateUserLogin(
         ExpressionAttributeValues: {
           ':createdAt': now.getTime(),
           ':externalId': input.externalId,
+          ':gsi1pk': `LOGIN#${input.vendor}#${input.login}`,
+          ':gsi1sk': `MODIFIED#${now.getTime()}`,
           ':login': input.login,
           ':newVersion': input.version + 1,
           ':updatedAt': now.getTime(),
@@ -514,7 +522,7 @@ export async function updateUserLogin(
         ReturnValues: 'ALL_NEW',
         TableName: tableName,
         UpdateExpression:
-          'SET #createdAt = :createdAt, #externalId = :externalId, #login = :login, #updatedAt = :updatedAt, #vendor = :vendor, #version = :newVersion',
+          'SET #createdAt = :createdAt, #externalId = :externalId, #gsi1pk = :gsi1pk, #gsi1sk = :gsi1sk, #login = :login, #updatedAt = :updatedAt, #vendor = :vendor, #version = :newVersion',
       })
     );
 

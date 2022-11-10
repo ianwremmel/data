@@ -3,6 +3,7 @@ import {snakeCase} from 'lodash';
 
 import {extractTtlInfo} from '../../common/fields';
 import {hasDirective, unmarshalField} from '../../common/helpers';
+import {extractIndexInfo} from '../../common/indexes';
 import {extractKeyInfo} from '../../common/keys';
 
 import {createItemTpl} from './templates/create-item';
@@ -15,6 +16,7 @@ import {updateItemTpl} from './templates/update-item';
  * Generates the createItem function for a table
  */
 export function createItemTemplate(objType: GraphQLObjectType) {
+  const indexInfo = extractIndexInfo(objType);
   const keyInfo = extractKeyInfo(objType);
   const ttlInfo = extractTtlInfo(objType);
 
@@ -65,7 +67,10 @@ export function createItemTemplate(objType: GraphQLObjectType) {
   }
 
   ean.push(...keyInfo.ean);
+  ean.push(...indexInfo.ean);
+  eav.push(...indexInfo.eav);
   unmarshall.push(...keyInfo.unmarshall);
+  updateExpressions.push(...indexInfo.updateExpressions);
 
   ean.sort();
   eav.sort();
@@ -191,6 +196,7 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
  * Generates the updateItem function for a table
  */
 export function updateItemTemplate(objType: GraphQLObjectType) {
+  const indexInfo = extractIndexInfo(objType);
   const keyInfo = extractKeyInfo(objType);
   const ttlInfo = extractTtlInfo(objType);
 
@@ -238,7 +244,10 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
   }
 
   ean.push(...keyInfo.ean);
+  ean.push(...indexInfo.ean);
+  eav.push(...indexInfo.eav);
   unmarshall.push(...keyInfo.unmarshall);
+  updateExpressions.push(...indexInfo.updateExpressions);
 
   ean.sort();
   eav.sort();

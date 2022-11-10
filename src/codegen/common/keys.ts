@@ -21,9 +21,18 @@ export function makeKeyTemplate(
   prefix: string,
   fields: readonly GraphQLField<unknown, unknown>[]
 ): string {
-  return [prefix, ...fields.map((field) => `\${input.${field.name}}`)].join(
-    '#'
-  );
+  return [
+    prefix,
+    ...fields.map((field) => {
+      if (field.name === 'createdAt' || field.name === 'updatedAt') {
+        // this template gets passed through so it's available in the output.
+        // eslint-disable-next-line no-template-curly-in-string
+        return '${now.getTime()}';
+      }
+
+      return `\${input.${field.name}}`;
+    }),
+  ].join('#');
 }
 
 export interface KeyInfo {
