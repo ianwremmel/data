@@ -1,3 +1,6 @@
+"""
+Indicates which third-party this record came from.
+"""
 enum Vendor {
   AZURE_DEV_OPS
   GITHUB

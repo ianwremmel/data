@@ -90,6 +90,7 @@ export type UserLogin = Model &
     version: Scalars['Int'];
   };
 
+/** Indicates which third-party this record came from. */
 export type Vendor = 'AZURE_DEV_OPS' | 'GITHUB' | 'GITLAB';
 
 /**
