@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Conditions:
+  IsProd:
+    Fn::Equals:
+      - Ref: StageName
+      - production
+Globals:
+  Function:
+    Environment:
+      Variables:
+        TABLE_ACCOUNT:
+          Ref: TableAccount
+        TABLE_SUBSCRIPTION:
+          Ref: TableSubscription
+Outputs:
+  TableAccount:
+    Description: The name of the DynamoDB table for Account
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-TableAccount
+      Value:
+        Ref: TableAccount
+    Value:
+      Ref: TableAccount
+  TableSubscription:
+    Description: The name of the DynamoDB table for Subscription
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-TableSubscription
+      Value:
+        Ref: TableSubscription
+    Value:
+      Ref: TableSubscription
+Parameters:
+  StageName:
+    Type: String
+    AllowedValues:
+      - development
+      - production
+      - test
+    Description: The name of the stage
+    Default: development
+Resources:
+  TableAccount:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled:
+          Fn::If:
+            - IsProd
+            - true
+            - false
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - Key: StageName
+          Value:
+            Ref: StageName
+        - Key: TableName
+          Value: TableAccount
+  TableSubscription:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled:
+          Fn::If:
+            - IsProd
+            - true
+            - false
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - Key: StageName
+          Value:
+            Ref: StageName
+        - Key: TableName
+          Value: TableSubscription

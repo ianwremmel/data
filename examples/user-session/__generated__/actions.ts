@@ -40,6 +40,8 @@ export interface Scalars {
   JSONObject: Record<string, unknown>;
 }
 
+export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
+
 /** Models are DynamoDB with a key schema that does not include a sort key. */
 export interface Model {
   createdAt: Scalars['Date'];
