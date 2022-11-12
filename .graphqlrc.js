@@ -17,7 +17,7 @@ const config = {
             [`examples/${example}/__generated__/actions.ts`]: {
               config: {
                 enumsAsTypes: true,
-                pathToDocumentClient: './src/client',
+                pathToDocumentClient: './examples/document-client',
                 scalars: {
                   Date: 'Date',
                   JSONObject: 'Record<string, unknown>',

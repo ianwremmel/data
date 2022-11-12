@@ -1,6 +1,6 @@
 import {faker} from '@faker-js/faker';
 
-import {NotFoundError, OptimisticLockingError} from '../../src/lib';
+import {NotFoundError, OptimisticLockingError} from '../../src/runtime';
 
 import {
   createUserLogin,
