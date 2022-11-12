@@ -1,42 +1,36 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: 'AWS::Serverless-2016-10-31'
-
+Transform: AWS::Serverless-2016-10-31
 Conditions:
-  IsProd: !Equals
-    - !Ref StageName
-    - production
-
+  IsProd:
+    Fn::Equals:
+      - Ref: StageName
+      - production
 Globals:
   Function:
     Environment:
       Variables:
-        ### Generated Table Name Environment Variables ###
-        TABLE_USER_LOGIN: !Ref TableUserLogin
-        ### End Generated Table Name Environment Variables ###
-
+        TABLE_USER_LOGIN:
+          Ref: TableUserLogin
 Outputs:
-  ### Generated Table Name Outputs ###
   TableUserLogin:
     Description: The name of the DynamoDB table for UserLogin
-    Value: !Ref TableUserLogin
     Export:
-      Name: !Sub ${AWS::StackName}-TableUserLogin
-      Value: !Ref TableUserLogin
-  ### End Generated Table Name Outputs ###
-
+      Name:
+        Fn::Sub: ${AWS::StackName}-TableUserLogin
+      Value:
+        Ref: TableUserLogin
+    Value:
+      Ref: TableUserLogin
 Parameters:
   StageName:
     Type: String
-    Description: The name of the stage
     AllowedValues:
       - development
       - production
       - test
+    Description: The name of the stage
     Default: development
-
 Resources:
-  ### Generated Table Resources ###
-
   TableUserLogin:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -67,20 +61,16 @@ Resources:
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       SSESpecification:
-        # Use the customer-owned, AWS-managed KMS key in prod; use the
-        # AWS-owned, AWS-managed KMS key in dev and test.
-        SSEEnabled: !If
-          - IsProd
-          - true
-          - false
+        SSEEnabled:
+          Fn::If:
+            - IsProd
+            - true
+            - false
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
       Tags:
         - Key: StageName
-          Value: !Ref StageName
+          Value:
+            Ref: StageName
         - Key: TableName
           Value: TableUserLogin
-      
-
-  ### End Generated Table Resources ###
-    
