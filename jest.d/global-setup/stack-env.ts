@@ -4,33 +4,55 @@ import {
   CloudFormationClient,
   DescribeStacksCommand,
 } from '@aws-sdk/client-cloudformation';
-import {snakeCase} from 'lodash';
+import {Stack} from '@aws-sdk/client-cloudformation/dist-types/models/models_0';
+import {glob} from 'glob';
+import {camelCase, snakeCase, upperFirst} from 'lodash';
 
 /**
  * Loads stack outputs as environment variables
  */
 export default async function loadAwsEnv() {
-  // Set fake credentials for localstack
-  process.env.AWS_ACCESS_KEY_ID = 'test';
-  process.env.AWS_SECRET_ACCESS_KEY = 'test';
+  if (process.env.TEST_MODE === 'localstack') {
+    // Set fake credentials for localstack
+    process.env.AWS_ACCESS_KEY_ID = 'test';
+    process.env.AWS_SECRET_ACCESS_KEY = 'test';
+    process.env.AWS_ENDPOINT = 'http://localhost:4566';
+    process.env.AWS_REGION = 'us-east-1';
+  } else if (process.env.TEST_MODE === 'aws') {
+    if (process.env.CI) {
+      assert.fail('Testing on AWS in CI is not yet supported');
+    } else {
+      process.env.AWS_PROFILE =
+        process.env.AWS_PROFILE ?? 'webstorm_playground';
+      process.env.AWS_SDK_LOAD_CONFIG = process.env.AWS_SDK_LOAD_CONFIG ?? '1';
+    }
+  } else {
+    assert.fail('TEST_MODE must be set to either "localstack" or "aws"');
+  }
 
-  const client = new CloudFormationClient({
-    endpoint: process.env.ENDPOINT,
-    region: process.env.REGION,
-  });
+  const client = process.env.AWS_ENDPOINT
+    ? new CloudFormationClient({
+        endpoint: process.env.AWS_ENDPOINT,
+      })
+    : new CloudFormationClient({});
 
   console.log('Fetching stack details from AWS');
   const stackData = await client.send(new DescribeStacksCommand({}));
   console.log('Fetched stack details from AWS');
 
   assert(stackData.Stacks, 'AWS should have returned an array of stacks');
-  assert(
-    stackData.Stacks.length > 0,
-    'There should be more than zero stacks named $stackName'
-  );
 
-  for (const stack of stackData.Stacks) {
+  const exampleStacks = glob
+    .sync('*/', {cwd: './examples'})
+    .map((dir) => upperFirst(camelCase(dir)));
+
+  for (const stackName of exampleStacks) {
+    const stack: Stack | undefined = stackData.Stacks.find(
+      (s) => s.StackName === stackName
+    );
+    assert(stack, `There should be a stack named ${stackName}`);
     assert(stack.Outputs, 'AWS should have returned stack outputs');
+
     for (const output of stack.Outputs) {
       const name = snakeCase(output.OutputKey).toUpperCase();
       assert(name, 'AWS should have returned a parameter name');

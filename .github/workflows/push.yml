@@ -60,7 +60,7 @@ jobs:
             ${{ runner.os }}-
       - run: npm ci
       - run: scripts/deploy-examples-to-localstack
-      - run: npm test
+      - run: TEST_MODE=localstack npm test
       - uses: check-run-reporter/action@v2.11.1
         if: ${{ always() }}
         with:

@@ -9,7 +9,7 @@
     "lint:es": "npm run --silent eslint -- .",
     "prelint:types": "mkdir --parents reports/style",
     "lint:types": "bash -c \"tsc $TSC_OPTIONS\"",
-    "test": "REGION=us-east-1 ENDPOINT=http://localhost:4566 TZ=UTC jest",
+    "test": "TZ=UTC jest",
     "prepare": "husky install"
   },
   "main": "src/lib",
