@@ -2,10 +2,8 @@
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
 import {DynamoDBDocumentClient} from '@aws-sdk/lib-dynamodb';
 
-// Create an Amazon DynamoDB service client object.
 const ddbClient = new DynamoDBClient({
-  endpoint: process.env.ENDPOINT,
-  region: process.env.REGION,
+  endpoint: process.env.AWS_ENDPOINT,
 });
 
 export {ddbClient};
