@@ -147,6 +147,28 @@ export function isType(
 }
 
 /**
+ * Marshals the specified field value for use with ddb.
+ */
+export function marshalField(field: GraphQLField<unknown, unknown>): string {
+  const fieldName = field.name;
+
+  const str = isType('Date', field)
+    ? `input.${fieldName}.getTime()`
+    : `input.${fieldName}`;
+
+  if (!isNonNullType(field.type)) {
+    // I'm not completely confident the following is correct or accurate, but
+    // the idea is to explicitly handle each of the three cases for defined,
+    // undefined, and null. If a value is defined, just use it. If it's null, we
+    // intend to unset it. if it's undefined, we don't want to do anything. wit
+    // it.
+    return `input.${fieldName} === null ? null : typeof input.${fieldName} === 'undefined' ? undefined : ${str}`;
+  }
+
+  return str;
+}
+
+/**
  * Helper function for building a field unmarshaller
  */
 export function unmarshalField(

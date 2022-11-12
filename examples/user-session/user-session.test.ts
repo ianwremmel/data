@@ -1,4 +1,4 @@
-import {NotFoundError, OptimisticLockingError} from '../../src/lib';
+import {NotFoundError, OptimisticLockingError} from '../../src/runtime';
 
 import {
   createUserSession,

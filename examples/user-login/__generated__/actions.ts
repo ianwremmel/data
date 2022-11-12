@@ -17,7 +17,7 @@ import {
   NotFoundError,
   OptimisticLockingError,
 } from '../../..';
-import {ddbDocClient} from '../../../src/client';
+import {ddbDocClient} from '../../document-client';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends {[key: string]: unknown}> = {[K in keyof T]: T[K]};

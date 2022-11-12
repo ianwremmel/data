@@ -22,6 +22,7 @@ export default async function loadAwsEnv() {
     if (process.env.CI) {
       assert.fail('Testing on AWS in CI is not yet supported');
     } else {
+      process.env.AWS_REGION = process.env.AWS_REGION ?? 'us-east-1';
       process.env.AWS_PROFILE =
         process.env.AWS_PROFILE ?? 'webstorm_playground';
       process.env.AWS_SDK_LOAD_CONFIG = process.env.AWS_SDK_LOAD_CONFIG ?? '1';

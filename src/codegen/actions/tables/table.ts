@@ -2,7 +2,7 @@ import {GraphQLObjectType} from 'graphql';
 import {snakeCase} from 'lodash';
 
 import {extractTtlInfo} from '../../common/fields';
-import {hasDirective, unmarshalField} from '../../common/helpers';
+import {hasDirective, marshalField, unmarshalField} from '../../common/helpers';
 import {extractIndexInfo, IndexFieldInfo} from '../../common/indexes';
 import {extractKeyInfo} from '../../common/keys';
 
@@ -61,7 +61,7 @@ export function createItemTemplate(objType: GraphQLObjectType) {
       updateExpressions.push(`#${fieldName} = :${fieldName}`);
     } else {
       ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
-      eav.push(`':${fieldName}': input.${fieldName}`);
+      eav.push(`':${fieldName}': ${marshalField(field)}`);
       unmarshall.push(unmarshalField(field));
       updateExpressions.push(`#${fieldName} = :${fieldName}`);
     }
@@ -290,7 +290,7 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
       updateExpressions.push(`#${fieldName} = :${fieldName}`);
     } else {
       ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
-      eav.push(`':${fieldName}': input.${fieldName}`);
+      eav.push(`':${fieldName}': ${marshalField(field)}`);
       unmarshall.push(unmarshalField(field));
       updateExpressions.push(`#${fieldName} = :${fieldName}`);
     }

@@ -13,6 +13,7 @@ import {
   getArgFieldTypeValues,
   getOptionalArgStringValue,
   hasInterface,
+  marshalField,
   unmarshalField,
 } from './helpers';
 import {IndexFieldInfo} from './indexes';
@@ -30,8 +31,7 @@ export function makeKeyTemplate(
         // eslint-disable-next-line no-template-curly-in-string
         return '${now.getTime()}';
       }
-
-      return `\${input.${field.name}}`;
+      return `\${${marshalField(field)}}`;
     }),
   ].join('#');
 }
