@@ -12,10 +12,16 @@ echo "Startup complete"
 
 for file in $(find examples -mindepth 1 -maxdepth 1 -type d); do
   stackname=$(echo "$file" | awk -F/ '{print $2}' | sed -r 's/(^|[-_ ]+)([0-9a-z])/\U\2/g')
+
+  sam build \
+    --beta-features \
+    --template "$file/__generated__/template.yml"
+
+  # doesn't need a template because it will use the one in .aws-sam that was
+  # just created by sam build
   samlocal deploy \
     --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
     --resolve-s3 \
-    --template "$file/__generated__/template.yml" \
     --stack-name "$stackname" \
-    --region us-east-1
+    --region "${AWS_REGION:-us-east-1}"
 done
