@@ -20,25 +20,26 @@ export function addToSchema(): AddToSchemaResult {
 
 /** @override */
 export const plugin: PluginFunction<CloudformationPluginConfig> = (schema) => {
-  const typesMap = schema.getTypeMap();
+  try {
+    const typesMap = schema.getTypeMap();
 
-  const tableTypes = Object.keys(typesMap)
-    .filter((typeName) => {
-      const type = typesMap[typeName];
-      return isObjectType(type) && hasInterface('Model', type);
-    })
-    .map((typeName) => {
-      const objType = typesMap[typeName];
-      assertObjectType(objType);
-      return objType as GraphQLObjectType;
-    });
+    const tableTypes = Object.keys(typesMap)
+      .filter((typeName) => {
+        const type = typesMap[typeName];
+        return isObjectType(type) && hasInterface('Model', type);
+      })
+      .map((typeName) => {
+        const objType = typesMap[typeName];
+        assertObjectType(objType);
+        return objType as GraphQLObjectType;
+      });
 
-  const tableNames = tableTypes.map((type) => type.name).sort();
+    const tableNames = tableTypes.map((type) => type.name).sort();
 
-  // Eventually, this should modifiy an existing file by using Guard comments
-  // and adding/replacing sections as relevant, but for now, we'll just do the
-  // basic generation to prove the concept
-  return `AWSTemplateFormatVersion: '2010-09-09'
+    // Eventually, this should modifiy an existing file by using Guard comments
+    // and adding/replacing sections as relevant, but for now, we'll just do the
+    // basic generation to prove the concept
+    return `AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 
 Conditions:
@@ -229,4 +230,9 @@ ${keySchema
 
   ### End Generated Table Resources ###
     `;
+  } catch (err) {
+    // graphql-codegen suppresses stack traces, so we have to re-log here.
+    console.error(err);
+    throw err;
+  }
 };
