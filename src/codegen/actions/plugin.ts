@@ -8,7 +8,7 @@ import {
 } from '@graphql-codegen/plugin-helpers';
 import {assertObjectType, GraphQLObjectType, isObjectType} from 'graphql';
 
-import {hasDirective, hasInterface} from '../common/helpers';
+import {hasInterface} from '../common/helpers';
 import {extractKeyInfo} from '../common/keys';
 
 import {ActionPluginConfig} from './config';
@@ -20,7 +20,7 @@ import {
   touchItemTemplate,
   updateItemTemplate,
 } from './tables/table';
-import {queryTpl} from './tables/templates/query';
+import {unmarshallTpl} from './tables/templates/unmarshall';
 
 /** @override */
 export function addToSchema(): AddToSchemaResult {
@@ -59,7 +59,6 @@ export interface MultiResultType<T> {
   items: T[];
 }
 
-
 ${tableTypes
   .map((objType) => {
     const keyInfo = extractKeyInfo(objType);
@@ -72,6 +71,7 @@ ${tableTypes
       deleteItemTemplate(objType),
       readItemTemplate(objType),
       touchItemTemplate(objType),
+      unmarshallTpl({objType}),
       updateItemTemplate(objType),
       queryTemplate(objType),
     ]
