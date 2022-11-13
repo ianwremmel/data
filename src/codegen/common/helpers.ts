@@ -114,7 +114,7 @@ export function getTypeScriptTypeForField(
 /** Indicates if objType contains the specified directive */
 export function hasDirective(
   directiveName: string,
-  objType: GraphQLObjectType
+  objType: GraphQLObjectType | GraphQLField<unknown, unknown>
 ) {
   return !!objType.astNode?.directives
     ?.map(({name}) => name.value)

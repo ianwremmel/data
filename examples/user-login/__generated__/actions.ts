@@ -193,75 +193,7 @@ export async function createUserLogin(
 
   return {
     capacity,
-    item: {
-      createdAt: (() => {
-        assert(
-          item._ct !== null,
-          () => new DataIntegrityError('Expected createdAt to be non-null')
-        );
-        assert(
-          typeof item._ct !== 'undefined',
-          () => new DataIntegrityError('Expected createdAt to be defined')
-        );
-        return new Date(item._ct);
-      })(),
-      externalId: (() => {
-        assert(
-          item.external_id !== null,
-          () => new DataIntegrityError('Expected externalId to be non-null')
-        );
-        assert(
-          typeof item.external_id !== 'undefined',
-          () => new DataIntegrityError('Expected externalId to be defined')
-        );
-        return item.external_id;
-      })(),
-      id: `${item.pk}#${item.sk}`,
-      login: (() => {
-        assert(
-          item.login !== null,
-          () => new DataIntegrityError('Expected login to be non-null')
-        );
-        assert(
-          typeof item.login !== 'undefined',
-          () => new DataIntegrityError('Expected login to be defined')
-        );
-        return item.login;
-      })(),
-      updatedAt: (() => {
-        assert(
-          item._md !== null,
-          () => new DataIntegrityError('Expected updatedAt to be non-null')
-        );
-        assert(
-          typeof item._md !== 'undefined',
-          () => new DataIntegrityError('Expected updatedAt to be defined')
-        );
-        return new Date(item._md);
-      })(),
-      vendor: (() => {
-        assert(
-          item.vendor !== null,
-          () => new DataIntegrityError('Expected vendor to be non-null')
-        );
-        assert(
-          typeof item.vendor !== 'undefined',
-          () => new DataIntegrityError('Expected vendor to be defined')
-        );
-        return item.vendor;
-      })(),
-      version: (() => {
-        assert(
-          item._v !== null,
-          () => new DataIntegrityError('Expected version to be non-null')
-        );
-        assert(
-          typeof item._v !== 'undefined',
-          () => new DataIntegrityError('Expected version to be defined')
-        );
-        return item._v;
-      })(),
-    },
+    item: unmarshallUserLogin(item),
     metrics,
   };
 }
@@ -351,75 +283,7 @@ export async function readUserLogin(
 
   return {
     capacity,
-    item: {
-      createdAt: (() => {
-        assert(
-          item._ct !== null,
-          () => new DataIntegrityError('Expected createdAt to be non-null')
-        );
-        assert(
-          typeof item._ct !== 'undefined',
-          () => new DataIntegrityError('Expected createdAt to be defined')
-        );
-        return new Date(item._ct);
-      })(),
-      externalId: (() => {
-        assert(
-          item.external_id !== null,
-          () => new DataIntegrityError('Expected externalId to be non-null')
-        );
-        assert(
-          typeof item.external_id !== 'undefined',
-          () => new DataIntegrityError('Expected externalId to be defined')
-        );
-        return item.external_id;
-      })(),
-      id: `${item.pk}#${item.sk}`,
-      login: (() => {
-        assert(
-          item.login !== null,
-          () => new DataIntegrityError('Expected login to be non-null')
-        );
-        assert(
-          typeof item.login !== 'undefined',
-          () => new DataIntegrityError('Expected login to be defined')
-        );
-        return item.login;
-      })(),
-      updatedAt: (() => {
-        assert(
-          item._md !== null,
-          () => new DataIntegrityError('Expected updatedAt to be non-null')
-        );
-        assert(
-          typeof item._md !== 'undefined',
-          () => new DataIntegrityError('Expected updatedAt to be defined')
-        );
-        return new Date(item._md);
-      })(),
-      vendor: (() => {
-        assert(
-          item.vendor !== null,
-          () => new DataIntegrityError('Expected vendor to be non-null')
-        );
-        assert(
-          typeof item.vendor !== 'undefined',
-          () => new DataIntegrityError('Expected vendor to be defined')
-        );
-        return item.vendor;
-      })(),
-      version: (() => {
-        assert(
-          item._v !== null,
-          () => new DataIntegrityError('Expected version to be non-null')
-        );
-        assert(
-          typeof item._v !== 'undefined',
-          () => new DataIntegrityError('Expected version to be defined')
-        );
-        return item._v;
-      })(),
-    },
+    item: unmarshallUserLogin(item),
     metrics: undefined,
   };
 }
@@ -472,6 +336,79 @@ export async function touchUserLogin(
     }
     throw err;
   }
+}
+
+/** Unmarshalls a DynamoDB record into a UserLogin object */
+export function unmarshallUserLogin(item: Record<string, any>): UserLogin {
+  return {
+    createdAt: (() => {
+      assert(
+        item._ct !== null,
+        () => new DataIntegrityError('Expected createdAt to be non-null')
+      );
+      assert(
+        typeof item._ct !== 'undefined',
+        () => new DataIntegrityError('Expected createdAt to be defined')
+      );
+      return new Date(item._ct);
+    })(),
+    externalId: (() => {
+      assert(
+        item.external_id !== null,
+        () => new DataIntegrityError('Expected externalId to be non-null')
+      );
+      assert(
+        typeof item.external_id !== 'undefined',
+        () => new DataIntegrityError('Expected externalId to be defined')
+      );
+      return item.external_id;
+    })(),
+    id: `${item.pk}#${item.sk}`,
+    login: (() => {
+      assert(
+        item.login !== null,
+        () => new DataIntegrityError('Expected login to be non-null')
+      );
+      assert(
+        typeof item.login !== 'undefined',
+        () => new DataIntegrityError('Expected login to be defined')
+      );
+      return item.login;
+    })(),
+    updatedAt: (() => {
+      assert(
+        item._md !== null,
+        () => new DataIntegrityError('Expected updatedAt to be non-null')
+      );
+      assert(
+        typeof item._md !== 'undefined',
+        () => new DataIntegrityError('Expected updatedAt to be defined')
+      );
+      return new Date(item._md);
+    })(),
+    vendor: (() => {
+      assert(
+        item.vendor !== null,
+        () => new DataIntegrityError('Expected vendor to be non-null')
+      );
+      assert(
+        typeof item.vendor !== 'undefined',
+        () => new DataIntegrityError('Expected vendor to be defined')
+      );
+      return item.vendor;
+    })(),
+    version: (() => {
+      assert(
+        item._v !== null,
+        () => new DataIntegrityError('Expected version to be non-null')
+      );
+      assert(
+        typeof item._v !== 'undefined',
+        () => new DataIntegrityError('Expected version to be defined')
+      );
+      return item._v;
+    })(),
+  };
 }
 
 export type UpdateUserLoginInput = Omit<UserLogin, 'createdAt' | 'updatedAt'>;
@@ -547,75 +484,7 @@ export async function updateUserLogin(
 
     return {
       capacity,
-      item: {
-        createdAt: (() => {
-          assert(
-            item._ct !== null,
-            () => new DataIntegrityError('Expected createdAt to be non-null')
-          );
-          assert(
-            typeof item._ct !== 'undefined',
-            () => new DataIntegrityError('Expected createdAt to be defined')
-          );
-          return new Date(item._ct);
-        })(),
-        externalId: (() => {
-          assert(
-            item.external_id !== null,
-            () => new DataIntegrityError('Expected externalId to be non-null')
-          );
-          assert(
-            typeof item.external_id !== 'undefined',
-            () => new DataIntegrityError('Expected externalId to be defined')
-          );
-          return item.external_id;
-        })(),
-        id: `${item.pk}#${item.sk}`,
-        login: (() => {
-          assert(
-            item.login !== null,
-            () => new DataIntegrityError('Expected login to be non-null')
-          );
-          assert(
-            typeof item.login !== 'undefined',
-            () => new DataIntegrityError('Expected login to be defined')
-          );
-          return item.login;
-        })(),
-        updatedAt: (() => {
-          assert(
-            item._md !== null,
-            () => new DataIntegrityError('Expected updatedAt to be non-null')
-          );
-          assert(
-            typeof item._md !== 'undefined',
-            () => new DataIntegrityError('Expected updatedAt to be defined')
-          );
-          return new Date(item._md);
-        })(),
-        vendor: (() => {
-          assert(
-            item.vendor !== null,
-            () => new DataIntegrityError('Expected vendor to be non-null')
-          );
-          assert(
-            typeof item.vendor !== 'undefined',
-            () => new DataIntegrityError('Expected vendor to be defined')
-          );
-          return item.vendor;
-        })(),
-        version: (() => {
-          assert(
-            item._v !== null,
-            () => new DataIntegrityError('Expected version to be non-null')
-          );
-          assert(
-            typeof item._v !== 'undefined',
-            () => new DataIntegrityError('Expected version to be defined')
-          );
-          return item._v;
-        })(),
-      },
+      item: unmarshallUserLogin(item),
       metrics,
     };
   } catch (err) {
@@ -719,75 +588,7 @@ export async function queryUserLogin(
     capacity,
     items: items.map((item) => {
       assert(item._et === 'UserLogin', () => new DataIntegrityError('TODO'));
-      return {
-        createdAt: (() => {
-          assert(
-            item._ct !== null,
-            () => new DataIntegrityError('Expected createdAt to be non-null')
-          );
-          assert(
-            typeof item._ct !== 'undefined',
-            () => new DataIntegrityError('Expected createdAt to be defined')
-          );
-          return new Date(item._ct);
-        })(),
-        externalId: (() => {
-          assert(
-            item.external_id !== null,
-            () => new DataIntegrityError('Expected externalId to be non-null')
-          );
-          assert(
-            typeof item.external_id !== 'undefined',
-            () => new DataIntegrityError('Expected externalId to be defined')
-          );
-          return item.external_id;
-        })(),
-        id: `${item.pk}#${item.sk}`,
-        login: (() => {
-          assert(
-            item.login !== null,
-            () => new DataIntegrityError('Expected login to be non-null')
-          );
-          assert(
-            typeof item.login !== 'undefined',
-            () => new DataIntegrityError('Expected login to be defined')
-          );
-          return item.login;
-        })(),
-        updatedAt: (() => {
-          assert(
-            item._md !== null,
-            () => new DataIntegrityError('Expected updatedAt to be non-null')
-          );
-          assert(
-            typeof item._md !== 'undefined',
-            () => new DataIntegrityError('Expected updatedAt to be defined')
-          );
-          return new Date(item._md);
-        })(),
-        vendor: (() => {
-          assert(
-            item.vendor !== null,
-            () => new DataIntegrityError('Expected vendor to be non-null')
-          );
-          assert(
-            typeof item.vendor !== 'undefined',
-            () => new DataIntegrityError('Expected vendor to be defined')
-          );
-          return item.vendor;
-        })(),
-        version: (() => {
-          assert(
-            item._v !== null,
-            () => new DataIntegrityError('Expected version to be non-null')
-          );
-          assert(
-            typeof item._v !== 'undefined',
-            () => new DataIntegrityError('Expected version to be defined')
-          );
-          return item._v;
-        })(),
-      };
+      return unmarshallUserLogin(item);
     }),
   };
 }

@@ -6,16 +6,10 @@ export interface ReadItemTplInput {
   readonly consistent: boolean;
   readonly key: readonly string[];
   readonly objType: GraphQLObjectType;
-  readonly unmarshall: readonly string[];
 }
 
 /** template */
-export function readItemTpl({
-  consistent,
-  key,
-  objType,
-  unmarshall,
-}: ReadItemTplInput) {
+export function readItemTpl({consistent, key, objType}: ReadItemTplInput) {
   const typeName = objType.name;
 
   const outputTypeName = `Read${typeName}Output`;
@@ -44,9 +38,7 @@ ${key.map((k) => `        ${k},`).join('\n')}
 
   return {
     capacity,
-    item: {
-${unmarshall.map((item) => `      ${item},`).join('\n')}
-    },
+    item: unmarshall${objType.name}(item),
     metrics: undefined,
   }
 }`;

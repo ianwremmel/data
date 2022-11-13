@@ -10,7 +10,6 @@ export interface QueryTplInput {
   readonly consistent: boolean;
   readonly indexes: readonly IndexFieldInfo[];
   readonly objType: GraphQLObjectType;
-  readonly unmarshall: readonly string[];
 }
 
 /** helper */
@@ -29,12 +28,7 @@ function renderFieldAsType(field: GraphQLField<unknown, unknown>): string {
 }
 
 /** template */
-export function queryTpl({
-  consistent,
-  indexes,
-  objType,
-  unmarshall,
-}: QueryTplInput) {
+export function queryTpl({consistent, indexes, objType}: QueryTplInput) {
   const typeName = objType.name;
 
   const inputTypeName = `Query${typeName}Input`;
@@ -122,10 +116,8 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>): 
   return {
     capacity,
     items: items.map((item) => {
-        assert(item._et === '${typeName}', () => new DataIntegrityError('TODO'));
-      return {
-${unmarshall.map((item) => `            ${item},`).join('\n')}
-      };
+      assert(item._et === '${typeName}', () => new DataIntegrityError('TODO'));
+      return unmarshall${objType.name}(item);
     })
   };
 }

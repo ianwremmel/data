@@ -9,7 +9,6 @@ export interface CreateItemTplInput {
   readonly key: readonly string[];
   readonly objType: GraphQLObjectType;
   readonly omit: readonly string[];
-  readonly unmarshall: readonly string[];
   readonly updateExpressions: readonly string[];
 }
 
@@ -21,7 +20,6 @@ export function createItemTpl({
   key,
   objType,
   omit,
-  unmarshall,
   updateExpressions,
 }: CreateItemTplInput) {
   const typeName = objType.name;
@@ -67,9 +65,7 @@ ${key.map((k) => `        ${k},`).join('\n')}
 
   return {
     capacity,
-    item: {
-${unmarshall.map((item) => `        ${item},`).join('\n')}
-    },
+    item: unmarshall${objType.name}(item),
     metrics,
   }
 }`;

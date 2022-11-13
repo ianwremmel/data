@@ -13,7 +13,6 @@ export interface UpdateItemTplInput {
   readonly eav: readonly string[];
   readonly key: readonly string[];
   readonly inputToPrimaryKey: readonly string[];
-  readonly unmarshall: readonly string[];
   readonly updateExpressions: readonly string[];
 }
 
@@ -26,7 +25,6 @@ export function updateItemTpl({
   eav,
   inputToPrimaryKey,
   key,
-  unmarshall,
   updateExpressions,
 }: UpdateItemTplInput) {
   const typeName = objType.name;
@@ -79,9 +77,7 @@ ${key.map((k) => `        ${k},`).join('\n')}
 
     return {
       capacity,
-      item: {
-${unmarshall.map((item) => `        ${item},`).join('\n')}
-      },
+      item: unmarshall${objType.name}(item),
       metrics,
     }
   }
