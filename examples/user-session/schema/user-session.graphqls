@@ -10,4 +10,10 @@ type UserSession implements Model & Node & Timestamped & Versioned
   session: JSONObject!
   updatedAt: Date!
   version: Int!
+  """
+  This field has nothing to do with UserSession, but this was the easiest place
+  to add it for testing. The intent is to prove that we can write an object,
+  when an optional field is absent from the payload.
+  """
+  optionalField: String
 }

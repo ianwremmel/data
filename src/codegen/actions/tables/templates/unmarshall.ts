@@ -1,8 +1,9 @@
 import assert from 'assert';
 
-import {GraphQLField, GraphQLObjectType} from 'graphql';
+import {GraphQLField, GraphQLObjectType, isNonNullType} from 'graphql';
+import {snakeCase} from 'lodash';
 
-import {hasDirective, unmarshalField} from '../../../common/helpers';
+import {hasDirective, isType, unmarshalField} from '../../../common/helpers';
 import {extractKeyInfo} from '../../../common/keys';
 
 export interface UnmarshallTplInput {
@@ -10,7 +11,7 @@ export interface UnmarshallTplInput {
 }
 
 /** helper */
-function getAliasForField(field: GraphQLField<unknown, unknown>) {
+export function getAliasForField(field: GraphQLField<unknown, unknown>) {
   if (hasDirective('ttl', field)) {
     return 'ttl';
   }
@@ -30,25 +31,71 @@ function getAliasForField(field: GraphQLField<unknown, unknown>) {
 export function unmarshallTpl({objType}: UnmarshallTplInput): string {
   const keyInfo = extractKeyInfo(objType);
 
+  const fields = Object.values(objType.getFields()).map((f) => {
+    const fieldName = f.name;
+    const columnName = getAliasForField(f) ?? snakeCase(f.name);
+    const isDateType = isType('Date', f);
+    const isRequired = isNonNullType(f.type);
+    return {
+      columnName,
+      field: f,
+      fieldName,
+      isDateType,
+      isRequired,
+    };
+  });
+
+  const requiredFields = fields.filter((f) => f.isRequired);
+  const optionalFields = fields.filter((f) => !f.isRequired);
+
   return `
 /** Unmarshalls a DynamoDB record into a ${objType.name} object */
 export function unmarshall${objType.name}(item: Record<string, any>): ${
     objType.name
   } {
-  return {
-    ${Object.values(objType.getFields()).map((field) => {
-      // This isn't ideal, but it'll work for now. I need a better way to deal
-      // with simple primary keys and Nodes
-      if (field.name === 'id' && keyInfo.unmarshall.length) {
-        assert(
-          keyInfo.unmarshall.length === 1,
-          'Expected exactly one key field to unmarshal'
-        );
-        return keyInfo.unmarshall[0];
-      }
-      return unmarshalField(field, getAliasForField(field));
-    })}
+
+${requiredFields
+  .map(({columnName, fieldName}) => {
+    return `if ('${columnName}' in item) {
+  assert(
+    item.${columnName} !== null,
+    () => new DataIntegrityError('Expected ${fieldName} to be non-null')
+  );
+  assert(
+    typeof item.${columnName} !== 'undefined',
+    () => new DataIntegrityError('Expected ${fieldName} to be defined')
+  );
+}`;
+  })
+  .join('\n')}
+
+  let result: ${objType.name} = {
+${requiredFields.map(({field}) => {
+  // This isn't ideal, but it'll work for now. I need a better way to deal
+  // with simple primary keys and Nodes
+  if (field.name === 'id' && keyInfo.unmarshall.length) {
+    assert(
+      keyInfo.unmarshall.length === 1,
+      'Expected exactly one key field to unmarshal'
+    );
+    return keyInfo.unmarshall[0];
+  }
+  return unmarshalField(field, getAliasForField(field));
+})}
   };
+
+${optionalFields.map(({columnName, field}) => {
+  return `
+  if ('${columnName}' in item) {
+    result = {
+      ...result,
+      ${unmarshalField(field, getAliasForField(field))}
+    }
+  }
+  `;
+})}
+
+  return result;
 }
 `;
 }

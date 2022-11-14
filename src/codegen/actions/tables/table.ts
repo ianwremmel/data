@@ -1,4 +1,4 @@
-import {GraphQLObjectType} from 'graphql';
+import {GraphQLObjectType, isNonNullType} from 'graphql';
 import {snakeCase} from 'lodash';
 
 import {extractTtlInfo} from '../../common/fields';
@@ -41,34 +41,32 @@ export function createItemTemplate(objType: GraphQLObjectType) {
     } else if (fieldName === 'version') {
       ean.push(`'#version': '_v'`);
       eav.push(`':version': 1`);
-      updateExpressions.push(`#version = :version`);
     } else if (fieldName === ttlInfo?.fieldName) {
-      ean.push(`'#ttl': 'ttl'`);
-      eav.push(`':ttl': now.getTime() + ${ttlInfo.duration}`);
-      updateExpressions.push(`#ttl = :ttl`);
+      ean.push(`'#${fieldName}': 'ttl'`);
+      eav.push(`':${fieldName}': now.getTime() + ${ttlInfo.duration}`);
     } else if (fieldName === 'createdAt') {
       ean.push(`'#${fieldName}': '_ct'`);
       eav.push(`':${fieldName}': now.getTime()`);
-      updateExpressions.push(`#${fieldName} = :${fieldName}`);
     } else if (fieldName === 'updatedAt') {
       ean.push(`'#${fieldName}': '_md'`);
       eav.push(`':${fieldName}': now.getTime()`);
-      updateExpressions.push(`#${fieldName} = :${fieldName}`);
-    } else {
+    } else if (isNonNullType(field.type)) {
       ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
       eav.push(`':${fieldName}': ${marshalField(field)}`);
-      updateExpressions.push(`#${fieldName} = :${fieldName}`);
+    } else {
+      const makeOptional = (inner: string) =>
+        `...('${fieldName}' in input ? {${inner}} : undefined)`;
+      ean.push(makeOptional(`'#${fieldName}': '${snakeCase(fieldName)}'`));
+      eav.push(makeOptional(`':${fieldName}': ${marshalField(field)}`));
     }
   }
 
   ean.push(...keyInfo.ean);
   ean.push(...indexInfo.ean);
   eav.push(...indexInfo.eav);
-  updateExpressions.push(...indexInfo.updateExpressions);
 
   ean.sort();
   eav.sort();
-  updateExpressions.sort();
 
   return createItemTpl({
     conditionField: keyInfo.conditionField,
@@ -77,7 +75,6 @@ export function createItemTemplate(objType: GraphQLObjectType) {
     key: keyInfo.keyForCreate,
     objType,
     omit: [...keyInfo.omitForCreate, ttlInfo?.fieldName ?? ''].filter(Boolean),
-    updateExpressions,
   });
 }
 
@@ -154,9 +151,9 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
       eav.push(`':versionInc': 1`);
       updateExpressions.push(`#version = #version + :versionInc`);
     } else if (fieldName === ttlInfo?.fieldName) {
-      ean.push(`'#ttl': 'ttl'`);
+      ean.push(`'#${fieldName}': 'ttl'`);
       eav.push(`':ttlInc': ${ttlInfo.duration}`);
-      updateExpressions.push(`#ttl = #ttl + :ttlInc`);
+      updateExpressions.push(`#${fieldName} = #${fieldName} + :ttlInc`);
     }
   }
 
@@ -186,7 +183,9 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
 
   const ean: string[] = [];
   const eav: string[] = [];
-  const updateExpressions: string[] = [];
+
+  ean.push(`'#entity': '_et'`);
+  eav.push(`':entity': '${objType.name}'`);
 
   const fields = objType.getFields();
   const fieldNames = Object.keys(fields).sort();
@@ -198,37 +197,35 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
       // intentionally empty. if key fields need to do anything, they'll be
       // handled after the loop
     } else if (fieldName === ttlInfo?.fieldName) {
-      ean.push(`'#ttl': 'ttl'`);
-      eav.push(`':ttl': now.getTime() + ${ttlInfo.duration}`);
-      updateExpressions.push(`#ttl = :ttl`);
+      ean.push(`'#${fieldName}': 'ttl'`);
+      eav.push(`':${fieldName}': now.getTime() + ${ttlInfo.duration}`);
     } else if (fieldName === 'version') {
       ean.push(`'#version': '_v'`);
-      eav.push(`':newVersion': input.version + 1`);
-      eav.push(`':version': input.version`);
-      updateExpressions.push(`#version = :newVersion`);
+      eav.push(`':version': input.version + 1`);
+      eav.push(`':previousVersion': input.version`);
     } else if (fieldName === 'createdAt') {
       ean.push(`'#${fieldName}': '_ct'`);
       eav.push(`':${fieldName}': now.getTime()`);
-      updateExpressions.push(`#${fieldName} = :${fieldName}`);
     } else if (fieldName === 'updatedAt') {
       ean.push(`'#${fieldName}': '_md'`);
       eav.push(`':${fieldName}': now.getTime()`);
-      updateExpressions.push(`#${fieldName} = :${fieldName}`);
-    } else {
+    } else if (isNonNullType(field.type)) {
       ean.push(`'#${fieldName}': '${snakeCase(fieldName)}'`);
       eav.push(`':${fieldName}': ${marshalField(field)}`);
-      updateExpressions.push(`#${fieldName} = :${fieldName}`);
+    } else {
+      const makeOptional = (inner: string) =>
+        `...('${fieldName}' in input ? {${inner}} : undefined)`;
+      ean.push(makeOptional(`'#${fieldName}': '${snakeCase(fieldName)}'`));
+      eav.push(makeOptional(`':${fieldName}': ${marshalField(field)}`));
     }
   }
 
   ean.push(...keyInfo.ean);
   ean.push(...indexInfo.ean);
   eav.push(...indexInfo.eav);
-  updateExpressions.push(...indexInfo.updateExpressions);
 
   ean.sort();
   eav.sort();
-  updateExpressions.sort();
 
   return updateItemTpl({
     conditionField: keyInfo.conditionField,
@@ -238,6 +235,5 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
     key: keyInfo.keyForReadAndUpdate,
     objType,
     ttlInfo,
-    updateExpressions,
   });
 }
