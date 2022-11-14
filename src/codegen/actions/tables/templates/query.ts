@@ -1,6 +1,6 @@
 import {GraphQLField, GraphQLObjectType} from 'graphql';
 
-import {getTypeScriptTypeForField} from '../../../common/helpers';
+import {getTypeScriptTypeForField, hasDirective} from '../../../common/helpers';
 import {IndexFieldInfo} from '../../../common/indexes';
 import {makeKeyTemplate} from '../../../common/keys';
 
@@ -30,6 +30,11 @@ function renderFieldAsType(field: GraphQLField<unknown, unknown>): string {
 /** template */
 export function queryTpl({consistent, indexes, objType}: QueryTplInput) {
   const typeName = objType.name;
+
+  const hasIndexes = hasDirective('compositeIndex', objType);
+  const eavPrefix = hasIndexes
+    ? '${' + `'index' in input ? input.index : ''` + '}'
+    : '';
 
   const inputTypeName = `Query${typeName}Input`;
   const outputTypeName = `Query${typeName}Output`;
@@ -98,14 +103,16 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>): 
   const {ConsumedCapacity: capacity, Items: items = []} = await ddbDocClient.send(new QueryCommand({
     ConsistentRead: ${consistent ? `!('index' in input)` : 'false'},
     ExpressionAttributeNames: {
-      '#pk': \`\${'index' in input ? input.index : ''}pk\`,
-      '#sk': \`\${'index' in input ? input.index : ''}sk\`,
+      '#pk': \`${eavPrefix}pk\`,
+      '#sk': \`${eavPrefix}sk\`,
     },
     ExpressionAttributeValues: {
       ':pk': makePartitionKeyForQuery${typeName}(input),
       ':sk': makeSortKeyForQuery${typeName}(input),
     },
-    IndexName: 'index' in input ? input.index : undefined,
+    IndexName: ${
+      hasIndexes ? `'index' in input ? input.index : undefined` : 'undefined'
+    },
     KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
