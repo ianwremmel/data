@@ -36,8 +36,12 @@ overrides:
       # schema will be used in each combined schema ,so this rule can't be
       # usefully enforced.
       '@graphql-eslint/no-unreachable-types': off
-
       strict: off
+
+  - files:
+      - 'src/runtime/**'
+    rules:
+      no-console: error
 
 parserOptions:
   sourceType: 'script'

@@ -48,6 +48,8 @@ EXAMPLE_OUTPUT_FILES     := action.ts template.yml
 
 EXAMPLE_OUTPUT           := $(foreach X,$(EXAMPLE_DIRS),$(foreach Y,$(addprefix /__generated__/,$(EXAMPLE_OUTPUT_FILES)),$X$Y))
 
+GENERATED_DIRS          := $(addsuffix /__generated__,$(EXAMPLE_DIRS))
+
 ################################################################################
 ## Public Targets
 ################################################################################
@@ -56,7 +58,7 @@ build: README.md $(EXAMPLE_OUTPUT) | $(SENTINEL_DIR) $(TMP_DIR)
 .PHONY: build
 
 clean:
-	rm -rf $(EXAMPLE_OUTPUT) $(TMP_DIR) $(SENTINEL_DIR)
+	rm -rf $(EXAMPLE_OUTPUT) $(TMP_DIR) $(SENTINEL_DIR) $(GENERATED_DIRS)
 .PHONY: clean
 
 ################################################################################
@@ -83,7 +85,7 @@ define GEN_EXAMPLE
 
 $(EXAMPLE_DIR)/__generated__/$(EXAMPLE_OUTPUT_FILES) &:
 	IS_EXAMPLE=true npx graphql-codegen --project $(subst examples/,,$(EXAMPLE_DIR))
-	npm run eslint -- --fix $(EXAMPLE_DIR)/__generated__/*.ts
+	npm run eslint -- --fix $(EXAMPLE_DIR)/__generated__
 
 endef
 $(foreach EXAMPLE_DIR,$(EXAMPLE_DIRS),$(eval $(GEN_EXAMPLE)))
