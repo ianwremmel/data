@@ -9,7 +9,6 @@ export interface CreateItemTplInput {
   readonly key: readonly string[];
   readonly objType: GraphQLObjectType;
   readonly omit: readonly string[];
-  readonly updateExpressions: readonly string[];
 }
 
 /** template */
@@ -20,7 +19,6 @@ export function createItemTpl({
   key,
   objType,
   omit,
-  updateExpressions,
 }: CreateItemTplInput) {
   const typeName = objType.name;
 
@@ -37,7 +35,7 @@ export type ${outputTypeName} = ResultType<${typeName}>
 export async function create${typeName}(input: Readonly<Create${typeName}Input>): Promise<Readonly<${outputTypeName}>> {
   const now = new Date();
 ${ensureTableTemplate(objType)}
-
+  const {UpdateExpression} = marshall${objType.name}(input);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand({
@@ -55,7 +53,7 @@ ${key.map((k) => `        ${k},`).join('\n')}
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression: 'SET ${updateExpressions.join(', ')}',
+      UpdateExpression,
   }));
 
   assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');

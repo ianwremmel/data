@@ -156,15 +156,6 @@ export function marshalField(field: GraphQLField<unknown, unknown>): string {
     ? `input.${fieldName}.getTime()`
     : `input.${fieldName}`;
 
-  if (!isNonNullType(field.type)) {
-    // I'm not completely confident the following is correct or accurate, but
-    // the idea is to explicitly handle each of the three cases for defined,
-    // undefined, and null. If a value is defined, just use it. If it's null, we
-    // intend to unset it. if it's undefined, we don't want to do anything. wit
-    // it.
-    return `input.${fieldName} === null ? null : typeof input.${fieldName} === 'undefined' ? undefined : ${str}`;
-  }
-
   return str;
 }
 
@@ -187,20 +178,6 @@ export function unmarshalField(
     } else {
       out = `${out} ? new Date(${out}) : null`;
     }
-  }
-
-  if (isNonNullType(fieldType.type)) {
-    out = `(() => {
-      assert(
-        item.${columnName} !== null,
-        () => new DataIntegrityError('Expected ${fieldName} to be non-null')
-      );
-      assert(
-        typeof item.${columnName} !== 'undefined',
-        () => new DataIntegrityError('Expected ${fieldName} to be defined')
-      );
-      return ${out};
-    })()`;
   }
 
   return `${fieldName}: ${out}`;

@@ -13,7 +13,6 @@ export interface UpdateItemTplInput {
   readonly eav: readonly string[];
   readonly key: readonly string[];
   readonly inputToPrimaryKey: readonly string[];
-  readonly updateExpressions: readonly string[];
 }
 
 /** template */
@@ -25,7 +24,6 @@ export function updateItemTpl({
   eav,
   inputToPrimaryKey,
   key,
-  updateExpressions,
 }: UpdateItemTplInput) {
   const typeName = objType.name;
 
@@ -47,9 +45,10 @@ export type ${outputTypeName} = ResultType<${typeName}>
 export async function update${typeName}(input: Readonly<${inputTypeName}>): Promise<Readonly<${outputTypeName}>> {
   const now = new Date();
 ${ensureTableTemplate(objType)}
+  const {UpdateExpression} = marshall${objType.name}(input);
   try {
     const {Attributes: item, ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand({
-      ConditionExpression: '#version = :version AND attribute_exists(#${conditionField})',
+      ConditionExpression: '#version = :previousVersion AND #entity = :entity AND attribute_exists(#${conditionField})',
       ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
       },
@@ -63,7 +62,7 @@ ${key.map((k) => `        ${k},`).join('\n')}
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression: 'SET ${updateExpressions.join(', ')}',
+      UpdateExpression,
     }));
 
     assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');

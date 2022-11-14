@@ -131,7 +131,7 @@ export async function createUserLogin(
   const now = new Date();
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
-
+  const {UpdateExpression} = marshallUserLogin(input);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -172,8 +172,7 @@ export async function createUserLogin(
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression:
-        'SET #createdAt = :createdAt, #entity = :entity, #externalId = :externalId, #gsi1pk = :gsi1pk, #gsi1sk = :gsi1sk, #login = :login, #updatedAt = :updatedAt, #vendor = :vendor, #version = :version',
+      UpdateExpression,
     })
   );
 
@@ -338,79 +337,6 @@ export async function touchUserLogin(
   }
 }
 
-/** Unmarshalls a DynamoDB record into a UserLogin object */
-export function unmarshallUserLogin(item: Record<string, any>): UserLogin {
-  return {
-    createdAt: (() => {
-      assert(
-        item._ct !== null,
-        () => new DataIntegrityError('Expected createdAt to be non-null')
-      );
-      assert(
-        typeof item._ct !== 'undefined',
-        () => new DataIntegrityError('Expected createdAt to be defined')
-      );
-      return new Date(item._ct);
-    })(),
-    externalId: (() => {
-      assert(
-        item.external_id !== null,
-        () => new DataIntegrityError('Expected externalId to be non-null')
-      );
-      assert(
-        typeof item.external_id !== 'undefined',
-        () => new DataIntegrityError('Expected externalId to be defined')
-      );
-      return item.external_id;
-    })(),
-    id: `${item.pk}#${item.sk}`,
-    login: (() => {
-      assert(
-        item.login !== null,
-        () => new DataIntegrityError('Expected login to be non-null')
-      );
-      assert(
-        typeof item.login !== 'undefined',
-        () => new DataIntegrityError('Expected login to be defined')
-      );
-      return item.login;
-    })(),
-    updatedAt: (() => {
-      assert(
-        item._md !== null,
-        () => new DataIntegrityError('Expected updatedAt to be non-null')
-      );
-      assert(
-        typeof item._md !== 'undefined',
-        () => new DataIntegrityError('Expected updatedAt to be defined')
-      );
-      return new Date(item._md);
-    })(),
-    vendor: (() => {
-      assert(
-        item.vendor !== null,
-        () => new DataIntegrityError('Expected vendor to be non-null')
-      );
-      assert(
-        typeof item.vendor !== 'undefined',
-        () => new DataIntegrityError('Expected vendor to be defined')
-      );
-      return item.vendor;
-    })(),
-    version: (() => {
-      assert(
-        item._v !== null,
-        () => new DataIntegrityError('Expected version to be non-null')
-      );
-      assert(
-        typeof item._v !== 'undefined',
-        () => new DataIntegrityError('Expected version to be defined')
-      );
-      return item._v;
-    })(),
-  };
-}
-
 export type UpdateUserLoginInput = Omit<UserLogin, 'createdAt' | 'updatedAt'>;
 export type UpdateUserLoginOutput = ResultType<UserLogin>;
 
@@ -421,6 +347,7 @@ export async function updateUserLogin(
   const now = new Date();
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
+  const {UpdateExpression} = marshallUserLogin(input);
   try {
     const {
       Attributes: item,
@@ -428,9 +355,11 @@ export async function updateUserLogin(
       ItemCollectionMetrics: metrics,
     } = await ddbDocClient.send(
       new UpdateCommand({
-        ConditionExpression: '#version = :version AND attribute_exists(#pk)',
+        ConditionExpression:
+          '#version = :previousVersion AND attribute_exists(#pk)',
         ExpressionAttributeNames: {
           '#createdAt': '_ct',
+          '#entity': '_et',
           '#externalId': 'external_id',
           '#gsi1pk': 'gsi1pk',
           '#gsi1sk': 'gsi1sk',
@@ -442,14 +371,15 @@ export async function updateUserLogin(
         },
         ExpressionAttributeValues: {
           ':createdAt': now.getTime(),
+          ':entity': 'UserLogin',
           ':externalId': input.externalId,
           ':gsi1pk': `LOGIN#${input.vendor}#${input.login}`,
           ':gsi1sk': `MODIFIED#${now.getTime()}`,
           ':login': input.login,
-          ':newVersion': input.version + 1,
+          ':previousVersion': input.version,
           ':updatedAt': now.getTime(),
           ':vendor': input.vendor,
-          ':version': input.version,
+          ':version': input.version + 1,
         },
         Key: {
           pk: `USER#${input.vendor}#${input.externalId}`,
@@ -459,8 +389,7 @@ export async function updateUserLogin(
         ReturnItemCollectionMetrics: 'SIZE',
         ReturnValues: 'ALL_NEW',
         TableName: tableName,
-        UpdateExpression:
-          'SET #createdAt = :createdAt, #externalId = :externalId, #gsi1pk = :gsi1pk, #gsi1sk = :gsi1sk, #login = :login, #updatedAt = :updatedAt, #vendor = :vendor, #version = :newVersion',
+        UpdateExpression,
       })
     );
 
@@ -591,4 +520,115 @@ export async function queryUserLogin(
       return unmarshallUserLogin(item);
     }),
   };
+}
+
+export interface MarshallUserLoginOutput {
+  UpdateExpression: string;
+}
+
+/** Marshalls a DynamoDB record into a UserLogin object */
+export function marshallUserLogin(
+  input: Record<string, any>
+): MarshallUserLoginOutput {
+  const updateExpression: string[] = [
+    '#entity = :entity',
+    '#createdAt = :createdAt',
+    '#externalId = :externalId',
+    '#login = :login',
+    '#updatedAt = :updatedAt',
+    '#vendor = :vendor',
+    '#version = :version',
+    '#gsi1pk = :gsi1pk',
+    '#gsi1sk = :gsi1sk',
+  ];
+
+  updateExpression.sort();
+
+  return {UpdateExpression: `SET ${updateExpression.join(', ')}`};
+}
+
+/** Unmarshalls a DynamoDB record into a UserLogin object */
+export function unmarshallUserLogin(item: Record<string, any>): UserLogin {
+  if ('_ct' in item) {
+    assert(
+      item._ct !== null,
+      () => new DataIntegrityError('Expected createdAt to be non-null')
+    );
+    assert(
+      typeof item._ct !== 'undefined',
+      () => new DataIntegrityError('Expected createdAt to be defined')
+    );
+  }
+  if ('external_id' in item) {
+    assert(
+      item.external_id !== null,
+      () => new DataIntegrityError('Expected externalId to be non-null')
+    );
+    assert(
+      typeof item.external_id !== 'undefined',
+      () => new DataIntegrityError('Expected externalId to be defined')
+    );
+  }
+  if ('id' in item) {
+    assert(
+      item.id !== null,
+      () => new DataIntegrityError('Expected id to be non-null')
+    );
+    assert(
+      typeof item.id !== 'undefined',
+      () => new DataIntegrityError('Expected id to be defined')
+    );
+  }
+  if ('login' in item) {
+    assert(
+      item.login !== null,
+      () => new DataIntegrityError('Expected login to be non-null')
+    );
+    assert(
+      typeof item.login !== 'undefined',
+      () => new DataIntegrityError('Expected login to be defined')
+    );
+  }
+  if ('_md' in item) {
+    assert(
+      item._md !== null,
+      () => new DataIntegrityError('Expected updatedAt to be non-null')
+    );
+    assert(
+      typeof item._md !== 'undefined',
+      () => new DataIntegrityError('Expected updatedAt to be defined')
+    );
+  }
+  if ('vendor' in item) {
+    assert(
+      item.vendor !== null,
+      () => new DataIntegrityError('Expected vendor to be non-null')
+    );
+    assert(
+      typeof item.vendor !== 'undefined',
+      () => new DataIntegrityError('Expected vendor to be defined')
+    );
+  }
+  if ('_v' in item) {
+    assert(
+      item._v !== null,
+      () => new DataIntegrityError('Expected version to be non-null')
+    );
+    assert(
+      typeof item._v !== 'undefined',
+      () => new DataIntegrityError('Expected version to be defined')
+    );
+  }
+
+  const result: UserLogin = {
+    createdAt: new Date(item._ct),
+    externalId: item.external_id,
+    id: `${item.pk}#${item.sk}`,
+    login: item.login,
+    updatedAt: new Date(item._md),
+    vendor: item.vendor,
+    version: item._v,
+  };
+
+  return result;
 }

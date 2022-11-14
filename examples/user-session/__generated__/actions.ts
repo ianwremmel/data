@@ -84,6 +84,12 @@ export type UserSession = Model &
     createdAt: Scalars['Date'];
     expires: Scalars['Date'];
     id: Scalars['ID'];
+    /**
+     * This field has nothing to do with UserSession, but this was the easiest place
+     * to add it for testing. The intent is to prove that we can write an object,
+     * when an optional field is absent from the payload.
+     */
+    optionalField?: Maybe<Scalars['String']>;
     session: Scalars['JSONObject'];
     updatedAt: Scalars['Date'];
     version: Scalars['Int'];
@@ -125,7 +131,7 @@ export async function createUserSession(
   const now = new Date();
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
-
+  const {UpdateExpression} = marshallUserSession(input);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -138,19 +144,25 @@ export async function createUserSession(
       ExpressionAttributeNames: {
         '#createdAt': '_ct',
         '#entity': '_et',
+        '#expires': 'ttl',
         '#id': 'id',
         '#session': 'session',
-        '#ttl': 'ttl',
         '#updatedAt': '_md',
         '#version': '_v',
+        ...('optionalField' in input
+          ? {'#optionalField': 'optional_field'}
+          : undefined),
       },
       ExpressionAttributeValues: {
         ':createdAt': now.getTime(),
         ':entity': 'UserSession',
+        ':expires': now.getTime() + 86400000,
         ':session': input.session,
-        ':ttl': now.getTime() + 86400000,
         ':updatedAt': now.getTime(),
         ':version': 1,
+        ...('optionalField' in input
+          ? {':optionalField': input.optionalField}
+          : undefined),
       },
       Key: {
         id: `UserSession#${uuidv4()}`,
@@ -159,8 +171,7 @@ export async function createUserSession(
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression:
-        'SET #createdAt = :createdAt, #entity = :entity, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt, #version = :version',
+      UpdateExpression,
     })
   );
 
@@ -287,8 +298,8 @@ export async function touchUserSession(
         new UpdateCommand({
           ConditionExpression: 'attribute_exists(#id)',
           ExpressionAttributeNames: {
+            '#expires': 'ttl',
             '#id': 'id',
-            '#ttl': 'ttl',
             '#version': '_v',
           },
           ExpressionAttributeValues: {
@@ -303,7 +314,7 @@ export async function touchUserSession(
           ReturnValues: 'ALL_NEW',
           TableName: tableName,
           UpdateExpression:
-            'SET #ttl = #ttl + :ttlInc, #version = #version + :versionInc',
+            'SET #expires = #expires + :ttlInc, #version = #version + :versionInc',
         })
       );
 
@@ -325,78 +336,6 @@ export async function touchUserSession(
   }
 }
 
-/** Unmarshalls a DynamoDB record into a UserSession object */
-export function unmarshallUserSession(item: Record<string, any>): UserSession {
-  return {
-    createdAt: (() => {
-      assert(
-        item._ct !== null,
-        () => new DataIntegrityError('Expected createdAt to be non-null')
-      );
-      assert(
-        typeof item._ct !== 'undefined',
-        () => new DataIntegrityError('Expected createdAt to be defined')
-      );
-      return new Date(item._ct);
-    })(),
-    expires: (() => {
-      assert(
-        item.ttl !== null,
-        () => new DataIntegrityError('Expected expires to be non-null')
-      );
-      assert(
-        typeof item.ttl !== 'undefined',
-        () => new DataIntegrityError('Expected expires to be defined')
-      );
-      return new Date(item.ttl);
-    })(),
-    id: (() => {
-      assert(
-        item.id !== null,
-        () => new DataIntegrityError('Expected id to be non-null')
-      );
-      assert(
-        typeof item.id !== 'undefined',
-        () => new DataIntegrityError('Expected id to be defined')
-      );
-      return item.id;
-    })(),
-    session: (() => {
-      assert(
-        item.session !== null,
-        () => new DataIntegrityError('Expected session to be non-null')
-      );
-      assert(
-        typeof item.session !== 'undefined',
-        () => new DataIntegrityError('Expected session to be defined')
-      );
-      return item.session;
-    })(),
-    updatedAt: (() => {
-      assert(
-        item._md !== null,
-        () => new DataIntegrityError('Expected updatedAt to be non-null')
-      );
-      assert(
-        typeof item._md !== 'undefined',
-        () => new DataIntegrityError('Expected updatedAt to be defined')
-      );
-      return new Date(item._md);
-    })(),
-    version: (() => {
-      assert(
-        item._v !== null,
-        () => new DataIntegrityError('Expected version to be non-null')
-      );
-      assert(
-        typeof item._v !== 'undefined',
-        () => new DataIntegrityError('Expected version to be defined')
-      );
-      return item._v;
-    })(),
-  };
-}
-
 export type UpdateUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'updatedAt'
@@ -410,6 +349,7 @@ export async function updateUserSession(
   const now = new Date();
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
+  const {UpdateExpression} = marshallUserSession(input);
   try {
     const {
       Attributes: item,
@@ -417,22 +357,31 @@ export async function updateUserSession(
       ItemCollectionMetrics: metrics,
     } = await ddbDocClient.send(
       new UpdateCommand({
-        ConditionExpression: '#version = :version AND attribute_exists(#id)',
+        ConditionExpression:
+          '#version = :previousVersion AND attribute_exists(#id)',
         ExpressionAttributeNames: {
           '#createdAt': '_ct',
+          '#entity': '_et',
+          '#expires': 'ttl',
           '#id': 'id',
           '#session': 'session',
-          '#ttl': 'ttl',
           '#updatedAt': '_md',
           '#version': '_v',
+          ...('optionalField' in input
+            ? {'#optionalField': 'optional_field'}
+            : undefined),
         },
         ExpressionAttributeValues: {
           ':createdAt': now.getTime(),
-          ':newVersion': input.version + 1,
+          ':entity': 'UserSession',
+          ':expires': now.getTime() + 86400000,
+          ':previousVersion': input.version,
           ':session': input.session,
-          ':ttl': now.getTime() + 86400000,
           ':updatedAt': now.getTime(),
-          ':version': input.version,
+          ':version': input.version + 1,
+          ...('optionalField' in input
+            ? {':optionalField': input.optionalField}
+            : undefined),
         },
         Key: {
           id: input.id,
@@ -441,8 +390,7 @@ export async function updateUserSession(
         ReturnItemCollectionMetrics: 'SIZE',
         ReturnValues: 'ALL_NEW',
         TableName: tableName,
-        UpdateExpression:
-          'SET #createdAt = :createdAt, #session = :session, #ttl = :ttl, #updatedAt = :updatedAt, #version = :newVersion',
+        UpdateExpression,
       })
     );
 
@@ -482,4 +430,112 @@ export async function updateUserSession(
     }
     throw err;
   }
+}
+
+export interface MarshallUserSessionOutput {
+  UpdateExpression: string;
+}
+
+/** Marshalls a DynamoDB record into a UserSession object */
+export function marshallUserSession(
+  input: Record<string, any>
+): MarshallUserSessionOutput {
+  const updateExpression: string[] = [
+    '#entity = :entity',
+    '#createdAt = :createdAt',
+    '#expires = :expires',
+    '#session = :session',
+    '#updatedAt = :updatedAt',
+    '#version = :version',
+  ];
+
+  if ('optionalField' in input) {
+    updateExpression.push('#optionalField = :optionalField');
+  }
+
+  updateExpression.sort();
+
+  return {UpdateExpression: `SET ${updateExpression.join(', ')}`};
+}
+
+/** Unmarshalls a DynamoDB record into a UserSession object */
+export function unmarshallUserSession(item: Record<string, any>): UserSession {
+  if ('_ct' in item) {
+    assert(
+      item._ct !== null,
+      () => new DataIntegrityError('Expected createdAt to be non-null')
+    );
+    assert(
+      typeof item._ct !== 'undefined',
+      () => new DataIntegrityError('Expected createdAt to be defined')
+    );
+  }
+  if ('ttl' in item) {
+    assert(
+      item.ttl !== null,
+      () => new DataIntegrityError('Expected expires to be non-null')
+    );
+    assert(
+      typeof item.ttl !== 'undefined',
+      () => new DataIntegrityError('Expected expires to be defined')
+    );
+  }
+  if ('id' in item) {
+    assert(
+      item.id !== null,
+      () => new DataIntegrityError('Expected id to be non-null')
+    );
+    assert(
+      typeof item.id !== 'undefined',
+      () => new DataIntegrityError('Expected id to be defined')
+    );
+  }
+  if ('session' in item) {
+    assert(
+      item.session !== null,
+      () => new DataIntegrityError('Expected session to be non-null')
+    );
+    assert(
+      typeof item.session !== 'undefined',
+      () => new DataIntegrityError('Expected session to be defined')
+    );
+  }
+  if ('_md' in item) {
+    assert(
+      item._md !== null,
+      () => new DataIntegrityError('Expected updatedAt to be non-null')
+    );
+    assert(
+      typeof item._md !== 'undefined',
+      () => new DataIntegrityError('Expected updatedAt to be defined')
+    );
+  }
+  if ('_v' in item) {
+    assert(
+      item._v !== null,
+      () => new DataIntegrityError('Expected version to be non-null')
+    );
+    assert(
+      typeof item._v !== 'undefined',
+      () => new DataIntegrityError('Expected version to be defined')
+    );
+  }
+
+  let result: UserSession = {
+    createdAt: new Date(item._ct),
+    expires: new Date(item.ttl),
+    id: item.id,
+    session: item.session,
+    updatedAt: new Date(item._md),
+    version: item._v,
+  };
+
+  if ('optional_field' in item) {
+    result = {
+      ...result,
+      optionalField: item.optional_field,
+    };
+  }
+
+  return result;
 }

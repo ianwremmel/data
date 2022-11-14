@@ -20,6 +20,7 @@ import {
   touchItemTemplate,
   updateItemTemplate,
 } from './tables/table';
+import {marshallTpl} from './tables/templates/marshall';
 import {unmarshallTpl} from './tables/templates/unmarshall';
 
 /** @override */
@@ -71,9 +72,10 @@ ${tableTypes
       deleteItemTemplate(objType),
       readItemTemplate(objType),
       touchItemTemplate(objType),
-      unmarshallTpl({objType}),
       updateItemTemplate(objType),
       queryTemplate(objType),
+      marshallTpl({objType}),
+      unmarshallTpl({objType}),
     ]
       .filter(Boolean)
       .join('\n\n');
