@@ -28,6 +28,7 @@ const config = {
             },
             [`examples/${example}/__generated__/template.yml`]: {
               config: {
+                dependenciesModuleId: './examples/dependencies',
                 enumsAsTypes: true,
               },
               plugins: ['./src/codegen/cloudformation'],

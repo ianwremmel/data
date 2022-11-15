@@ -1,3 +1,17 @@
+import {EventBridgeClient} from '@aws-sdk/client-eventbridge';
+
+export interface WithTableName {
+  tableName: string;
+}
+
+export interface WithModelName {
+  modelName: string;
+}
+
+export interface WithEventBridge {
+  eventBridge: EventBridgeClient;
+}
+
 export interface WithTelemetry {
   captureException(error: unknown): void;
   captureAsyncFunction<R>(

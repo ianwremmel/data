@@ -22,6 +22,9 @@ generated automatically on create.
 """
 directive @autoKey(field: String!) on OBJECT
 
+"""
+CDC Event Types
+"""
 enum CdcEvent {
   INSERT
   MODIFY

@@ -40,6 +40,7 @@ export interface Scalars {
   JSONObject: Record<string, unknown>;
 }
 
+/** CDC Event Types */
 export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
 /** Models are DynamoDB with a key schema that does not include a sort key. */

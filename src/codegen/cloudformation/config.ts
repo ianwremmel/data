@@ -1,1 +1,3 @@
-export type CloudformationPluginConfig = void;
+export interface CloudformationPluginConfig {
+  dependenciesModuleId: string;
+}

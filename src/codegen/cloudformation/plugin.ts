@@ -11,6 +11,7 @@ import yml from 'js-yaml';
 
 import {hasInterface} from '../common/helpers';
 
+import {defineCdc} from './cdc';
 import {CloudformationPluginConfig} from './config';
 import {defineTable} from './table';
 
@@ -40,15 +41,21 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
     .map((typeName) => {
       const objType = typesMap[typeName];
       assertObjectType(objType);
+      const cdcResources = defineCdc(config, objType as GraphQLObjectType, {
+        outputFile,
+      });
       const tableResources = defineTable(objType as GraphQLObjectType);
       return {
         env: {
+          ...cdcResources.env,
           ...tableResources.env,
         },
         output: {
+          ...cdcResources.output,
           ...tableResources.output,
         },
         resources: {
+          ...cdcResources.resources,
           ...tableResources.resources,
         },
       };

@@ -3,6 +3,7 @@ import http from 'http';
 import https from 'https';
 
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
+import {EventBridgeClient} from '@aws-sdk/client-eventbridge';
 import {DynamoDBDocumentClient} from '@aws-sdk/lib-dynamodb';
 import {
   captureAWSv3Client,
@@ -27,6 +28,13 @@ const _ddb = new DynamoDBClient({
 export const ddb: DynamoDBClient = isRunningInLambda
   ? captureAWSv3Client(_ddb as any)
   : _ddb;
+
+const _eventBridge = new EventBridgeClient({
+  endpoint: process.env.AWS_ENDPOINT,
+});
+export const eventBridge: EventBridgeClient = isRunningInLambda
+  ? captureAWSv3Client(_eventBridge as any)
+  : _eventBridge;
 
 const marshallOptions = {
   // Whether to convert typeof object to map attribute.
