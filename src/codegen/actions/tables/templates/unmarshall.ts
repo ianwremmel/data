@@ -84,8 +84,9 @@ ${requiredFields.map(({field}) => {
 })}
   };
 
-${optionalFields.map(({columnName, field}) => {
-  return `
+${optionalFields
+  .map(({columnName, field}) => {
+    return `
   if ('${columnName}' in item) {
     result = {
       ...result,
@@ -93,7 +94,8 @@ ${optionalFields.map(({columnName, field}) => {
     }
   }
   `;
-})}
+  })
+  .join('\n')}
 
   return result;
 }

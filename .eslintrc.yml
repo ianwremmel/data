@@ -43,5 +43,10 @@ overrides:
     rules:
       no-console: error
 
+  - files:
+      - '**/__generated__/**/*'
+    rules:
+      complexity: off
+
 parserOptions:
   sourceType: 'script'
