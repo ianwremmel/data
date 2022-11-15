@@ -4,16 +4,29 @@ import https from 'https';
 
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
 import {DynamoDBDocumentClient} from '@aws-sdk/lib-dynamodb';
-import {captureAWSv3Client, captureHTTPsGlobal} from 'aws-xray-sdk-core';
+import {
+  captureAWSv3Client,
+  captureHTTPsGlobal,
+  captureAsyncFunc,
+  getSegment,
+} from 'aws-xray-sdk-core';
 
-captureHTTPsGlobal(http);
-captureHTTPsGlobal(https);
+// Pre SDKv3, XRay could safely run anywhere and just no-opped if it wasn't
+// inside a Lambda. Now, we have to decided to no-op manually.
+const isRunningInLambda =
+  typeof process.env.AWS_LAMBDA_FUNCTION_NAME !== 'undefined';
 
-export const ddb: DynamoDBClient = captureAWSv3Client(
-  new DynamoDBClient({
-    endpoint: process.env.AWS_ENDPOINT,
-  }) as any
-);
+if (isRunningInLambda) {
+  captureHTTPsGlobal(https);
+  captureHTTPsGlobal(http);
+}
+
+const _ddb = new DynamoDBClient({
+  endpoint: process.env.AWS_ENDPOINT,
+});
+export const ddb: DynamoDBClient = isRunningInLambda
+  ? captureAWSv3Client(_ddb as any)
+  : _ddb;
 
 const marshallOptions = {
   // Whether to convert typeof object to map attribute.
@@ -33,3 +46,27 @@ const translateConfig = {marshallOptions, unmarshallOptions};
 
 // Create the DynamoDB Document client.
 export const ddbDocClient = DynamoDBDocumentClient.from(ddb, translateConfig);
+
+/** From WithTelemetry */
+export function captureException(err: unknown) {
+  if (err instanceof Error) {
+    getSegment()?.addError(err);
+  } else {
+    getSegment()?.addError(JSON.stringify(err));
+  }
+}
+
+/** From WithTelemetry */
+export async function captureAsyncFunction<R>(
+  name: string,
+  attributes: Record<string, boolean | number | string | undefined>,
+  fn: () => Promise<R>
+): Promise<R> {
+  return captureAsyncFunc(name, async (subsegment) => {
+    try {
+      return await fn();
+    } finally {
+      subsegment?.close();
+    }
+  });
+}
