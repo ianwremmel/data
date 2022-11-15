@@ -96,7 +96,7 @@ ${tableTypes
         `import {v4 as uuidv4} from 'uuid'`,
         `import {ddbDocClient} from "${path.relative(
           path.resolve(process.cwd(), path.dirname(info.outputFile)),
-          path.resolve(process.cwd(), config.pathToDocumentClient)
+          path.resolve(process.cwd(), config.dependenciesModuleId)
         )}"`,
       ],
     };
