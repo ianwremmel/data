@@ -358,7 +358,7 @@ export async function updateUserSession(
     } = await ddbDocClient.send(
       new UpdateCommand({
         ConditionExpression:
-          '#version = :previousVersion AND attribute_exists(#id)',
+          '#version = :previousVersion AND #entity = :entity AND attribute_exists(#id)',
         ExpressionAttributeNames: {
           '#createdAt': '_ct',
           '#entity': '_et',
