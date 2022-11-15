@@ -1,12 +1,19 @@
 // Create service client module using ES6 syntax.
+import http from 'http';
+import https from 'https';
+
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
 import {DynamoDBDocumentClient} from '@aws-sdk/lib-dynamodb';
+import {captureAWSv3Client, captureHTTPsGlobal} from 'aws-xray-sdk-core';
 
-const ddbClient = new DynamoDBClient({
-  endpoint: process.env.AWS_ENDPOINT,
-});
+captureHTTPsGlobal(http);
+captureHTTPsGlobal(https);
 
-export {ddbClient};
+export const ddb: DynamoDBClient = captureAWSv3Client(
+  new DynamoDBClient({
+    endpoint: process.env.AWS_ENDPOINT,
+  }) as any
+);
 
 const marshallOptions = {
   // Whether to convert typeof object to map attribute.
@@ -25,6 +32,4 @@ const unmarshallOptions = {
 const translateConfig = {marshallOptions, unmarshallOptions};
 
 // Create the DynamoDB Document client.
-const ddbDocClient = DynamoDBDocumentClient.from(ddbClient, translateConfig);
-
-export {ddbDocClient};
+export const ddbDocClient = DynamoDBDocumentClient.from(ddb, translateConfig);
