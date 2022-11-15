@@ -73,6 +73,11 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
             {} as Record<string, {Ref: string}>
           ),
         },
+        Handler: 'index.handler',
+        MemorySize: 256,
+        Runtime: 'nodejs16.x',
+        Timeout: 30,
+        Tracing: 'Active',
       },
     },
     Outputs: allResources.reduce(

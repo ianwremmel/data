@@ -13,6 +13,11 @@ Globals:
           Ref: TableAccount
         TABLE_SUBSCRIPTION:
           Ref: TableSubscription
+    Handler: index.handler
+    MemorySize: 256
+    Runtime: nodejs16.x
+    Timeout: 30
+    Tracing: Active
 Outputs:
   TableAccount:
     Description: The name of the DynamoDB table for Account
