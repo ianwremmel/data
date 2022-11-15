@@ -1,16 +1,22 @@
+import assert from 'assert';
 import path from 'path';
 
-import {GraphQLObjectType} from 'graphql';
+import {GraphQLObjectType, GraphQLSchema} from 'graphql';
 import {kebabCase} from 'lodash';
 
-import {hasDirective} from '../../common/helpers';
+import {
+  getArgStringValue,
+  getDirective,
+  hasDirective,
+} from '../../common/helpers';
 import {CloudformationPluginConfig} from '../config';
 import {CloudFormationFragment} from '../types';
 
-import {makeTableDispatcher} from './lambdas';
+import {makeHandler, makeTableDispatcher} from './lambdas';
 
 /** Generates CDC config for a type */
 export function defineCdc(
+  schema: GraphQLSchema,
   config: CloudformationPluginConfig,
   type: GraphQLObjectType,
   info: {outputFile: string}
@@ -18,6 +24,10 @@ export function defineCdc(
   if (!hasDirective('cdc', type)) {
     return {};
   }
+  const directive = getDirective('cdc', type);
+
+  const event = getArgStringValue('event', directive);
+
   const isExample = !!process.env.IS_EXAMPLE;
   const libImportPath = isExample ? '../../../..' : '@ianwremmel/data';
 
@@ -25,6 +35,14 @@ export function defineCdc(
 
   const modelName = typeName;
   const tableName = `Table${typeName}`;
+
+  const produces = getArgStringValue('produces', directive);
+  const targetModel = schema.getType(produces);
+  assert(
+    targetModel,
+    `\`produces\` arg on @cdc for ${modelName} identifies ${produces}, which does not appear to identify a type`
+  );
+  const destinationTable = produces;
 
   const dispatcherFilename = `dispatcher-${kebabCase(tableName)}`;
   const dispatcherFunctionName = `${tableName}CDCDispatcher`;
@@ -38,12 +56,28 @@ export function defineCdc(
     )
   );
 
+  const handlerPath = getArgStringValue('handler', directive);
+  const handlerFunctionName = `${modelName}CDCHandler`;
+
   makeTableDispatcher({
     dependenciesModuleId,
     libImportPath,
     modelName,
     outDir: path.join(path.dirname(info.outputFile), dispatcherFilename),
     tableName,
+  });
+
+  const handlerFilename = `handler-${kebabCase(modelName)}`;
+  makeHandler({
+    dependenciesModuleId,
+    // add an extra level of nesting because we know we're putting the generated
+    // file in a folder.
+    handlerPath: handlerPath.startsWith('.')
+      ? path.join('..', handlerPath)
+      : handlerPath,
+    libImportPath,
+    outDir: path.join(path.dirname(info.outputFile), handlerFilename),
+    type,
   });
 
   return {
@@ -80,6 +114,89 @@ export function defineCdc(
             },
           ],
           Timeout: 60,
+        },
+        // eslint-disable-next-line sort-keys
+        Metadata: {
+          BuildMethod: 'esbuild',
+          BuildProperties: {
+            EntryPoints: ['./index'],
+            Minify: false,
+            Sourcemap: true,
+            Target: 'es2020',
+          },
+        },
+      },
+      [`${handlerFunctionName}DLQ`]: {
+        Type: 'AWS::SQS::Queue',
+        // eslint-disable-next-line sort-keys
+        Properties: {
+          KmsMasterKeyId: 'alias/aws/sqs',
+        },
+      },
+      [`${handlerFunctionName}EventBridgeDLQ`]: {
+        Type: 'AWS::SQS::Queue',
+        // eslint-disable-next-line sort-keys
+        Properties: {
+          KmsMasterKeyId: 'alias/aws/sqs',
+        },
+      },
+      [handlerFunctionName]: {
+        Type: 'AWS::Serverless::Function',
+        // eslint-disable-next-line sort-keys
+        Properties: {
+          CodeUri: handlerFilename,
+          DeadLetterQueue: {
+            TargetArn: {
+              'Fn::GetAtt': [`${handlerFunctionName}EventBridgeDLQ`, 'Arn'],
+            },
+            Type: 'SQS',
+          },
+          Events: {
+            [event]: {
+              Type: 'EventBridgeRule',
+              // eslint-disable-next-line sort-keys
+              Properties: {
+                DeadLetterConfig: {
+                  Arn: {'Fn::GetAtt': [`${handlerFunctionName}DLQ`, 'Arn']},
+                },
+                EventBusName: 'default',
+                Pattern: {
+                  detail: {
+                    dynamodb: {
+                      NewImage: {
+                        _et: {
+                          S: [`${modelName}`],
+                        },
+                      },
+                    },
+                  },
+                  'detail-type':
+                    event === 'UPSERT' ? ['INSERT', 'MODIFY'] : [event],
+                  resources: [{'Fn::GetAtt': [tableName, 'Arn']}],
+                  source: [`${tableName}.${modelName}`],
+                },
+              },
+            },
+          },
+          Policies: [
+            'AWSLambdaBasicExecutionRole',
+            'AWSLambda_ReadOnlyAccess',
+            'AWSXrayWriteOnlyAccess',
+            'CloudWatchLambdaInsightsExecutionRolePolicy',
+            {CloudWatchPutMetricPolicy: {}},
+            {
+              DynamoDBCrudPolicy: {
+                TableName: {Ref: `Table${destinationTable}`},
+              },
+            },
+            {
+              SQSSendMessagePolicy: {
+                QueueName: {
+                  'Fn::GetAtt': [`${handlerFunctionName}DLQ`, 'QueueName'],
+                },
+              },
+            },
+          ],
         },
         // eslint-disable-next-line sort-keys
         Metadata: {

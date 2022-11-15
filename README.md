@@ -11,6 +11,7 @@
 
 -   [Install](#install)
 -   [Usage](#usage)
+-   [Known Issues](#known-issues)
 -   [Maintainer](#maintainer)
 -   [Contribute](#contribute)
     -   [Testing](#testing)
@@ -21,6 +22,11 @@
 ## Install
 
 ## Usage
+
+## Known Issues
+
+-   Even though Dead Letter Queues are configured for CDC handlers, the Start
+    DLQ Redrive button in the AWS console is disabled.
 
 ## Maintainer
 

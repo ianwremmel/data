@@ -30,6 +30,23 @@ export function getOptionalArg(name: string, directive: ConstDirectiveNode) {
 
 /**
  * Gets the string value of the specified argument from the given directive.
+ */
+export function getArgStringValue(
+  fieldName: string,
+  directive: ConstDirectiveNode
+): string {
+  const prefixArg = getArg(fieldName, directive);
+
+  assert(
+    prefixArg.value.kind === 'StringValue',
+    `Expected @${directive.name.value} directive argument "${fieldName}" to be a string, but got ${prefixArg.value.kind}`
+  );
+
+  return prefixArg.value.value;
+}
+
+/**
+ * Gets the string value of the specified argument from the given directive.
  * Returns an empty string if the argument is not present.
  */
 export function getOptionalArgStringValue(

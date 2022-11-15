@@ -41,9 +41,14 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
     .map((typeName) => {
       const objType = typesMap[typeName];
       assertObjectType(objType);
-      const cdcResources = defineCdc(config, objType as GraphQLObjectType, {
-        outputFile,
-      });
+      const cdcResources = defineCdc(
+        schema,
+        config,
+        objType as GraphQLObjectType,
+        {
+          outputFile,
+        }
+      );
       const tableResources = defineTable(objType as GraphQLObjectType);
       return {
         env: {
