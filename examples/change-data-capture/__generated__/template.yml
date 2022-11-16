@@ -38,6 +38,10 @@ Outputs:
     Value:
       Ref: TableSubscription
 Parameters:
+  LogRetentionInDays:
+    Type: Number
+    Description: Log retention in days
+    Default: 3
   StageName:
     Type: String
     AllowedValues:
@@ -118,7 +122,7 @@ Resources:
       LogGroupName:
         Fn::Sub: /aws/lambda/${TableSubscriptionCDCDispatcher}
       RetentionInDays:
-        Ref: LogRetentionDays
+        Ref: LogRetentionInDays
   SubscriptionCDCHandlerDLQ:
     Type: AWS::SQS::Queue
     Properties:
@@ -190,7 +194,7 @@ Resources:
       LogGroupName:
         Fn::Sub: /aws/lambda/${SubscriptionCDCHandler}
       RetentionInDays:
-        Ref: LogRetentionDays
+        Ref: LogRetentionInDays
   TableSubscription:
     Type: AWS::DynamoDB::Table
     Properties:

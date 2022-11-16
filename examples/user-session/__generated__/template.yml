@@ -27,6 +27,10 @@ Outputs:
     Value:
       Ref: TableUserSession
 Parameters:
+  LogRetentionInDays:
+    Type: Number
+    Description: Log retention in days
+    Default: 3
   StageName:
     Type: String
     AllowedValues:
