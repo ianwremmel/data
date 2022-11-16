@@ -88,12 +88,16 @@ directive @ttl(duration: String!) on FIELD_DEFINITION
 
 """
 Models are DynamoDB tables with a key schema that may or may not include a sort
-key. A Model must be decorated with either @partitionKey or @compositeKey. If
-a Model implements Node, it will synthesize an "id" field, though at this time
-it will not be base64 encoded or prefixed with the type name.
+key. A Model must be decorated with either @partitionKey or @compositeKey.
+
+Note that, while Model does not explicitly implement Node, its `id` field
+behaves like `Node#id` typically does. This is to avoid defining Node in the
+injected schema if the consumer's schema also defined Node or defines it
+differently.
 """
 interface Model implements Timestamped & Versioned {
   createdAt: Date!
+  id: ID!
   updatedAt: Date!
   version: Int!
 }

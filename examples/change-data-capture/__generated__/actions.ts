@@ -62,9 +62,18 @@ export type Account = Model &
 /** CDC Event Types */
 export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
-/** Models are DynamoDB with a key schema that does not include a sort key. */
+/**
+ * Models are DynamoDB tables with a key schema that may or may not include a sort
+ * key. A Model must be decorated with either @partitionKey or @compositeKey.
+ *
+ * Note that, while Model does not explicitly implement Node, its `id` field
+ * behaves like `Node#id` typically does. This is to avoid defining Node in the
+ * injected schema if the consumer's schema also defined Node or defines it
+ * differently.
+ */
 export interface Model {
   createdAt: Scalars['Date'];
+  id: Scalars['ID'];
   updatedAt: Scalars['Date'];
   version: Scalars['Int'];
 }
@@ -346,7 +355,10 @@ export async function touchAccount(
   }
 }
 
-export type UpdateAccountInput = Omit<Account, 'createdAt' | 'updatedAt'>;
+export type UpdateAccountInput = Omit<
+  Account,
+  'createdAt' | 'id' | 'updatedAt'
+>;
 export type UpdateAccountOutput = ResultType<Account>;
 
 /**  */
@@ -878,7 +890,7 @@ export async function touchSubscription(
 
 export type UpdateSubscriptionInput = Omit<
   Subscription,
-  'createdAt' | 'updatedAt'
+  'createdAt' | 'id' | 'updatedAt'
 >;
 export type UpdateSubscriptionOutput = ResultType<Subscription>;
 

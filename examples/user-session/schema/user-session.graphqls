@@ -3,10 +3,15 @@ A user session object.
 """
 type UserSession implements Model & Node & Timestamped & Versioned
   @consistent
-  @partitionKey(pkFields: ["id"], pkPrefix: "USER_SESSION") {
+  @partitionKey(pkFields: ["sessionId"], pkPrefix: "USER_SESSION") {
   createdAt: Date!
   expires: Date! @ttl(duration: "1d")
   id: ID!
+  """
+  Since `id` is a reserved field, sessionId is the field we'll use to inject a
+  random uuid, which the underlying system will use as the basis for `id`.
+  """
+  sessionId: String!
   session: JSONObject!
   updatedAt: Date!
   version: Int!

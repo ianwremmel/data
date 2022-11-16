@@ -57,8 +57,6 @@ function extractCompositeKeyInfo(
   type: GraphQLObjectType,
   directive: ConstDirectiveNode
 ): KeyInfo {
-  const isNode = hasInterface('Node', type);
-
   const pkFields = getArgFieldTypeValues('pkFields', type, directive);
   const skFields = getArgFieldTypeValues('skFields', type, directive);
   const pkPrefix = getOptionalArgStringValue('pkPrefix', directive);
@@ -74,10 +72,15 @@ function extractCompositeKeyInfo(
 
   const fields = type.getFields();
 
+  assert(
+    !fieldNames.includes('id'),
+    'id is a reserved field and cannot be part of the partition key'
+  );
+
   return {
     conditionField: 'pk',
     ean: [`'#pk': 'pk'`],
-    fields: new Set(['pk', 'sk', isNode ? 'id' : ''].filter(Boolean)),
+    fields: new Set(['pk', 'sk', 'id'].filter(Boolean)),
     index: {
       pkFields,
       pkPrefix,
@@ -87,7 +90,7 @@ function extractCompositeKeyInfo(
     inputToPrimaryKey: fieldNames.map((f) => `${f}: input.${f}`),
     keyForCreate: [`pk: \`${pkTemplate}\``, `sk: \`${skTemplate}\``],
     keyForReadAndUpdate: [`pk: \`${pkTemplate}\``, `sk: \`${skTemplate}\``],
-    omitForCreate: [isNode ? 'id' : ''].filter(Boolean),
+    omitForCreate: ['id'].filter(Boolean),
     primaryKeyType: fieldNames.map((fieldName) => {
       const field = fields[fieldName];
 
@@ -107,7 +110,7 @@ function extractCompositeKeyInfo(
     }),
     // The embedded template is intentional.
     // eslint-disable-next-line no-template-curly-in-string
-    unmarshall: [isNode ? 'id: `${item.pk}#${item.sk}`' : ''].filter(Boolean),
+    unmarshall: ['id: `${item.pk}#${item.sk}`'].filter(Boolean),
   };
 }
 
@@ -118,8 +121,6 @@ function extractPartitionKeyInfo(
   type: GraphQLObjectType,
   directive: ConstDirectiveNode
 ): KeyInfo {
-  const isNode = hasInterface('Node', type);
-
   const pkFields = getArgFieldTypeValues('pkFields', type, directive);
   const pkPrefix = getOptionalArgStringValue('pkPrefix', directive);
 
@@ -129,12 +130,15 @@ function extractPartitionKeyInfo(
 
   const fields = type.getFields();
 
-  const pkIsId = isNode && pkFields.length === 1 && pkFields[0].name === 'id';
+  assert(
+    !fieldNames.includes('id'),
+    'id is a reserved field and cannot be part of the partition key'
+  );
 
   return {
     conditionField: 'pk',
     ean: [`'#pk': 'pk'`],
-    fields: new Set(['pk', pkIsId ? 'id' : ''].filter(Boolean)),
+    fields: new Set(['pk', 'id'].filter(Boolean)),
     index: {
       pkFields,
       pkPrefix,
@@ -142,7 +146,7 @@ function extractPartitionKeyInfo(
     inputToPrimaryKey: fieldNames.map((f) => `${f}: input.${f}`),
     keyForCreate: [`pk: \`${pkTemplate}\``],
     keyForReadAndUpdate: [`pk: \`${pkTemplate}\``],
-    omitForCreate: [].filter(Boolean),
+    omitForCreate: ['id'],
     primaryKeyType: fieldNames.map((fieldName) => {
       const field = fields[fieldName];
 
@@ -161,9 +165,7 @@ function extractPartitionKeyInfo(
       return `${fieldName}: ${field.type};`;
     }),
 
-    unmarshall: [
-      pkIsId ? `id: \`\${item.pk.replace(/^${pkPrefix}#/, '')}\`` : '',
-    ].filter(Boolean),
+    unmarshall: [`id: \`\${item.pk}}\``],
   };
 }
 /**
