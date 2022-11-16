@@ -4,7 +4,7 @@ import {
   CloudFormationClient,
   DescribeStacksCommand,
 } from '@aws-sdk/client-cloudformation';
-import {Stack} from '@aws-sdk/client-cloudformation/dist-types/models/models_0';
+import type {Stack} from '@aws-sdk/client-cloudformation/dist-types/models/models_0';
 import {glob} from 'glob';
 import {camelCase, snakeCase, upperFirst} from 'lodash';
 
@@ -45,7 +45,8 @@ export default async function loadAwsEnv() {
 
   const exampleStacks = glob
     .sync('*/', {cwd: './examples'})
-    .map((dir) => upperFirst(camelCase(dir)));
+    .map((dir) => upperFirst(camelCase(dir)))
+    .filter((stack) => stack !== 'ChangeDataCapture');
 
   for (const stackName of exampleStacks) {
     const stack: Stack | undefined = stackData.Stacks.find(

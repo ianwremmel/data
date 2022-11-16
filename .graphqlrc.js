@@ -17,18 +17,19 @@ const config = {
             [`examples/${example}/__generated__/actions.ts`]: {
               config: {
                 enumsAsTypes: true,
-                pathToDocumentClient: './examples/document-client',
                 scalars: {
                   Date: 'Date',
                   JSONObject: 'Record<string, unknown>',
                 },
                 strictScalars: true,
+                dependenciesModuleId: './examples/dependencies',
               },
               plugins: ['typescript', './src/codegen/actions'],
             },
             [`examples/${example}/__generated__/template.yml`]: {
               config: {
-                enumsAsTypes: true,
+                actionsModuleId: `./examples/${example}/__generated__/actions`,
+                dependenciesModuleId: './examples/dependencies',
               },
               plugins: ['./src/codegen/cloudformation'],
             },

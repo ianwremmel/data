@@ -1,6 +1,7 @@
 import assert from 'assert';
 
-import {GraphQLField, GraphQLObjectType, isNonNullType} from 'graphql';
+import type {GraphQLField, GraphQLObjectType} from 'graphql';
+import {isNonNullType} from 'graphql';
 import {snakeCase} from 'lodash';
 
 import {hasDirective, isType, unmarshalField} from '../../../common/helpers';
@@ -84,8 +85,9 @@ ${requiredFields.map(({field}) => {
 })}
   };
 
-${optionalFields.map(({columnName, field}) => {
-  return `
+${optionalFields
+  .map(({columnName, field}) => {
+    return `
   if ('${columnName}' in item) {
     result = {
       ...result,
@@ -93,7 +95,8 @@ ${optionalFields.map(({columnName, field}) => {
     }
   }
   `;
-})}
+  })
+  .join('\n')}
 
   return result;
 }

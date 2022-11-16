@@ -1,3 +1,3 @@
 export interface ActionPluginConfig {
-  readonly pathToDocumentClient: string;
+  readonly dependenciesModuleId: string;
 }

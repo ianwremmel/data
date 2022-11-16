@@ -11,6 +11,11 @@ Globals:
       Variables:
         TABLE_USER_SESSION:
           Ref: TableUserSession
+    Handler: index.handler
+    MemorySize: 256
+    Runtime: nodejs16.x
+    Timeout: 30
+    Tracing: Active
 Outputs:
   TableUserSession:
     Description: The name of the DynamoDB table for UserSession

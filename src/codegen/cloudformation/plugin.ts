@@ -2,16 +2,18 @@ import assert from 'assert';
 import {readFileSync} from 'fs';
 import path from 'path';
 
-import {
+import type {
   AddToSchemaResult,
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
-import {assertObjectType, GraphQLObjectType, isObjectType} from 'graphql';
+import type {GraphQLObjectType} from 'graphql';
+import {assertObjectType, isObjectType} from 'graphql';
 import yml from 'js-yaml';
 
 import {hasInterface} from '../common/helpers';
 
-import {CloudformationPluginConfig} from './config';
+import {defineCdc} from './cdc';
+import type {CloudformationPluginConfig} from './config';
 import {defineTable} from './table';
 
 /** @override */
@@ -40,15 +42,26 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
     .map((typeName) => {
       const objType = typesMap[typeName];
       assertObjectType(objType);
+      const cdcResources = defineCdc(
+        schema,
+        config,
+        objType as GraphQLObjectType,
+        {
+          outputFile,
+        }
+      );
       const tableResources = defineTable(objType as GraphQLObjectType);
       return {
         env: {
+          ...cdcResources.env,
           ...tableResources.env,
         },
         output: {
+          ...cdcResources.output,
           ...tableResources.output,
         },
         resources: {
+          ...cdcResources.resources,
           ...tableResources.resources,
         },
       };
@@ -73,6 +86,11 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
             {} as Record<string, {Ref: string}>
           ),
         },
+        Handler: 'index.handler',
+        MemorySize: 256,
+        Runtime: 'nodejs16.x',
+        Timeout: 30,
+        Tracing: 'Active',
       },
     },
     Outputs: allResources.reduce(

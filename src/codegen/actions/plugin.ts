@@ -2,16 +2,17 @@ import assert from 'assert';
 import {readFileSync} from 'fs';
 import path from 'path';
 
-import {
+import type {
   AddToSchemaResult,
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
-import {assertObjectType, GraphQLObjectType, isObjectType} from 'graphql';
+import type {GraphQLObjectType} from 'graphql';
+import {assertObjectType, isObjectType} from 'graphql';
 
 import {hasInterface} from '../common/helpers';
 import {extractKeyInfo} from '../common/keys';
 
-import {ActionPluginConfig} from './config';
+import type {ActionPluginConfig} from './config';
 import {
   createItemTemplate,
   deleteItemTemplate,
@@ -91,13 +92,14 @@ ${tableTypes
       content,
       prepend: [
         `import {ConditionalCheckFailedException, ConsumedCapacity, ItemCollectionMetrics} from '@aws-sdk/client-dynamodb';`,
-        `import {DeleteCommand, GetCommand, QueryCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
-        `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '${runtimeModuleId}'`,
-        `import {v4 as uuidv4} from 'uuid'`,
+        `import {DeleteCommand, GetCommand, QueryCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';`,
+        `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '${runtimeModuleId}';`,
+        `import {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';`,
+        `import {v4 as uuidv4} from 'uuid';`,
         `import {ddbDocClient} from "${path.relative(
           path.resolve(process.cwd(), path.dirname(info.outputFile)),
-          path.resolve(process.cwd(), config.pathToDocumentClient)
-        )}"`,
+          path.resolve(process.cwd(), config.dependenciesModuleId)
+        )}";`,
       ],
     };
   } catch (err) {

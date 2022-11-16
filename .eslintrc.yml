@@ -18,6 +18,10 @@ overrides:
       - '**/*.tsx'
     parserOptions:
       sourceType: module
+    rules:
+      '@typescript-eslint/consistent-type-imports': error
+      no-duplicate-imports: off
+      import/no-duplicates: error
 
   - files:
       - '**/*.test.*'
@@ -42,6 +46,14 @@ overrides:
       - 'src/runtime/**'
     rules:
       no-console: error
+
+  - files:
+      - '**/__generated__/**/*'
+    rules:
+      '@typescript-eslint/no-explicit-any': off
+      '@typescript-eslint/no-unused-vars': off
+      complexity: off
+      sort-keys: off
 
 parserOptions:
   sourceType: 'script'

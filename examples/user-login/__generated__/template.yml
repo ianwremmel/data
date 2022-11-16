@@ -11,6 +11,11 @@ Globals:
       Variables:
         TABLE_USER_LOGIN:
           Ref: TableUserLogin
+    Handler: index.handler
+    MemorySize: 256
+    Runtime: nodejs16.x
+    Timeout: 30
+    Tracing: Active
 Outputs:
   TableUserLogin:
     Description: The name of the DynamoDB table for UserLogin

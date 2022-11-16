@@ -23,6 +23,36 @@ generated automatically on create.
 directive @autoKey(field: String!) on OBJECT
 
 """
+CDC Event Types
+"""
+enum CdcEvent {
+  INSERT
+  MODIFY
+  REMOVE
+  UPSERT
+}
+
+"""
+Wires a up a change data capture stream to a DynamoDB table.
+"""
+directive @cdc(
+  """
+  The type of change events to subscribe to.
+  """
+  event: CdcEvent!
+  """
+  Path to the requireable package that handles a specific event. Relative paths
+  are, unfortunately, relative to the _generated_ file, not the GraphQL schema
+  file.
+  """
+  handler: String!
+  """
+  The model type that will be updated by this stream.
+  """
+  produces: String!
+) on OBJECT
+
+"""
 Indicates this Model has a composite key generated from the specified fields.
 """
 directive @compositeKey(

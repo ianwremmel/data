@@ -1,15 +1,13 @@
 import assert from 'assert';
 
-import {
+import type {
   ConstDirectiveNode,
   FieldDefinitionNode,
   GraphQLField,
   GraphQLObjectType,
-  isNonNullType,
-  isScalarType,
   ObjectTypeDefinitionNode,
-  isListType,
 } from 'graphql';
+import {isNonNullType, isScalarType, isListType} from 'graphql';
 import {snakeCase} from 'lodash';
 
 /** Gets the specified argument from the given directive. */
@@ -26,6 +24,23 @@ export function getArg(name: string, directive: ConstDirectiveNode) {
 /** Gets the specified argument from the given directive. */
 export function getOptionalArg(name: string, directive: ConstDirectiveNode) {
   return directive.arguments?.find((arg) => arg.name.value === name);
+}
+
+/**
+ * Gets the string value of the specified argument from the given directive.
+ */
+export function getArgStringValue(
+  fieldName: string,
+  directive: ConstDirectiveNode
+): string {
+  const prefixArg = getArg(fieldName, directive);
+
+  assert(
+    prefixArg.value.kind === 'StringValue',
+    `Expected @${directive.name.value} directive argument "${fieldName}" to be a string, but got ${prefixArg.value.kind}`
+  );
+
+  return prefixArg.value.value;
 }
 
 /**

@@ -1,14 +1,15 @@
-import {
-  ConditionalCheckFailedException,
+import type {
   ConsumedCapacity,
   ItemCollectionMetrics,
 } from '@aws-sdk/client-dynamodb';
+import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
 import {
   DeleteCommand,
   GetCommand,
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
 import {v4 as uuidv4} from 'uuid';
 
 import {
@@ -17,7 +18,7 @@ import {
   NotFoundError,
   OptimisticLockingError,
 } from '../../..';
-import {ddbDocClient} from '../../document-client';
+import {ddbDocClient} from '../../dependencies';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends {[key: string]: unknown}> = {[K in keyof T]: T[K]};
@@ -39,6 +40,9 @@ export interface Scalars {
   /** Arbitrary JSON stored as a Map in DynamoDB */
   JSONObject: Record<string, unknown>;
 }
+
+/** CDC Event Types */
+export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
 /** Models are DynamoDB with a key schema that does not include a sort key. */
 export interface Model {
@@ -128,10 +132,13 @@ export type CreateUserSessionOutput = ResultType<UserSession>;
 export async function createUserSession(
   input: Readonly<CreateUserSessionInput>
 ): Promise<Readonly<CreateUserSessionOutput>> {
-  const now = new Date();
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
-  const {UpdateExpression} = marshallUserSession(input);
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallUserSession(input);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -141,29 +148,8 @@ export async function createUserSession(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#id)',
-      ExpressionAttributeNames: {
-        '#createdAt': '_ct',
-        '#entity': '_et',
-        '#expires': 'ttl',
-        '#id': 'id',
-        '#session': 'session',
-        '#updatedAt': '_md',
-        '#version': '_v',
-        ...('optionalField' in input
-          ? {'#optionalField': 'optional_field'}
-          : undefined),
-      },
-      ExpressionAttributeValues: {
-        ':createdAt': now.getTime(),
-        ':entity': 'UserSession',
-        ':expires': now.getTime() + 86400000,
-        ':session': input.session,
-        ':updatedAt': now.getTime(),
-        ':version': 1,
-        ...('optionalField' in input
-          ? {':optionalField': input.optionalField}
-          : undefined),
-      },
+      ExpressionAttributeNames,
+      ExpressionAttributeValues,
       Key: {
         id: `UserSession#${uuidv4()}`,
       },
@@ -346,10 +332,13 @@ export type UpdateUserSessionOutput = ResultType<UserSession>;
 export async function updateUserSession(
   input: Readonly<UpdateUserSessionInput>
 ): Promise<Readonly<UpdateUserSessionOutput>> {
-  const now = new Date();
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
-  const {UpdateExpression} = marshallUserSession(input);
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallUserSession(input);
   try {
     const {
       Attributes: item,
@@ -359,29 +348,10 @@ export async function updateUserSession(
       new UpdateCommand({
         ConditionExpression:
           '#version = :previousVersion AND #entity = :entity AND attribute_exists(#id)',
-        ExpressionAttributeNames: {
-          '#createdAt': '_ct',
-          '#entity': '_et',
-          '#expires': 'ttl',
-          '#id': 'id',
-          '#session': 'session',
-          '#updatedAt': '_md',
-          '#version': '_v',
-          ...('optionalField' in input
-            ? {'#optionalField': 'optional_field'}
-            : undefined),
-        },
+        ExpressionAttributeNames,
         ExpressionAttributeValues: {
-          ':createdAt': now.getTime(),
-          ':entity': 'UserSession',
-          ':expires': now.getTime() + 86400000,
+          ...ExpressionAttributeValues,
           ':previousVersion': input.version,
-          ':session': input.session,
-          ':updatedAt': now.getTime(),
-          ':version': input.version + 1,
-          ...('optionalField' in input
-            ? {':optionalField': input.optionalField}
-            : undefined),
         },
         Key: {
           id: input.id,
@@ -433,6 +403,8 @@ export async function updateUserSession(
 }
 
 export interface MarshallUserSessionOutput {
+  ExpressionAttributeNames: Record<string, string>;
+  ExpressionAttributeValues: Record<string, NativeAttributeValue>;
   UpdateExpression: string;
 }
 
@@ -440,6 +412,8 @@ export interface MarshallUserSessionOutput {
 export function marshallUserSession(
   input: Record<string, any>
 ): MarshallUserSessionOutput {
+  const now = new Date();
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#createdAt = :createdAt',
@@ -449,13 +423,38 @@ export function marshallUserSession(
     '#version = :version',
   ];
 
-  if ('optionalField' in input) {
+  const ean: Record<string, string> = {
+    '#entity': '_et',
+    '#createdAt': '_ct',
+    '#expires': 'ttl',
+    '#session': 'session',
+    '#updatedAt': '_md',
+    '#version': '_v',
+    '#id': 'id',
+  };
+
+  const eav: Record<string, unknown> = {
+    ':entity': 'UserSession',
+    ':createdAt': now.getTime(),
+    ':expires': now.getTime() + 86400000,
+    ':session': input.session,
+    ':updatedAt': now.getTime(),
+    ':version': ('version' in input ? input.version : 0) + 1,
+  };
+
+  if ('optionalField' in input && typeof input.optionalField !== 'undefined') {
+    ean['#optionalField'] = 'optional_field';
+    eav[':optionalField'] = input.optionalField;
     updateExpression.push('#optionalField = :optionalField');
   }
 
   updateExpression.sort();
 
-  return {UpdateExpression: `SET ${updateExpression.join(', ')}`};
+  return {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    UpdateExpression: `SET ${updateExpression.join(', ')}`,
+  };
 }
 
 /** Unmarshalls a DynamoDB record into a UserSession object */

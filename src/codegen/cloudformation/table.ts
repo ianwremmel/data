@@ -1,4 +1,4 @@
-import {GraphQLObjectType} from 'graphql';
+import type {GraphQLObjectType} from 'graphql';
 import {assertObjectType} from 'graphql/index';
 import {snakeCase} from 'lodash';
 
@@ -6,7 +6,7 @@ import {extractTtlInfo} from '../common/fields';
 import {hasDirective} from '../common/helpers';
 import {extractIndexInfo} from '../common/indexes';
 
-import {CloudFormationFragment} from './types';
+import type {CloudFormationFragment} from './types';
 
 /** cloudformation generator */
 export function defineTable(type: GraphQLObjectType): CloudFormationFragment {

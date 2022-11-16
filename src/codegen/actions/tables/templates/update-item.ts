@@ -1,7 +1,7 @@
-import {GraphQLObjectType} from 'graphql';
+import type {GraphQLObjectType} from 'graphql';
 
-import {Nullable} from '../../../../types';
-import {TtlInfo} from '../../../common/fields';
+import type {Nullable} from '../../../../types';
+import type {TtlInfo} from '../../../common/fields';
 
 import {ensureTableTemplate} from './ensure-table';
 
@@ -9,8 +9,6 @@ export interface UpdateItemTplInput {
   readonly conditionField: string;
   readonly objType: GraphQLObjectType;
   readonly ttlInfo: Nullable<TtlInfo>;
-  readonly ean: readonly string[];
-  readonly eav: readonly string[];
   readonly key: readonly string[];
   readonly inputToPrimaryKey: readonly string[];
 }
@@ -20,8 +18,6 @@ export function updateItemTpl({
   conditionField,
   objType,
   ttlInfo,
-  ean,
-  eav,
   inputToPrimaryKey,
   key,
 }: UpdateItemTplInput) {
@@ -43,17 +39,17 @@ export type ${outputTypeName} = ResultType<${typeName}>
 
 /**  */
 export async function update${typeName}(input: Readonly<${inputTypeName}>): Promise<Readonly<${outputTypeName}>> {
-  const now = new Date();
 ${ensureTableTemplate(objType)}
-  const {UpdateExpression} = marshall${objType.name}(input);
+  const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${
+    objType.name
+  }(input);
   try {
     const {Attributes: item, ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand({
       ConditionExpression: '#version = :previousVersion AND #entity = :entity AND attribute_exists(#${conditionField})',
-      ExpressionAttributeNames: {
-${ean.map((e) => `        ${e},`).join('\n')}
-      },
+      ExpressionAttributeNames,
       ExpressionAttributeValues: {
-${eav.map((e) => `        ${e},`).join('\n')}
+        ...ExpressionAttributeValues,
+        ':previousVersion': input.version,
       },
       Key: {
 ${key.map((k) => `        ${k},`).join('\n')}
