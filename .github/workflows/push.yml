@@ -58,7 +58,7 @@ jobs:
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
-      - run: npm ci
+      - run: npm ci && npm i -g esbuild
       - run: scripts/deploy-examples-to-localstack
       - run: TEST_MODE=localstack npm test
       - uses: check-run-reporter/action@v2.11.1
