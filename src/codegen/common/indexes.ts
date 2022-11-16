@@ -11,13 +11,21 @@ export interface IndexInfo {
   readonly updateExpressions: readonly string[];
 }
 
-export interface IndexFieldInfo {
+export interface PartitionKeyIndexInfo {
+  readonly name?: string;
+  readonly pkPrefix?: string;
+  readonly pkFields: readonly GraphQLField<unknown, unknown>[];
+}
+
+export interface ComposityKeyIndexInfo {
   readonly name?: string;
   readonly pkPrefix?: string;
   readonly skPrefix?: string;
   readonly pkFields: readonly GraphQLField<unknown, unknown>[];
   readonly skFields: readonly GraphQLField<unknown, unknown>[];
 }
+
+export type IndexFieldInfo = PartitionKeyIndexInfo | ComposityKeyIndexInfo;
 
 /**
  * Returns the index info for the given object type.

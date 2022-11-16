@@ -1,3 +1,5 @@
+import {faker} from '@faker-js/faker';
+
 import {NotFoundError, OptimisticLockingError} from '../../src/runtime';
 
 import {
@@ -9,20 +11,27 @@ import {
 } from './__generated__/actions';
 
 const userSessionMatcher = {
-  capacity: {TableName: expect.any(String)},
-  item: {
-    createdAt: expect.any(Date),
-    expires: expect.any(Date),
-    id: expect.any(String),
-    updatedAt: expect.any(Date),
-  },
+  createdAt: expect.any(Date),
+  expires: expect.any(Date),
+  updatedAt: expect.any(Date),
 };
+
+const itemMatcher = {
+  capacity: {TableName: expect.any(String)},
+  item: userSessionMatcher,
+};
+
+faker.seed(1701);
+
 describe('createUserSession()', () => {
   it('creates a record', async () => {
-    const result = await createUserSession({session: {foo: 'foo'}});
+    const result = await createUserSession({
+      id: faker.datatype.uuid(),
+      session: {foo: 'foo'},
+    });
 
     expect(result).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -41,7 +50,7 @@ describe('createUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "181c887c-e7df-4331-9fba-65d255867e20",
           "session": {
             "foo": "foo",
           },
@@ -53,7 +62,6 @@ describe('createUserSession()', () => {
     `
     );
 
-    expect(result.item.id).toMatch(/UserSession#/);
     expect(result.item.createdAt.getTime()).not.toBeNaN();
     expect(result.item.expires.getTime()).not.toBeNaN();
     expect(result.item.updatedAt.getTime()).not.toBeNaN();
@@ -65,7 +73,10 @@ describe('createUserSession()', () => {
 
 describe('deleteUserSession()', () => {
   it('deletes a record', async () => {
-    const result = await createUserSession({session: {foo: 'foo'}});
+    const result = await createUserSession({
+      id: faker.datatype.uuid(),
+      session: {foo: 'foo'},
+    });
 
     const deleteResult = await deleteUserSession(result.item);
     expect(deleteResult).toMatchInlineSnapshot(
@@ -105,11 +116,14 @@ describe('deleteUserSession()', () => {
 
 describe('readUserSession()', () => {
   it('reads a record', async () => {
-    const result = await createUserSession({session: {foo: 'foo'}});
+    const result = await createUserSession({
+      id: faker.datatype.uuid(),
+      session: {foo: 'foo'},
+    });
 
     const readResult = await readUserSession(result.item);
     expect(readResult).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -128,7 +142,7 @@ describe('readUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "02505b7a-ec07-459f-89ba-6d135b70db53",
           "session": {
             "foo": "foo",
           },
@@ -153,11 +167,14 @@ describe('readUserSession()', () => {
 
 describe('touchUserSession()', () => {
   it("updates a record's createdAt and extends its ttl", async () => {
-    const result = await createUserSession({session: {foo: 'foo'}});
+    const result = await createUserSession({
+      id: faker.datatype.uuid(),
+      session: {foo: 'foo'},
+    });
 
     const readResult = await readUserSession(result.item);
     expect(readResult).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -176,7 +193,7 @@ describe('touchUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "ead69330-c3a1-451b-99d2-e3f5a5fed3a6",
           "session": {
             "foo": "foo",
           },
@@ -191,7 +208,7 @@ describe('touchUserSession()', () => {
     await touchUserSession(result.item);
     const touchResult = await readUserSession(result.item);
     expect(touchResult).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -210,7 +227,7 @@ describe('touchUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "ead69330-c3a1-451b-99d2-e3f5a5fed3a6",
           "session": {
             "foo": "foo",
           },
@@ -240,9 +257,12 @@ describe('touchUserSession()', () => {
 
 describe('updateUserSession()', () => {
   it('updates a record', async () => {
-    const createResult = await createUserSession({session: {foo: 'foo'}});
+    const createResult = await createUserSession({
+      id: faker.datatype.uuid(),
+      session: {foo: 'foo'},
+    });
     expect(createResult).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -261,7 +281,7 @@ describe('updateUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "1b862cf6-0e8c-4f35-9d50-8db873e9e2ad",
           "session": {
             "foo": "foo",
           },
@@ -279,7 +299,7 @@ describe('updateUserSession()', () => {
       session: {foo: 'bar'},
     });
     expect(updateResult).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -298,7 +318,7 @@ describe('updateUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "1b862cf6-0e8c-4f35-9d50-8db873e9e2ad",
           "session": {
             "foo": "bar",
           },
@@ -313,7 +333,7 @@ describe('updateUserSession()', () => {
 
     const readResult = await readUserSession(createResult.item);
     expect(readResult).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -332,7 +352,7 @@ describe('updateUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "1b862cf6-0e8c-4f35-9d50-8db873e9e2ad",
           "session": {
             "foo": "bar",
           },
@@ -364,7 +384,10 @@ describe('updateUserSession()', () => {
   });
 
   it('throws an error if the loaded record is out of date', async () => {
-    const createResult = await createUserSession({session: {foo: 'foo'}});
+    const createResult = await createUserSession({
+      id: faker.datatype.uuid(),
+      session: {foo: 'foo'},
+    });
     await updateUserSession({
       ...createResult.item,
       session: {foo: 'bar'},

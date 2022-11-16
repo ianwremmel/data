@@ -16,11 +16,10 @@ might require it.
 directive @consistent on OBJECT
 
 """
-Indicates the Model in question must use a partition key without a primary key,
-have exactly one field as its main identifier, and that that field will be
-generated automatically on create.
+Indicates the Model in question must use a partition key without a sort key as
+its primary key.
 """
-directive @autoKey(field: String!) on OBJECT
+directive @partitionKey(pkFields: [String!]!, pkPrefix: String) on OBJECT
 
 """
 CDC Event Types
@@ -88,7 +87,10 @@ entities that all might use different names
 directive @ttl(duration: String!) on FIELD_DEFINITION
 
 """
-Models are DynamoDB with a key schema that does not include a sort key.
+Models are DynamoDB tables with a key schema that may or may not include a sort
+key. A Model must be decorated with either @partitionKey or @compositeKey. If
+a Model implements Node, it will synthesize an "id" field, though at this time
+it will not be base64 encoded or prefixed with the type name.
 """
 interface Model implements Timestamped & Versioned {
   createdAt: Date!

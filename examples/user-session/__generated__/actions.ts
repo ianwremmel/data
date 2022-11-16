@@ -125,7 +125,7 @@ export interface UserSessionPrimaryKey {
 
 export type CreateUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
+  'createdAt' | 'expires' | 'updatedAt' | 'version'
 >;
 export type CreateUserSessionOutput = ResultType<UserSession>;
 /**  */
@@ -147,11 +147,11 @@ export async function createUserSession(
     Attributes: item,
   } = await ddbDocClient.send(
     new UpdateCommand({
-      ConditionExpression: 'attribute_not_exists(#id)',
+      ConditionExpression: 'attribute_not_exists(#pk)',
       ExpressionAttributeNames,
       ExpressionAttributeValues,
       Key: {
-        id: `UserSession#${uuidv4()}`,
+        pk: `USER_SESSION#${input.id}`,
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -195,12 +195,12 @@ export async function deleteUserSession(
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
       await ddbDocClient.send(
         new DeleteCommand({
-          ConditionExpression: 'attribute_exists(#id)',
+          ConditionExpression: 'attribute_exists(#pk)',
           ExpressionAttributeNames: {
-            '#id': 'id',
+            '#pk': 'pk',
           },
           Key: {
-            id: input.id,
+            pk: `USER_SESSION#${input.id}`,
           },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
@@ -240,7 +240,7 @@ export async function readUserSession(
     new GetCommand({
       ConsistentRead: true,
       Key: {
-        id: input.id,
+        pk: `USER_SESSION#${input.id}`,
       },
       ReturnConsumedCapacity: 'INDEXES',
       TableName: tableName,
@@ -282,10 +282,10 @@ export async function touchUserSession(
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
       await ddbDocClient.send(
         new UpdateCommand({
-          ConditionExpression: 'attribute_exists(#id)',
+          ConditionExpression: 'attribute_exists(#pk)',
           ExpressionAttributeNames: {
             '#expires': 'ttl',
-            '#id': 'id',
+            '#pk': 'pk',
             '#version': '_v',
           },
           ExpressionAttributeValues: {
@@ -293,7 +293,7 @@ export async function touchUserSession(
             ':versionInc': 1,
           },
           Key: {
-            id: input.id,
+            pk: `USER_SESSION#${input.id}`,
           },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
@@ -347,14 +347,14 @@ export async function updateUserSession(
     } = await ddbDocClient.send(
       new UpdateCommand({
         ConditionExpression:
-          '#version = :previousVersion AND #entity = :entity AND attribute_exists(#id)',
+          '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
         ExpressionAttributeNames,
         ExpressionAttributeValues: {
           ...ExpressionAttributeValues,
           ':previousVersion': input.version,
         },
         Key: {
-          id: input.id,
+          pk: `USER_SESSION#${input.id}`,
         },
         ReturnConsumedCapacity: 'INDEXES',
         ReturnItemCollectionMetrics: 'SIZE',
@@ -430,7 +430,7 @@ export function marshallUserSession(
     '#session': 'session',
     '#updatedAt': '_md',
     '#version': '_v',
-    '#id': 'id',
+    '#pk': 'pk',
   };
 
   const eav: Record<string, unknown> = {
@@ -523,7 +523,7 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
   let result: UserSession = {
     createdAt: new Date(item._ct),
     expires: new Date(item.ttl),
-    id: item.id,
+    id: `${item.pk.replace(/^USER_SESSION#/, '')}`,
     session: item.session,
     updatedAt: new Date(item._md),
     version: item._v,

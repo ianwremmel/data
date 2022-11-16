@@ -3,7 +3,7 @@ A user session object.
 """
 type UserSession implements Model & Node & Timestamped & Versioned
   @consistent
-  @autoKey(field: "id") {
+  @partitionKey(pkFields: ["id"], pkPrefix: "USER_SESSION") {
   createdAt: Date!
   expires: Date! @ttl(duration: "1d")
   id: ID!

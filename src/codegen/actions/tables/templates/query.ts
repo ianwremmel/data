@@ -22,6 +22,47 @@ function makePartialKeyTemplate(
     .join(', ')}].filter(Boolean).join('#')`;
 }
 
+/** Generates the type signature for the query function */
+function indexInfoToTypeSignature(
+  indexInfo: IndexFieldInfo
+): string | string[] {
+  if ('skFields' in indexInfo) {
+    const {name, pkFields, skFields} = indexInfo;
+    return [undefined, ...skFields].map((_, index) =>
+      [
+        name ? `index: '${name}'` : '',
+        ...[
+          ...pkFields.map(renderFieldAsType),
+          ...skFields.slice(0, index).map(renderFieldAsType),
+        ].sort(),
+      ].join('\n')
+    );
+  }
+
+  const {name, pkFields} = indexInfo;
+  return [name ? `index: '${name}'` : '', ...pkFields.map(renderFieldAsType)]
+    .sort()
+    .join('\n');
+}
+
+/** Generates the sort key for the query function */
+function indexToSortKey(indexInfo: IndexFieldInfo): string {
+  if ('skFields' in indexInfo) {
+    const {name, skFields, skPrefix} = indexInfo;
+    if (name) {
+      return `
+if ('index' in input && input.index === '${name}') {
+  return ${makePartialKeyTemplate(skPrefix ?? '', skFields)};
+}`;
+    }
+    return `if (!('index' in input)) {
+  return ${makePartialKeyTemplate(skPrefix ?? '', skFields)}
+}`;
+  }
+
+  return '';
+}
+
 /** helper */
 function renderFieldAsType(field: GraphQLField<unknown, unknown>): string {
   return `  ${field.name}: ${getTypeScriptTypeForField(field)};`;
@@ -40,17 +81,7 @@ export function queryTpl({consistent, indexes, objType}: QueryTplInput) {
   const outputTypeName = `Query${typeName}Output`;
 
   const typeSignature = indexes
-    .flatMap(({name, pkFields, skFields}) =>
-      [undefined, ...skFields].map((_, index) =>
-        [
-          name ? `index: '${name}'` : '',
-          ...[
-            ...pkFields.map(renderFieldAsType),
-            ...skFields.slice(0, index).map(renderFieldAsType),
-          ].sort(),
-        ].join('\n')
-      )
-    )
+    .flatMap(indexInfoToTypeSignature)
     .map((t) => `{${t}}`)
     .join(' | ');
 
@@ -79,19 +110,7 @@ if ('index' in input && input.index === '${name}') {
 
 /** helper */
 function makeSortKeyForQuery${typeName}(input: ${inputTypeName}): string | undefined {
-${indexes
-  .map(({name, skFields, skPrefix}) => {
-    if (name) {
-      return `
-if ('index' in input && input.index === '${name}') {
-  return ${makePartialKeyTemplate(skPrefix ?? '', skFields)};
-}`;
-    }
-    return `if (!('index' in input)) {
-  return ${makePartialKeyTemplate(skPrefix ?? '', skFields)}
-}`;
-  })
-  .join('\n else ')};
+${indexes.map(indexToSortKey).join('\n else ')};
 
   throw new Error('Could not construct sort key from input');
 }
