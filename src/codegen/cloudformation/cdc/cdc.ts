@@ -69,6 +69,7 @@ export function defineCdc(
 
   const handlerFilename = `handler-${kebabCase(modelName)}`;
   makeHandler({
+    actionsModuleId: path.relative(info.outputFile, config.actionsModuleId),
     dependenciesModuleId,
     // add an extra level of nesting because we know we're putting the generated
     // file in a folder.

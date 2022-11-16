@@ -17,19 +17,19 @@ const config = {
             [`examples/${example}/__generated__/actions.ts`]: {
               config: {
                 enumsAsTypes: true,
-                dependenciesModuleId: './examples/dependencies',
                 scalars: {
                   Date: 'Date',
                   JSONObject: 'Record<string, unknown>',
                 },
                 strictScalars: true,
+                dependenciesModuleId: './examples/dependencies',
               },
               plugins: ['typescript', './src/codegen/actions'],
             },
             [`examples/${example}/__generated__/template.yml`]: {
               config: {
+                actionsModuleId: `./examples/${example}/__generated__/actions`,
                 dependenciesModuleId: './examples/dependencies',
-                enumsAsTypes: true,
               },
               plugins: ['./src/codegen/cloudformation'],
             },

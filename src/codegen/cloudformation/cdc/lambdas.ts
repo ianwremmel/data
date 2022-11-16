@@ -36,6 +36,7 @@ export const handler = makeDynamoDBStreamDispatcher({
 }
 
 export interface MakeHandlerOptions {
+  readonly actionsModuleId: string;
   readonly dependenciesModuleId: string;
   readonly handlerPath: string;
   readonly libImportPath: string;
@@ -45,6 +46,7 @@ export interface MakeHandlerOptions {
 
 /** generate the dispatcher lambda function */
 export function makeHandler({
+  actionsModuleId,
   dependenciesModuleId,
   handlerPath,
   libImportPath,
@@ -57,7 +59,7 @@ import {assert, makeModelChangeHandler} from '${libImportPath}';
 
 import * as dependencies from '${dependenciesModuleId}';
 import {handler as cdcHandler} from '${handlerPath}';
-import {unmarshall${type.name}} from '../actions';
+import {unmarshall${type.name}} from '${actionsModuleId}';
 
 export const handler = makeModelChangeHandler(dependencies, (record) => {
   assert(record.dynamodb.NewImage, 'Expected DynamoDB Record to have a NewImage');
