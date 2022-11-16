@@ -21,8 +21,6 @@ const itemMatcher = {
   item: userSessionMatcher,
 };
 
-faker.seed(1701);
-
 describe('createUserSession()', () => {
   it('creates a record', async () => {
     const result = await createUserSession({
@@ -143,11 +141,11 @@ describe('readUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#02505b7a-ec07-459f-89ba-6d135b70db53}",
+          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
           "session": {
             "foo": "foo",
           },
-          "sessionId": "02505b7a-ec07-459f-89ba-6d135b70db53",
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 1,
         },
@@ -195,11 +193,11 @@ describe('touchUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#ead69330-c3a1-451b-99d2-e3f5a5fed3a6}",
+          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
           "session": {
             "foo": "foo",
           },
-          "sessionId": "ead69330-c3a1-451b-99d2-e3f5a5fed3a6",
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 1,
         },
@@ -230,11 +228,11 @@ describe('touchUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#ead69330-c3a1-451b-99d2-e3f5a5fed3a6}",
+          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
           "session": {
             "foo": "foo",
           },
-          "sessionId": "ead69330-c3a1-451b-99d2-e3f5a5fed3a6",
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 2,
         },
@@ -285,11 +283,11 @@ describe('updateUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#1b862cf6-0e8c-4f35-9d50-8db873e9e2ad}",
+          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
           "session": {
             "foo": "foo",
           },
-          "sessionId": "1b862cf6-0e8c-4f35-9d50-8db873e9e2ad",
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 1,
         },
@@ -323,11 +321,11 @@ describe('updateUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#1b862cf6-0e8c-4f35-9d50-8db873e9e2ad}",
+          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
           "session": {
             "foo": "bar",
           },
-          "sessionId": "1b862cf6-0e8c-4f35-9d50-8db873e9e2ad",
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 2,
         },
@@ -358,11 +356,11 @@ describe('updateUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#1b862cf6-0e8c-4f35-9d50-8db873e9e2ad}",
+          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
           "session": {
             "foo": "bar",
           },
-          "sessionId": "1b862cf6-0e8c-4f35-9d50-8db873e9e2ad",
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 2,
         },

@@ -19,6 +19,7 @@ module.exports = {
     {
       ...commonProjectConfig,
       displayName: 'Unit Tests',
+      setupFilesAfterEnv: ['<rootDir>/jest.d/setup-files-after-env/faker.ts'],
       // The parenthesis around test are necessary, even though we're not using
       // `(spec|test)`.
       testMatch: [`<rootDir>/src/**/?(*.)+(test).[tj]s?(x)`],
@@ -27,6 +28,7 @@ module.exports = {
       ...commonProjectConfig,
       displayName: `Example: ${upperFirst(camelCase(example.split('/')[1]))}`,
       globalSetup: '<rootDir>/jest.d/global-setup/stack-env.ts',
+      setupFilesAfterEnv: ['<rootDir>/jest.d/setup-files-after-env/faker.ts'],
       testMatch: [`<rootDir>/${example}**/?(*.)+(test).[tj]s?(x)`],
     })),
   ],

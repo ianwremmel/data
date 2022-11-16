@@ -22,8 +22,6 @@ const itemMatcher = {
   item: userLoginMatcher,
 };
 
-faker.seed(1701);
-
 describe('createUserLogin()', () => {
   it('creates a record', async () => {
     const result = await createUserLogin({
@@ -166,9 +164,9 @@ describe('readUserLogin()', () => {
         },
         "item": {
           "createdAt": Any<Date>,
-          "externalId": "94988",
+          "externalId": "8943",
           "id": Any<String>,
-          "login": "Craig59",
+          "login": "Joshuah_Buckridge53",
           "updatedAt": Any<Date>,
           "vendor": "GITHUB",
           "version": 1,
@@ -222,9 +220,9 @@ describe('touchUserLogin()', () => {
         },
         "item": {
           "createdAt": Any<Date>,
-          "externalId": "97362",
+          "externalId": "8943",
           "id": Any<String>,
-          "login": "Moses.Parker",
+          "login": "Joshuah_Buckridge53",
           "updatedAt": Any<Date>,
           "vendor": "GITHUB",
           "version": 1,
@@ -255,9 +253,9 @@ describe('touchUserLogin()', () => {
         },
         "item": {
           "createdAt": Any<Date>,
-          "externalId": "97362",
+          "externalId": "8943",
           "id": Any<String>,
-          "login": "Moses.Parker",
+          "login": "Joshuah_Buckridge53",
           "updatedAt": Any<Date>,
           "vendor": "GITHUB",
           "version": 2,
@@ -318,9 +316,9 @@ describe('updateUserLogin()', () => {
         },
         "item": {
           "createdAt": Any<Date>,
-          "externalId": "82326",
+          "externalId": "8943",
           "id": Any<String>,
-          "login": "Cecile55",
+          "login": "Joshuah_Buckridge53",
           "updatedAt": Any<Date>,
           "vendor": "GITHUB",
           "version": 1,
@@ -358,9 +356,9 @@ describe('updateUserLogin()', () => {
         },
         "item": {
           "createdAt": Any<Date>,
-          "externalId": "82326",
+          "externalId": "8943",
           "id": Any<String>,
-          "login": "Cecile55",
+          "login": "Joshuah_Buckridge53",
           "updatedAt": Any<Date>,
           "vendor": "GITHUB",
           "version": 2,
@@ -390,9 +388,9 @@ describe('updateUserLogin()', () => {
         },
         "item": {
           "createdAt": Any<Date>,
-          "externalId": "82326",
+          "externalId": "8943",
           "id": Any<String>,
-          "login": "Cecile55",
+          "login": "Joshuah_Buckridge53",
           "updatedAt": Any<Date>,
           "vendor": "GITHUB",
           "version": 2,
@@ -559,27 +557,27 @@ describe('queryUserLogin()', () => {
         "items": [
           {
             "createdAt": Any<Date>,
-            "externalId": "60701",
+            "externalId": "48061",
             "id": Any<String>,
-            "login": "Cullen52",
+            "login": "Laurianne_Wiza40",
             "updatedAt": Any<Date>,
             "vendor": "GITHUB",
             "version": 1,
           },
           {
             "createdAt": Any<Date>,
-            "externalId": "60701",
+            "externalId": "48061",
             "id": Any<String>,
-            "login": "Elvis_Wilkinson",
+            "login": "Norval_Thompson",
             "updatedAt": Any<Date>,
             "vendor": "GITHUB",
             "version": 1,
           },
           {
             "createdAt": Any<Date>,
-            "externalId": "60701",
+            "externalId": "48061",
             "id": Any<String>,
-            "login": "Karli_Olson83",
+            "login": "Valentin8",
             "updatedAt": Any<Date>,
             "vendor": "GITHUB",
             "version": 1,
@@ -625,9 +623,9 @@ describe('queryUserLogin()', () => {
         "items": [
           {
             "createdAt": Any<Date>,
-            "externalId": "75754",
+            "externalId": "8943",
             "id": Any<String>,
-            "login": "Leopold44",
+            "login": "Joshuah_Buckridge53",
             "updatedAt": Any<Date>,
             "vendor": "GITHUB",
             "version": 1,
@@ -679,9 +677,9 @@ describe('queryUserLogin()', () => {
         "items": [
           {
             "createdAt": Any<Date>,
-            "externalId": "36807",
+            "externalId": "48061",
             "id": Any<String>,
-            "login": "Lamont61",
+            "login": "Norval_Thompson",
             "updatedAt": Any<Date>,
             "vendor": "GITHUB",
             "version": 1,
