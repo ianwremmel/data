@@ -1,8 +1,8 @@
 /** Unmarshalls a DynamoDB record so it can be used like something reasonable */
-import {AttributeValue} from '@aws-sdk/client-dynamodb';
+import type {AttributeValue} from '@aws-sdk/client-dynamodb';
 import {unmarshall} from '@aws-sdk/util-dynamodb';
-import {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
-import {DynamoDBRecord, StreamRecord} from 'aws-lambda';
+import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
+import type {DynamoDBRecord, StreamRecord} from 'aws-lambda';
 
 type UnmarshalledStreamRecord = Omit<StreamRecord, 'NewImage' | 'OldImage'> & {
   NewImage?: Record<string, NativeAttributeValue> | undefined;

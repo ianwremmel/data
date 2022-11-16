@@ -1,8 +1,9 @@
-import {GraphQLObjectType} from 'graphql';
+import type {GraphQLObjectType} from 'graphql';
 
 import {extractTtlInfo} from '../../common/fields';
 import {hasDirective} from '../../common/helpers';
-import {extractIndexInfo, IndexFieldInfo} from '../../common/indexes';
+import type {IndexFieldInfo} from '../../common/indexes';
+import {extractIndexInfo} from '../../common/indexes';
 import {extractKeyInfo} from '../../common/keys';
 
 import {createItemTpl} from './templates/create-item';

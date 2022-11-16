@@ -1,7 +1,7 @@
 import {PutEventsCommand} from '@aws-sdk/client-eventbridge';
-import {Context, DynamoDBRecord, DynamoDBStreamHandler} from 'aws-lambda';
+import type {Context, DynamoDBRecord, DynamoDBStreamHandler} from 'aws-lambda';
 
-import {
+import type {
   WithEventBridge,
   WithModelName,
   WithTableName,

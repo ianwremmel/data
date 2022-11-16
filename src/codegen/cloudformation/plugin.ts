@@ -2,17 +2,18 @@ import assert from 'assert';
 import {readFileSync} from 'fs';
 import path from 'path';
 
-import {
+import type {
   AddToSchemaResult,
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
-import {assertObjectType, GraphQLObjectType, isObjectType} from 'graphql';
+import type {GraphQLObjectType} from 'graphql';
+import {assertObjectType, isObjectType} from 'graphql';
 import yml from 'js-yaml';
 
 import {hasInterface} from '../common/helpers';
 
 import {defineCdc} from './cdc';
-import {CloudformationPluginConfig} from './config';
+import type {CloudformationPluginConfig} from './config';
 import {defineTable} from './table';
 
 /** @override */

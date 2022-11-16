@@ -1,15 +1,13 @@
 import assert from 'assert';
 
-import {
+import type {
   ConstDirectiveNode,
   FieldDefinitionNode,
   GraphQLField,
   GraphQLObjectType,
-  isNonNullType,
-  isScalarType,
   ObjectTypeDefinitionNode,
-  isListType,
 } from 'graphql';
+import {isNonNullType, isScalarType, isListType} from 'graphql';
 import {snakeCase} from 'lodash';
 
 /** Gets the specified argument from the given directive. */

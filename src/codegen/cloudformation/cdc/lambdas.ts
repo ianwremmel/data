@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import {GraphQLObjectType} from 'graphql';
+import type {GraphQLObjectType} from 'graphql';
 
 export interface MakeTableDispatcherInput {
   readonly dependenciesModuleId: string;

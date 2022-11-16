@@ -1,4 +1,4 @@
-import {GraphQLObjectType} from 'graphql';
+import type {GraphQLObjectType} from 'graphql';
 
 import {ensureTableTemplate} from './ensure-table';
 

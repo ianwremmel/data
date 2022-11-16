@@ -1,4 +1,4 @@
-import {EventBridgeClient} from '@aws-sdk/client-eventbridge';
+import type {EventBridgeClient} from '@aws-sdk/client-eventbridge';
 
 export interface WithTableName {
   tableName: string;

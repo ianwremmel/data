@@ -4,7 +4,7 @@ import {
   CloudFormationClient,
   DescribeStacksCommand,
 } from '@aws-sdk/client-cloudformation';
-import {Stack} from '@aws-sdk/client-cloudformation/dist-types/models/models_0';
+import type {Stack} from '@aws-sdk/client-cloudformation/dist-types/models/models_0';
 import {glob} from 'glob';
 import {camelCase, snakeCase, upperFirst} from 'lodash';
 

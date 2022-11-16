@@ -18,6 +18,10 @@ overrides:
       - '**/*.tsx'
     parserOptions:
       sourceType: module
+    rules:
+      '@typescript-eslint/consistent-type-imports': error
+      no-duplicate-imports: off
+      import/no-duplicates: error
 
   - files:
       - '**/*.test.*'

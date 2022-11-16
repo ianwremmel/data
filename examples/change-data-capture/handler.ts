@@ -1,7 +1,7 @@
+import type {Subscription} from './__generated__/actions';
 import {
   createAccount,
   readAccount,
-  Subscription,
   updateAccount,
 } from './__generated__/actions';
 

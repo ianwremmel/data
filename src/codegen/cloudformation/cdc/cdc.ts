@@ -1,7 +1,7 @@
 import assert from 'assert';
 import path from 'path';
 
-import {GraphQLObjectType, GraphQLSchema} from 'graphql';
+import type {GraphQLObjectType, GraphQLSchema} from 'graphql';
 import {kebabCase} from 'lodash';
 
 import {
@@ -9,8 +9,8 @@ import {
   getDirective,
   hasDirective,
 } from '../../common/helpers';
-import {CloudformationPluginConfig} from '../config';
-import {CloudFormationFragment} from '../types';
+import type {CloudformationPluginConfig} from '../config';
+import type {CloudFormationFragment} from '../types';
 
 import {makeHandler, makeTableDispatcher} from './lambdas';
 

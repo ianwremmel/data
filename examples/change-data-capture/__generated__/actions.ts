@@ -1,15 +1,15 @@
-import {
-  ConditionalCheckFailedException,
+import type {
   ConsumedCapacity,
   ItemCollectionMetrics,
 } from '@aws-sdk/client-dynamodb';
+import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
 import {
   DeleteCommand,
   GetCommand,
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
-import {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
+import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
 import {v4 as uuidv4} from 'uuid';
 
 import {

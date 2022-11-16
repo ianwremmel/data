@@ -1,8 +1,8 @@
 import assert from 'assert';
 
-import {GraphQLObjectType} from 'graphql';
+import type {GraphQLObjectType} from 'graphql';
 
-import {Nullable} from '../../types';
+import type {Nullable} from '../../types';
 
 import {getDirective, getOptionalArg} from './helpers';
 

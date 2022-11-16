@@ -1,12 +1,11 @@
 import assert from 'assert';
 
-import {
+import type {
   ConstDirectiveNode,
   GraphQLField,
   GraphQLObjectType,
-  isNonNullType,
-  isScalarType,
 } from 'graphql';
+import {isNonNullType, isScalarType} from 'graphql';
 
 import {
   getArg,
@@ -16,7 +15,7 @@ import {
   marshalField,
   unmarshalField,
 } from './helpers';
-import {IndexFieldInfo} from './indexes';
+import type {IndexFieldInfo} from './indexes';
 
 /** Generates the template for producing the desired primary key or index column */
 export function makeKeyTemplate(

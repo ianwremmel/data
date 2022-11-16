@@ -1,6 +1,7 @@
 import assert from 'assert';
 
-import {GraphQLField, GraphQLObjectType, isNonNullType} from 'graphql';
+import type {GraphQLField, GraphQLObjectType} from 'graphql';
+import {isNonNullType} from 'graphql';
 import {snakeCase} from 'lodash';
 
 import {hasDirective, isType, unmarshalField} from '../../../common/helpers';

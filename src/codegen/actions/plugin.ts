@@ -2,16 +2,17 @@ import assert from 'assert';
 import {readFileSync} from 'fs';
 import path from 'path';
 
-import {
+import type {
   AddToSchemaResult,
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
-import {assertObjectType, GraphQLObjectType, isObjectType} from 'graphql';
+import type {GraphQLObjectType} from 'graphql';
+import {assertObjectType, isObjectType} from 'graphql';
 
 import {hasInterface} from '../common/helpers';
 import {extractKeyInfo} from '../common/keys';
 
-import {ActionPluginConfig} from './config';
+import type {ActionPluginConfig} from './config';
 import {
   createItemTemplate,
   deleteItemTemplate,

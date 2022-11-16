@@ -1,5 +1,5 @@
-import {GraphQLObjectType} from 'graphql';
-import {GraphQLField} from 'graphql/index';
+import type {GraphQLObjectType} from 'graphql';
+import type {GraphQLField} from 'graphql/index';
 
 import {getArgFieldTypeValues, getOptionalArgStringValue} from './helpers';
 import {makeKeyTemplate} from './keys';

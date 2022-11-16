@@ -1,4 +1,5 @@
-import {GraphQLObjectType, isNonNullType} from 'graphql/index';
+import type {GraphQLObjectType} from 'graphql/index';
+import {isNonNullType} from 'graphql/index';
 import {snakeCase} from 'lodash';
 
 import {extractTtlInfo} from '../../../common/fields';

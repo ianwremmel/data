@@ -1,7 +1,7 @@
-import {GraphQLField, GraphQLObjectType} from 'graphql';
+import type {GraphQLField, GraphQLObjectType} from 'graphql';
 
 import {getTypeScriptTypeForField, hasDirective} from '../../../common/helpers';
-import {IndexFieldInfo} from '../../../common/indexes';
+import type {IndexFieldInfo} from '../../../common/indexes';
 import {makeKeyTemplate} from '../../../common/keys';
 
 import {ensureTableTemplate} from './ensure-table';
