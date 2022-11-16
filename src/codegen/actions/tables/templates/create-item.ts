@@ -4,8 +4,6 @@ import {ensureTableTemplate} from './ensure-table';
 
 export interface CreateItemTplInput {
   readonly conditionField: string;
-  readonly ean: readonly string[];
-  readonly eav: readonly string[];
   readonly key: readonly string[];
   readonly objType: GraphQLObjectType;
   readonly omit: readonly string[];
@@ -14,8 +12,6 @@ export interface CreateItemTplInput {
 /** template */
 export function createItemTpl({
   conditionField,
-  ean,
-  eav,
   key,
   objType,
   omit,
@@ -33,19 +29,16 @@ export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join('|')}>;
 export type ${outputTypeName} = ResultType<${typeName}>
 /**  */
 export async function create${typeName}(input: Readonly<Create${typeName}Input>): Promise<Readonly<${outputTypeName}>> {
-  const now = new Date();
 ${ensureTableTemplate(objType)}
-  const {UpdateExpression} = marshall${objType.name}(input);
+  const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${
+    objType.name
+  }(input);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#${conditionField})',
-      ExpressionAttributeNames: {
-${ean.map((e) => `        ${e},`).join('\n')}
-      },
-      ExpressionAttributeValues: {
-${eav.map((e) => `        ${e},`).join('\n')}
-      },
+      ExpressionAttributeNames,
+      ExpressionAttributeValues,
       Key: {
 ${key.map((k) => `        ${k},`).join('\n')}
       },

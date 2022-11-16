@@ -9,6 +9,7 @@ import {
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
 import {v4 as uuidv4} from 'uuid';
 
 import {
@@ -131,10 +132,13 @@ export type CreateUserLoginOutput = ResultType<UserLogin>;
 export async function createUserLogin(
   input: Readonly<CreateUserLoginInput>
 ): Promise<Readonly<CreateUserLoginOutput>> {
-  const now = new Date();
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
-  const {UpdateExpression} = marshallUserLogin(input);
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallUserLogin(input);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -144,29 +148,8 @@ export async function createUserLogin(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#createdAt': '_ct',
-        '#entity': '_et',
-        '#externalId': 'external_id',
-        '#gsi1pk': 'gsi1pk',
-        '#gsi1sk': 'gsi1sk',
-        '#login': 'login',
-        '#pk': 'pk',
-        '#updatedAt': '_md',
-        '#vendor': 'vendor',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':createdAt': now.getTime(),
-        ':entity': 'UserLogin',
-        ':externalId': input.externalId,
-        ':gsi1pk': `LOGIN#${input.vendor}#${input.login}`,
-        ':gsi1sk': `MODIFIED#${now.getTime()}`,
-        ':login': input.login,
-        ':updatedAt': now.getTime(),
-        ':vendor': input.vendor,
-        ':version': 1,
-      },
+      ExpressionAttributeNames,
+      ExpressionAttributeValues,
       Key: {
         pk: `USER#${input.vendor}#${input.externalId}`,
         sk: `LOGIN#${input.login}`,
@@ -347,10 +330,13 @@ export type UpdateUserLoginOutput = ResultType<UserLogin>;
 export async function updateUserLogin(
   input: Readonly<UpdateUserLoginInput>
 ): Promise<Readonly<UpdateUserLoginOutput>> {
-  const now = new Date();
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
-  const {UpdateExpression} = marshallUserLogin(input);
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallUserLogin(input);
   try {
     const {
       Attributes: item,
@@ -360,29 +346,10 @@ export async function updateUserLogin(
       new UpdateCommand({
         ConditionExpression:
           '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
-        ExpressionAttributeNames: {
-          '#createdAt': '_ct',
-          '#entity': '_et',
-          '#externalId': 'external_id',
-          '#gsi1pk': 'gsi1pk',
-          '#gsi1sk': 'gsi1sk',
-          '#login': 'login',
-          '#pk': 'pk',
-          '#updatedAt': '_md',
-          '#vendor': 'vendor',
-          '#version': '_v',
-        },
+        ExpressionAttributeNames,
         ExpressionAttributeValues: {
-          ':createdAt': now.getTime(),
-          ':entity': 'UserLogin',
-          ':externalId': input.externalId,
-          ':gsi1pk': `LOGIN#${input.vendor}#${input.login}`,
-          ':gsi1sk': `MODIFIED#${now.getTime()}`,
-          ':login': input.login,
+          ...ExpressionAttributeValues,
           ':previousVersion': input.version,
-          ':updatedAt': now.getTime(),
-          ':vendor': input.vendor,
-          ':version': input.version + 1,
         },
         Key: {
           pk: `USER#${input.vendor}#${input.externalId}`,
@@ -526,6 +493,8 @@ export async function queryUserLogin(
 }
 
 export interface MarshallUserLoginOutput {
+  ExpressionAttributeNames: Record<string, string>;
+  ExpressionAttributeValues: Record<string, NativeAttributeValue>;
   UpdateExpression: string;
 }
 
@@ -533,6 +502,8 @@ export interface MarshallUserLoginOutput {
 export function marshallUserLogin(
   input: Record<string, any>
 ): MarshallUserLoginOutput {
+  const now = new Date();
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#createdAt = :createdAt',
@@ -545,9 +516,38 @@ export function marshallUserLogin(
     '#gsi1sk = :gsi1sk',
   ];
 
+  const ean: Record<string, string> = {
+    '#entity': '_et',
+    '#createdAt': '_ct',
+    '#externalId': 'external_id',
+    '#login': 'login',
+    '#updatedAt': '_md',
+    '#vendor': 'vendor',
+    '#version': '_v',
+    '#pk': 'pk',
+    '#gsi1pk': 'gsi1pk',
+    '#gsi1sk': 'gsi1sk',
+  };
+
+  const eav: Record<string, unknown> = {
+    ':entity': 'UserLogin',
+    ':createdAt': now.getTime(),
+    ':externalId': input.externalId,
+    ':login': input.login,
+    ':updatedAt': now.getTime(),
+    ':vendor': input.vendor,
+    ':version': ('version' in input ? input.version : 0) + 1,
+    ':gsi1pk': `LOGIN#${input.vendor}#${input.login}`,
+    ':gsi1sk': `MODIFIED#${now.getTime()}`,
+  };
+
   updateExpression.sort();
 
-  return {UpdateExpression: `SET ${updateExpression.join(', ')}`};
+  return {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    UpdateExpression: `SET ${updateExpression.join(', ')}`,
+  };
 }
 
 /** Unmarshalls a DynamoDB record into a UserLogin object */

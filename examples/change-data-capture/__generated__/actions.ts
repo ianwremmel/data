@@ -9,6 +9,7 @@ import {
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
 import {v4 as uuidv4} from 'uuid';
 
 import {
@@ -154,10 +155,13 @@ export type CreateAccountOutput = ResultType<Account>;
 export async function createAccount(
   input: Readonly<CreateAccountInput>
 ): Promise<Readonly<CreateAccountOutput>> {
-  const now = new Date();
   const tableName = process.env.TABLE_ACCOUNT;
   assert(tableName, 'TABLE_ACCOUNT is not set');
-  const {UpdateExpression} = marshallAccount(input);
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallAccount(input);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -167,35 +171,8 @@ export async function createAccount(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#createdAt': '_ct',
-        '#effectiveDate': 'effective_date',
-        '#entity': '_et',
-        '#externalId': 'external_id',
-        '#pk': 'pk',
-        '#updatedAt': '_md',
-        '#vendor': 'vendor',
-        '#version': '_v',
-        ...('cancelled' in input ? {'#cancelled': 'cancelled'} : undefined),
-        ...('onFreeTrial' in input
-          ? {'#onFreeTrial': 'on_free_trial'}
-          : undefined),
-        ...('planName' in input ? {'#planName': 'plan_name'} : undefined),
-      },
-      ExpressionAttributeValues: {
-        ':createdAt': now.getTime(),
-        ':effectiveDate': input.effectiveDate.getTime(),
-        ':entity': 'Account',
-        ':externalId': input.externalId,
-        ':updatedAt': now.getTime(),
-        ':vendor': input.vendor,
-        ':version': 1,
-        ...('cancelled' in input ? {':cancelled': input.cancelled} : undefined),
-        ...('onFreeTrial' in input
-          ? {':onFreeTrial': input.onFreeTrial}
-          : undefined),
-        ...('planName' in input ? {':planName': input.planName} : undefined),
-      },
+      ExpressionAttributeNames,
+      ExpressionAttributeValues,
       Key: {
         pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
         sk: `SUMMARY`,
@@ -376,10 +353,13 @@ export type UpdateAccountOutput = ResultType<Account>;
 export async function updateAccount(
   input: Readonly<UpdateAccountInput>
 ): Promise<Readonly<UpdateAccountOutput>> {
-  const now = new Date();
   const tableName = process.env.TABLE_ACCOUNT;
   assert(tableName, 'TABLE_ACCOUNT is not set');
-  const {UpdateExpression} = marshallAccount(input);
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallAccount(input);
   try {
     const {
       Attributes: item,
@@ -389,37 +369,10 @@ export async function updateAccount(
       new UpdateCommand({
         ConditionExpression:
           '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
-        ExpressionAttributeNames: {
-          '#createdAt': '_ct',
-          '#effectiveDate': 'effective_date',
-          '#entity': '_et',
-          '#externalId': 'external_id',
-          '#pk': 'pk',
-          '#updatedAt': '_md',
-          '#vendor': 'vendor',
-          '#version': '_v',
-          ...('cancelled' in input ? {'#cancelled': 'cancelled'} : undefined),
-          ...('onFreeTrial' in input
-            ? {'#onFreeTrial': 'on_free_trial'}
-            : undefined),
-          ...('planName' in input ? {'#planName': 'plan_name'} : undefined),
-        },
+        ExpressionAttributeNames,
         ExpressionAttributeValues: {
-          ':createdAt': now.getTime(),
-          ':effectiveDate': input.effectiveDate.getTime(),
-          ':entity': 'Account',
-          ':externalId': input.externalId,
+          ...ExpressionAttributeValues,
           ':previousVersion': input.version,
-          ':updatedAt': now.getTime(),
-          ':vendor': input.vendor,
-          ':version': input.version + 1,
-          ...('cancelled' in input
-            ? {':cancelled': input.cancelled}
-            : undefined),
-          ...('onFreeTrial' in input
-            ? {':onFreeTrial': input.onFreeTrial}
-            : undefined),
-          ...('planName' in input ? {':planName': input.planName} : undefined),
         },
         Key: {
           pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
@@ -541,6 +494,8 @@ export async function queryAccount(
 }
 
 export interface MarshallAccountOutput {
+  ExpressionAttributeNames: Record<string, string>;
+  ExpressionAttributeValues: Record<string, NativeAttributeValue>;
   UpdateExpression: string;
 }
 
@@ -548,6 +503,8 @@ export interface MarshallAccountOutput {
 export function marshallAccount(
   input: Record<string, any>
 ): MarshallAccountOutput {
+  const now = new Date();
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#createdAt = :createdAt',
@@ -558,21 +515,52 @@ export function marshallAccount(
     '#version = :version',
   ];
 
-  if ('cancelled' in input) {
+  const ean: Record<string, string> = {
+    '#entity': '_et',
+    '#createdAt': '_ct',
+    '#effectiveDate': 'effective_date',
+    '#externalId': 'external_id',
+    '#updatedAt': '_md',
+    '#vendor': 'vendor',
+    '#version': '_v',
+    '#pk': 'pk',
+  };
+
+  const eav: Record<string, unknown> = {
+    ':entity': 'Account',
+    ':createdAt': now.getTime(),
+    ':effectiveDate': input.effectiveDate.getTime(),
+    ':externalId': input.externalId,
+    ':updatedAt': now.getTime(),
+    ':vendor': input.vendor,
+    ':version': ('version' in input ? input.version : 0) + 1,
+  };
+
+  if ('cancelled' in input && typeof input.cancelled !== 'undefined') {
+    ean['#cancelled'] = 'cancelled';
+    eav[':cancelled'] = input.cancelled;
     updateExpression.push('#cancelled = :cancelled');
   }
 
-  if ('onFreeTrial' in input) {
+  if ('onFreeTrial' in input && typeof input.onFreeTrial !== 'undefined') {
+    ean['#onFreeTrial'] = 'on_free_trial';
+    eav[':onFreeTrial'] = input.onFreeTrial;
     updateExpression.push('#onFreeTrial = :onFreeTrial');
   }
 
-  if ('planName' in input) {
+  if ('planName' in input && typeof input.planName !== 'undefined') {
+    ean['#planName'] = 'plan_name';
+    eav[':planName'] = input.planName;
     updateExpression.push('#planName = :planName');
   }
 
   updateExpression.sort();
 
-  return {UpdateExpression: `SET ${updateExpression.join(', ')}`};
+  return {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    UpdateExpression: `SET ${updateExpression.join(', ')}`,
+  };
 }
 
 /** Unmarshalls a DynamoDB record into a Account object */
@@ -697,10 +685,13 @@ export type CreateSubscriptionOutput = ResultType<Subscription>;
 export async function createSubscription(
   input: Readonly<CreateSubscriptionInput>
 ): Promise<Readonly<CreateSubscriptionOutput>> {
-  const now = new Date();
   const tableName = process.env.TABLE_SUBSCRIPTION;
   assert(tableName, 'TABLE_SUBSCRIPTION is not set');
-  const {UpdateExpression} = marshallSubscription(input);
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallSubscription(input);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -710,35 +701,8 @@ export async function createSubscription(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#createdAt': '_ct',
-        '#effectiveDate': 'effective_date',
-        '#entity': '_et',
-        '#externalId': 'external_id',
-        '#pk': 'pk',
-        '#updatedAt': '_md',
-        '#vendor': 'vendor',
-        '#version': '_v',
-        ...('cancelled' in input ? {'#cancelled': 'cancelled'} : undefined),
-        ...('onFreeTrial' in input
-          ? {'#onFreeTrial': 'on_free_trial'}
-          : undefined),
-        ...('planName' in input ? {'#planName': 'plan_name'} : undefined),
-      },
-      ExpressionAttributeValues: {
-        ':createdAt': now.getTime(),
-        ':effectiveDate': input.effectiveDate.getTime(),
-        ':entity': 'Subscription',
-        ':externalId': input.externalId,
-        ':updatedAt': now.getTime(),
-        ':vendor': input.vendor,
-        ':version': 1,
-        ...('cancelled' in input ? {':cancelled': input.cancelled} : undefined),
-        ...('onFreeTrial' in input
-          ? {':onFreeTrial': input.onFreeTrial}
-          : undefined),
-        ...('planName' in input ? {':planName': input.planName} : undefined),
-      },
+      ExpressionAttributeNames,
+      ExpressionAttributeValues,
       Key: {
         pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
         sk: `SUBSCRIPTION#${input.effectiveDate.getTime()}`,
@@ -922,10 +886,13 @@ export type UpdateSubscriptionOutput = ResultType<Subscription>;
 export async function updateSubscription(
   input: Readonly<UpdateSubscriptionInput>
 ): Promise<Readonly<UpdateSubscriptionOutput>> {
-  const now = new Date();
   const tableName = process.env.TABLE_SUBSCRIPTION;
   assert(tableName, 'TABLE_SUBSCRIPTION is not set');
-  const {UpdateExpression} = marshallSubscription(input);
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallSubscription(input);
   try {
     const {
       Attributes: item,
@@ -935,37 +902,10 @@ export async function updateSubscription(
       new UpdateCommand({
         ConditionExpression:
           '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
-        ExpressionAttributeNames: {
-          '#createdAt': '_ct',
-          '#effectiveDate': 'effective_date',
-          '#entity': '_et',
-          '#externalId': 'external_id',
-          '#pk': 'pk',
-          '#updatedAt': '_md',
-          '#vendor': 'vendor',
-          '#version': '_v',
-          ...('cancelled' in input ? {'#cancelled': 'cancelled'} : undefined),
-          ...('onFreeTrial' in input
-            ? {'#onFreeTrial': 'on_free_trial'}
-            : undefined),
-          ...('planName' in input ? {'#planName': 'plan_name'} : undefined),
-        },
+        ExpressionAttributeNames,
         ExpressionAttributeValues: {
-          ':createdAt': now.getTime(),
-          ':effectiveDate': input.effectiveDate.getTime(),
-          ':entity': 'Subscription',
-          ':externalId': input.externalId,
+          ...ExpressionAttributeValues,
           ':previousVersion': input.version,
-          ':updatedAt': now.getTime(),
-          ':vendor': input.vendor,
-          ':version': input.version + 1,
-          ...('cancelled' in input
-            ? {':cancelled': input.cancelled}
-            : undefined),
-          ...('onFreeTrial' in input
-            ? {':onFreeTrial': input.onFreeTrial}
-            : undefined),
-          ...('planName' in input ? {':planName': input.planName} : undefined),
         },
         Key: {
           pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
@@ -1100,6 +1040,8 @@ export async function querySubscription(
 }
 
 export interface MarshallSubscriptionOutput {
+  ExpressionAttributeNames: Record<string, string>;
+  ExpressionAttributeValues: Record<string, NativeAttributeValue>;
   UpdateExpression: string;
 }
 
@@ -1107,6 +1049,8 @@ export interface MarshallSubscriptionOutput {
 export function marshallSubscription(
   input: Record<string, any>
 ): MarshallSubscriptionOutput {
+  const now = new Date();
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#createdAt = :createdAt',
@@ -1117,21 +1061,52 @@ export function marshallSubscription(
     '#version = :version',
   ];
 
-  if ('cancelled' in input) {
+  const ean: Record<string, string> = {
+    '#entity': '_et',
+    '#createdAt': '_ct',
+    '#effectiveDate': 'effective_date',
+    '#externalId': 'external_id',
+    '#updatedAt': '_md',
+    '#vendor': 'vendor',
+    '#version': '_v',
+    '#pk': 'pk',
+  };
+
+  const eav: Record<string, unknown> = {
+    ':entity': 'Subscription',
+    ':createdAt': now.getTime(),
+    ':effectiveDate': input.effectiveDate.getTime(),
+    ':externalId': input.externalId,
+    ':updatedAt': now.getTime(),
+    ':vendor': input.vendor,
+    ':version': ('version' in input ? input.version : 0) + 1,
+  };
+
+  if ('cancelled' in input && typeof input.cancelled !== 'undefined') {
+    ean['#cancelled'] = 'cancelled';
+    eav[':cancelled'] = input.cancelled;
     updateExpression.push('#cancelled = :cancelled');
   }
 
-  if ('onFreeTrial' in input) {
+  if ('onFreeTrial' in input && typeof input.onFreeTrial !== 'undefined') {
+    ean['#onFreeTrial'] = 'on_free_trial';
+    eav[':onFreeTrial'] = input.onFreeTrial;
     updateExpression.push('#onFreeTrial = :onFreeTrial');
   }
 
-  if ('planName' in input) {
+  if ('planName' in input && typeof input.planName !== 'undefined') {
+    ean['#planName'] = 'plan_name';
+    eav[':planName'] = input.planName;
     updateExpression.push('#planName = :planName');
   }
 
   updateExpression.sort();
 
-  return {UpdateExpression: `SET ${updateExpression.join(', ')}`};
+  return {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    UpdateExpression: `SET ${updateExpression.join(', ')}`,
+  };
 }
 
 /** Unmarshalls a DynamoDB record into a Subscription object */

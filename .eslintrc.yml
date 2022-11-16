@@ -47,6 +47,7 @@ overrides:
       - '**/__generated__/**/*'
     rules:
       complexity: off
+      sort-keys: off
 
 parserOptions:
   sourceType: 'script'

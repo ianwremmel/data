@@ -91,13 +91,14 @@ ${tableTypes
       content,
       prepend: [
         `import {ConditionalCheckFailedException, ConsumedCapacity, ItemCollectionMetrics} from '@aws-sdk/client-dynamodb';`,
-        `import {DeleteCommand, GetCommand, QueryCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'`,
-        `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '${runtimeModuleId}'`,
-        `import {v4 as uuidv4} from 'uuid'`,
+        `import {DeleteCommand, GetCommand, QueryCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';`,
+        `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '${runtimeModuleId}';`,
+        `import {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';`,
+        `import {v4 as uuidv4} from 'uuid';`,
         `import {ddbDocClient} from "${path.relative(
           path.resolve(process.cwd(), path.dirname(info.outputFile)),
           path.resolve(process.cwd(), config.dependenciesModuleId)
-        )}"`,
+        )}";`,
       ],
     };
   } catch (err) {
