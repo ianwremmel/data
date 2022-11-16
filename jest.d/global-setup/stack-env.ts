@@ -45,7 +45,8 @@ export default async function loadAwsEnv() {
 
   const exampleStacks = glob
     .sync('*/', {cwd: './examples'})
-    .map((dir) => upperFirst(camelCase(dir)));
+    .map((dir) => upperFirst(camelCase(dir)))
+    .filter((stack) => stack !== 'ChangeDataCapture');
 
   for (const stackName of exampleStacks) {
     const stack: Stack | undefined = stackData.Stacks.find(
