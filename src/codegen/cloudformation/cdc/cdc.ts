@@ -126,6 +126,7 @@ export function defineCdc(
           },
         },
       },
+      ...makeLogGroup(dispatcherFunctionName),
       [`${handlerFunctionName}DLQ`]: {
         Type: 'AWS::SQS::Queue',
         // eslint-disable-next-line sort-keys
@@ -208,6 +209,21 @@ export function defineCdc(
             Target: 'es2020',
           },
         },
+      },
+      ...makeLogGroup(handlerFunctionName),
+    },
+  };
+}
+
+/** cloudformation generator */
+function makeLogGroup(functionName: string) {
+  return {
+    [`${functionName}LogGroup`]: {
+      Type: 'AWS::Logs::LogGroup',
+      // eslint-disable-next-line sort-keys
+      Properties: {
+        LogGroupName: {'Fn::Sub': `/aws/lambda/\${${functionName}}`},
+        RetentionInDays: {Ref: 'LogRetentionDays'},
       },
     },
   };

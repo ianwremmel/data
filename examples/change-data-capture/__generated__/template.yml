@@ -112,6 +112,13 @@ Resources:
         Minify: false
         Sourcemap: true
         Target: es2020
+  TableSubscriptionCDCDispatcherLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${TableSubscriptionCDCDispatcher}
+      RetentionInDays:
+        Ref: LogRetentionDays
   SubscriptionCDCHandlerDLQ:
     Type: AWS::SQS::Queue
     Properties:
@@ -177,6 +184,13 @@ Resources:
         Minify: false
         Sourcemap: true
         Target: es2020
+  SubscriptionCDCHandlerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${SubscriptionCDCHandler}
+      RetentionInDays:
+        Ref: LogRetentionDays
   TableSubscription:
     Type: AWS::DynamoDB::Table
     Properties:
