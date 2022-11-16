@@ -8,6 +8,7 @@ import type {Stack} from '@aws-sdk/client-cloudformation/dist-types/models/model
 import {glob} from 'glob';
 import {camelCase, snakeCase, upperFirst} from 'lodash';
 
+/* eslint-disable complexity */
 /**
  * Loads stack outputs as environment variables
  */
@@ -37,30 +38,45 @@ export default async function loadAwsEnv() {
       })
     : new CloudFormationClient({});
 
-  console.log('Fetching stack details from AWS');
+  console.log(`Fetching stack details from "${process.env.TEST_MODE}"`);
   const stackData = await client.send(new DescribeStacksCommand({}));
-  console.log('Fetched stack details from AWS');
+  console.log(`Fetched stack details from "${process.env.TEST_MODE}"`);
 
-  assert(stackData.Stacks, 'AWS should have returned an array of stacks');
+  assert(
+    stackData.Stacks,
+    `"${process.env.TEST_MODE}" should have returned an array of stacks`
+  );
 
-  const exampleStacks = glob
+  let exampleStacks = glob
     .sync('*/', {cwd: './examples'})
-    .map((dir) => upperFirst(camelCase(dir)))
-    .filter((stack) => stack !== 'ChangeDataCapture');
+    .map((dir) => upperFirst(camelCase(dir)));
+
+  if (process.env.TEST_MODE === 'localstack') {
+    exampleStacks = exampleStacks.filter(
+      (stack) => stack !== 'ChangeDataCapture'
+    );
+  }
 
   for (const stackName of exampleStacks) {
     const stack: Stack | undefined = stackData.Stacks.find(
       (s) => s.StackName === stackName
     );
     assert(stack, `There should be a stack named ${stackName}`);
-    assert(stack.Outputs, 'AWS should have returned stack outputs');
+    assert(
+      stack.Outputs,
+      `"${process.env.TEST_MODE}" should have returned stack outputs`
+    );
 
     for (const output of stack.Outputs) {
       const name = snakeCase(output.OutputKey).toUpperCase();
-      assert(name, 'AWS should have returned a parameter name');
+      assert(
+        name,
+        `"${process.env.TEST_MODE}" should have returned a parameter name`
+      );
       const value = output.OutputValue;
       console.log(`Setting env ${name} to ${value} from stack`);
       process.env[name] = value;
     }
   }
 }
+/* eslint-enable complexity */
