@@ -24,7 +24,7 @@ export function createItemTemplate(objType: GraphQLObjectType) {
     conditionField: keyInfo.conditionField,
     key: keyInfo.keyForCreate,
     objType,
-    omit: [...keyInfo.omitForCreate, ttlInfo?.fieldName ?? ''].filter(Boolean),
+    omit: ['id', ttlInfo?.fieldName ?? ''].filter(Boolean),
   });
 }
 
@@ -132,7 +132,6 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
 
   return updateItemTpl({
     conditionField: keyInfo.conditionField,
-
     inputToPrimaryKey: keyInfo.inputToPrimaryKey,
     key: keyInfo.keyForReadAndUpdate,
     objType,

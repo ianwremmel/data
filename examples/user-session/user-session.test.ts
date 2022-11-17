@@ -1,3 +1,6 @@
+import {faker} from '@faker-js/faker';
+import Base64 from 'base64url';
+
 import {NotFoundError, OptimisticLockingError} from '../../src/runtime';
 
 import {
@@ -9,20 +12,25 @@ import {
 } from './__generated__/actions';
 
 const userSessionMatcher = {
-  capacity: {TableName: expect.any(String)},
-  item: {
-    createdAt: expect.any(Date),
-    expires: expect.any(Date),
-    id: expect.any(String),
-    updatedAt: expect.any(Date),
-  },
+  createdAt: expect.any(Date),
+  expires: expect.any(Date),
+  updatedAt: expect.any(Date),
 };
+
+const itemMatcher = {
+  capacity: {TableName: expect.any(String)},
+  item: userSessionMatcher,
+};
+
 describe('createUserSession()', () => {
   it('creates a record', async () => {
-    const result = await createUserSession({session: {foo: 'foo'}});
+    const result = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
 
     expect(result).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -41,10 +49,11 @@ describe('createUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "foo",
           },
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 1,
         },
@@ -53,7 +62,10 @@ describe('createUserSession()', () => {
     `
     );
 
-    expect(result.item.id).toMatch(/UserSession#/);
+    expect(Base64.decode(result.item.id)).toMatchInlineSnapshot(
+      `"UserSession:USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20"`
+    );
+
     expect(result.item.createdAt.getTime()).not.toBeNaN();
     expect(result.item.expires.getTime()).not.toBeNaN();
     expect(result.item.updatedAt.getTime()).not.toBeNaN();
@@ -65,7 +77,10 @@ describe('createUserSession()', () => {
 
 describe('deleteUserSession()', () => {
   it('deletes a record', async () => {
-    const result = await createUserSession({session: {foo: 'foo'}});
+    const result = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
 
     const deleteResult = await deleteUserSession(result.item);
     expect(deleteResult).toMatchInlineSnapshot(
@@ -98,18 +113,21 @@ describe('deleteUserSession()', () => {
 
   it('throws an error if the record does not exist', async () => {
     await expect(
-      async () => await deleteUserSession({id: 'some-id'})
+      async () => await deleteUserSession({sessionId: 'some-id'})
     ).rejects.toThrow(NotFoundError);
   });
 });
 
 describe('readUserSession()', () => {
   it('reads a record', async () => {
-    const result = await createUserSession({session: {foo: 'foo'}});
+    const result = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
 
     const readResult = await readUserSession(result.item);
     expect(readResult).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -128,10 +146,11 @@ describe('readUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "foo",
           },
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 1,
         },
@@ -146,18 +165,21 @@ describe('readUserSession()', () => {
 
   it('throws an error if the record does not exist', async () => {
     await expect(
-      async () => await readUserSession({id: 'some-id'})
+      async () => await readUserSession({sessionId: 'some-id'})
     ).rejects.toThrow(NotFoundError);
   });
 });
 
 describe('touchUserSession()', () => {
   it("updates a record's createdAt and extends its ttl", async () => {
-    const result = await createUserSession({session: {foo: 'foo'}});
+    const result = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
 
     const readResult = await readUserSession(result.item);
     expect(readResult).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -176,10 +198,11 @@ describe('touchUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "foo",
           },
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 1,
         },
@@ -191,7 +214,7 @@ describe('touchUserSession()', () => {
     await touchUserSession(result.item);
     const touchResult = await readUserSession(result.item);
     expect(touchResult).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -210,10 +233,11 @@ describe('touchUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "foo",
           },
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 2,
         },
@@ -233,16 +257,19 @@ describe('touchUserSession()', () => {
 
   it('throws an error if the record does not exist', async () => {
     await expect(
-      async () => await touchUserSession({id: 'some-id'})
+      async () => await touchUserSession({sessionId: 'some-id'})
     ).rejects.toThrow(NotFoundError);
   });
 });
 
 describe('updateUserSession()', () => {
   it('updates a record', async () => {
-    const createResult = await createUserSession({session: {foo: 'foo'}});
+    const createResult = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
     expect(createResult).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -261,10 +288,11 @@ describe('updateUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "foo",
           },
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 1,
         },
@@ -279,7 +307,7 @@ describe('updateUserSession()', () => {
       session: {foo: 'bar'},
     });
     expect(updateResult).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -298,10 +326,11 @@ describe('updateUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "bar",
           },
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 2,
         },
@@ -313,7 +342,7 @@ describe('updateUserSession()', () => {
 
     const readResult = await readUserSession(createResult.item);
     expect(readResult).toMatchInlineSnapshot(
-      userSessionMatcher,
+      itemMatcher,
       `
       {
         "capacity": {
@@ -332,10 +361,11 @@ describe('updateUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": Any<String>,
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "bar",
           },
+          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 2,
         },
@@ -356,15 +386,18 @@ describe('updateUserSession()', () => {
     await expect(
       async () =>
         await updateUserSession({
-          id: 'some-id',
           session: {foo: 'foo'},
+          sessionId: 'some-id',
           version: 0,
         })
     ).rejects.toThrow(NotFoundError);
   });
 
   it('throws an error if the loaded record is out of date', async () => {
-    const createResult = await createUserSession({session: {foo: 'foo'}});
+    const createResult = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
     await updateUserSession({
       ...createResult.item,
       session: {foo: 'bar'},

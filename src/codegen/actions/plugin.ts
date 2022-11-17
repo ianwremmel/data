@@ -93,6 +93,7 @@ ${tableTypes
       prepend: [
         `import {ConditionalCheckFailedException, ConsumedCapacity, ItemCollectionMetrics} from '@aws-sdk/client-dynamodb';`,
         `import {DeleteCommand, GetCommand, QueryCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';`,
+        `import Base64 from 'base64url';`,
         `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '${runtimeModuleId}';`,
         `import {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';`,
         `import {v4 as uuidv4} from 'uuid';`,

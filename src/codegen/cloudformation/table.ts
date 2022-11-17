@@ -28,7 +28,7 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
           AttributeType: 'S',
         },
       ]
-    : [{AttributeName: 'id', AttributeType: 'S'}];
+    : [{AttributeName: 'pk', AttributeType: 'S'}];
 
   const keySchema = isCompositeKey
     ? [
@@ -43,7 +43,7 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
       ]
     : [
         {
-          AttributeName: 'id',
+          AttributeName: 'pk',
           KeyType: 'HASH',
         },
       ];

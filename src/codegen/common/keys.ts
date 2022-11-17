@@ -10,12 +10,16 @@ import {isNonNullType, isScalarType} from 'graphql';
 import {
   getArg,
   getArgFieldTypeValues,
+  getDirective,
   getOptionalArgStringValue,
+  hasDirective,
   hasInterface,
   marshalField,
   unmarshalField,
 } from './helpers';
 import type {IndexFieldInfo} from './indexes';
+
+export const DIVIDER = '#:#';
 
 /** Generates the template for producing the desired primary key or index column */
 export function makeKeyTemplate(
@@ -55,8 +59,6 @@ function extractCompositeKeyInfo(
   type: GraphQLObjectType,
   directive: ConstDirectiveNode
 ): KeyInfo {
-  const isNode = hasInterface('Node', type);
-
   const pkFields = getArgFieldTypeValues('pkFields', type, directive);
   const skFields = getArgFieldTypeValues('skFields', type, directive);
   const pkPrefix = getOptionalArgStringValue('pkPrefix', directive);
@@ -72,10 +74,15 @@ function extractCompositeKeyInfo(
 
   const fields = type.getFields();
 
+  assert(
+    !fieldNames.includes('id'),
+    'id is a reserved field and cannot be part of the partition key'
+  );
+
   return {
     conditionField: 'pk',
     ean: [`'#pk': 'pk'`],
-    fields: new Set(['pk', 'sk', isNode ? 'id' : ''].filter(Boolean)),
+    fields: new Set(['pk', 'sk', 'id'].filter(Boolean)),
     index: {
       pkFields,
       pkPrefix,
@@ -85,7 +92,7 @@ function extractCompositeKeyInfo(
     inputToPrimaryKey: fieldNames.map((f) => `${f}: input.${f}`),
     keyForCreate: [`pk: \`${pkTemplate}\``, `sk: \`${skTemplate}\``],
     keyForReadAndUpdate: [`pk: \`${pkTemplate}\``, `sk: \`${skTemplate}\``],
-    omitForCreate: [isNode ? 'id' : ''].filter(Boolean),
+    omitForCreate: ['id'].filter(Boolean),
     primaryKeyType: fieldNames.map((fieldName) => {
       const field = fields[fieldName];
 
@@ -103,50 +110,80 @@ function extractCompositeKeyInfo(
 
       return `${fieldName}: ${field.type};`;
     }),
-    // The embedded template is intentional.
-    // eslint-disable-next-line no-template-curly-in-string
-    unmarshall: [isNode ? 'id: `${item.pk}#${item.sk}`' : ''].filter(Boolean),
+    unmarshall: [
+      `id: Base64.encode(\`${type.name}:\${item.pk}${DIVIDER}\${item.sk}\`)`,
+    ].filter(Boolean),
   };
 }
 
+/**
+ * Returns the partition key info for the given object type.
+ */
+function extractPartitionKeyInfo(
+  type: GraphQLObjectType,
+  directive: ConstDirectiveNode
+): KeyInfo {
+  const pkFields = getArgFieldTypeValues('pkFields', type, directive);
+  const pkPrefix = getOptionalArgStringValue('pkPrefix', directive);
+
+  const pkTemplate = makeKeyTemplate(pkPrefix, pkFields);
+
+  const fieldNames = pkFields.map((f) => f.name).sort();
+
+  const fields = type.getFields();
+
+  assert(
+    !fieldNames.includes('id'),
+    'id is a reserved field and cannot be part of the partition key'
+  );
+
+  return {
+    conditionField: 'pk',
+    ean: [`'#pk': 'pk'`],
+    fields: new Set(['pk', 'id'].filter(Boolean)),
+    index: {
+      pkFields,
+      pkPrefix,
+    },
+    inputToPrimaryKey: fieldNames.map((f) => `${f}: input.${f}`),
+    keyForCreate: [`pk: \`${pkTemplate}\``],
+    keyForReadAndUpdate: [`pk: \`${pkTemplate}\``],
+    omitForCreate: ['id'],
+    primaryKeyType: fieldNames.map((fieldName) => {
+      const field = fields[fieldName];
+
+      if (isNonNullType(field.type)) {
+        if (isScalarType(field.type.ofType)) {
+          return `${fieldName}: Scalars['${field.type.ofType}'];`;
+        }
+
+        return `${fieldName}: ${field.type.ofType};`;
+      }
+
+      if (isScalarType(field.type)) {
+        return `${fieldName}: Scalars['${field.type}'];`;
+      }
+
+      return `${fieldName}: ${field.type};`;
+    }),
+
+    unmarshall: [`id: Base64.encode(\`${type.name}:\${item.pk}\`)`],
+  };
+}
 /**
  * Parses out a types key fields and generates the necessary code for
  * marshalling/unmarshalling them.
  */
 export function extractKeyInfo(type: GraphQLObjectType): KeyInfo {
-  const directive = type.astNode?.directives?.find(
-    (d) => d.name.value === 'autoKey' || d.name.value === 'compositeKey'
-  );
-
-  assert(
-    directive,
-    `Expected type ${type.name} to have an @autoKey or @compositeKey directive`
-  );
-
-  if (directive.name.value === 'compositeKey') {
-    return extractCompositeKeyInfo(type, directive);
+  if (hasDirective('compositeKey', type)) {
+    return extractCompositeKeyInfo(type, getDirective('compositeKey', type));
   }
 
-  const directiveField = getArg('field', directive);
+  if (hasDirective('partitionKey', type)) {
+    return extractPartitionKeyInfo(type, getDirective('partitionKey', type));
+  }
 
-  assert(
-    directiveField,
-    `Expected @autoKey directive to have argument "fields"`
+  assert.fail(
+    `Expected type ${type.name} to have a @partitionKey or @compositeKey directive`
   );
-
-  const field =
-    directiveField.value.kind === 'StringValue' && directiveField.value.value;
-  assert(field, `Expected @autoKey directive to have argument "field"`);
-
-  return {
-    conditionField: field,
-    ean: [`'#${field}': '${field}'`],
-    fields: new Set([field]),
-    inputToPrimaryKey: [`${field}: input.${field}`],
-    keyForCreate: [`${field}: \`${type.name}#\${uuidv4()}\``],
-    keyForReadAndUpdate: [`${field}: input.${field}`],
-    omitForCreate: [field],
-    primaryKeyType: [`id: Scalars['ID']`],
-    unmarshall: [unmarshalField(type.getFields().id)],
-  };
 }

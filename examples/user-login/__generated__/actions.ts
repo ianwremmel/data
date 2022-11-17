@@ -10,6 +10,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
+import Base64 from 'base64url';
 import {v4 as uuidv4} from 'uuid';
 
 import {
@@ -44,9 +45,18 @@ export interface Scalars {
 /** CDC Event Types */
 export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
-/** Models are DynamoDB with a key schema that does not include a sort key. */
+/**
+ * Models are DynamoDB tables with a key schema that may or may not include a sort
+ * key. A Model must be decorated with either @partitionKey or @compositeKey.
+ *
+ * Note that, while Model does not explicitly implement Node, its `id` field
+ * behaves like `Node#id` typically does. This is to avoid defining Node in the
+ * injected schema if the consumer's schema also defined Node or defines it
+ * differently.
+ */
 export interface Model {
   createdAt: Scalars['Date'];
+  id: Scalars['ID'];
   updatedAt: Scalars['Date'];
   version: Scalars['Int'];
 }
@@ -323,7 +333,10 @@ export async function touchUserLogin(
   }
 }
 
-export type UpdateUserLoginInput = Omit<UserLogin, 'createdAt' | 'updatedAt'>;
+export type UpdateUserLoginInput = Omit<
+  UserLogin,
+  'createdAt' | 'id' | 'updatedAt'
+>;
 export type UpdateUserLoginOutput = ResultType<UserLogin>;
 
 /**  */
@@ -492,6 +505,38 @@ export async function queryUserLogin(
   };
 }
 
+/** queries the UserLogin table by primary key using a node id */
+export async function queryUserLoginByNodeId(
+  id: Scalars['ID']
+): Promise<Readonly<Omit<ResultType<UserLogin>, 'metrics'>>> {
+  const primaryKeyValues = Base64.decode(id)
+    .split(':')
+    .slice(1)
+    .join(':')
+    .split('#');
+
+  const primaryKey: QueryUserLoginInput = {
+    vendor: primaryKeyValues[1] as Vendor,
+    externalId: primaryKeyValues[2],
+  };
+
+  if (typeof primaryKeyValues[2] !== 'undefined') {
+    // @ts-ignore - TSC will usually see this as an error because it determined
+    // that primaryKey is the no-sort-fields-specified version of the type.
+    primaryKey.login = primaryKeyValues[5];
+  }
+
+  const {capacity, items} = await queryUserLogin(primaryKey);
+
+  assert(items.length > 0, () => new NotFoundError('UserLogin', primaryKey));
+  assert(
+    items.length < 2,
+    () => new DataIntegrityError(`Found multiple UserLogin with id ${id}`)
+  );
+
+  return {capacity, item: items[0]};
+}
+
 export interface MarshallUserLoginOutput {
   ExpressionAttributeNames: Record<string, string>;
   ExpressionAttributeValues: Record<string, NativeAttributeValue>;
@@ -626,7 +671,7 @@ export function unmarshallUserLogin(item: Record<string, any>): UserLogin {
   const result: UserLogin = {
     createdAt: new Date(item._ct),
     externalId: item.external_id,
-    id: `${item.pk}#${item.sk}`,
+    id: Base64.encode(`UserLogin:${item.pk}#:#${item.sk}`),
     login: item.login,
     updatedAt: new Date(item._md),
     vendor: item.vendor,

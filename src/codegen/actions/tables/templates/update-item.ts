@@ -25,6 +25,7 @@ export function updateItemTpl({
 
   const inputTypeName = `Update${typeName}Input`;
   const omitInputFields = [
+    'id',
     'createdAt',
     'updatedAt',
     ...(ttlInfo ? [ttlInfo.fieldName] : []),

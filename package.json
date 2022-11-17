@@ -71,6 +71,7 @@
     "@graphql-codegen/plugin-helpers": "^2.7.1",
     "@types/aws-lambda": "^8.10.108",
     "@types/uuid": "^8.3.4",
+    "base64url": "^3.0.1",
     "js-yaml": "^4.1.0",
     "uuid": "^9.0.0"
   },

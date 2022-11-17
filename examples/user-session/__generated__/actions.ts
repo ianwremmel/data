@@ -10,6 +10,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
+import Base64 from 'base64url';
 import {v4 as uuidv4} from 'uuid';
 
 import {
@@ -44,9 +45,18 @@ export interface Scalars {
 /** CDC Event Types */
 export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
-/** Models are DynamoDB with a key schema that does not include a sort key. */
+/**
+ * Models are DynamoDB tables with a key schema that may or may not include a sort
+ * key. A Model must be decorated with either @partitionKey or @compositeKey.
+ *
+ * Note that, while Model does not explicitly implement Node, its `id` field
+ * behaves like `Node#id` typically does. This is to avoid defining Node in the
+ * injected schema if the consumer's schema also defined Node or defines it
+ * differently.
+ */
 export interface Model {
   createdAt: Scalars['Date'];
+  id: Scalars['ID'];
   updatedAt: Scalars['Date'];
   version: Scalars['Int'];
 }
@@ -95,6 +105,11 @@ export type UserSession = Model &
      */
     optionalField?: Maybe<Scalars['String']>;
     session: Scalars['JSONObject'];
+    /**
+     * Since `id` is a reserved field, sessionId is the field we'll use to inject a
+     * random uuid, which the underlying system will use as the basis for `id`.
+     */
+    sessionId: Scalars['String'];
     updatedAt: Scalars['Date'];
     version: Scalars['Int'];
   };
@@ -120,7 +135,7 @@ export interface MultiResultType<T> {
 }
 
 export interface UserSessionPrimaryKey {
-  id: Scalars['ID'];
+  sessionId: Scalars['String'];
 }
 
 export type CreateUserSessionInput = Omit<
@@ -147,11 +162,11 @@ export async function createUserSession(
     Attributes: item,
   } = await ddbDocClient.send(
     new UpdateCommand({
-      ConditionExpression: 'attribute_not_exists(#id)',
+      ConditionExpression: 'attribute_not_exists(#pk)',
       ExpressionAttributeNames,
       ExpressionAttributeValues,
       Key: {
-        id: `UserSession#${uuidv4()}`,
+        pk: `USER_SESSION#${input.sessionId}`,
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -195,12 +210,12 @@ export async function deleteUserSession(
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
       await ddbDocClient.send(
         new DeleteCommand({
-          ConditionExpression: 'attribute_exists(#id)',
+          ConditionExpression: 'attribute_exists(#pk)',
           ExpressionAttributeNames: {
-            '#id': 'id',
+            '#pk': 'pk',
           },
           Key: {
-            id: input.id,
+            pk: `USER_SESSION#${input.sessionId}`,
           },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
@@ -240,7 +255,7 @@ export async function readUserSession(
     new GetCommand({
       ConsistentRead: true,
       Key: {
-        id: input.id,
+        pk: `USER_SESSION#${input.sessionId}`,
       },
       ReturnConsumedCapacity: 'INDEXES',
       TableName: tableName,
@@ -282,10 +297,10 @@ export async function touchUserSession(
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
       await ddbDocClient.send(
         new UpdateCommand({
-          ConditionExpression: 'attribute_exists(#id)',
+          ConditionExpression: 'attribute_exists(#pk)',
           ExpressionAttributeNames: {
             '#expires': 'ttl',
-            '#id': 'id',
+            '#pk': 'pk',
             '#version': '_v',
           },
           ExpressionAttributeValues: {
@@ -293,7 +308,7 @@ export async function touchUserSession(
             ':versionInc': 1,
           },
           Key: {
-            id: input.id,
+            pk: `USER_SESSION#${input.sessionId}`,
           },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
@@ -324,7 +339,7 @@ export async function touchUserSession(
 
 export type UpdateUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'expires' | 'updatedAt'
+  'createdAt' | 'expires' | 'id' | 'updatedAt'
 >;
 export type UpdateUserSessionOutput = ResultType<UserSession>;
 
@@ -347,14 +362,14 @@ export async function updateUserSession(
     } = await ddbDocClient.send(
       new UpdateCommand({
         ConditionExpression:
-          '#version = :previousVersion AND #entity = :entity AND attribute_exists(#id)',
+          '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
         ExpressionAttributeNames,
         ExpressionAttributeValues: {
           ...ExpressionAttributeValues,
           ':previousVersion': input.version,
         },
         Key: {
-          id: input.id,
+          pk: `USER_SESSION#${input.sessionId}`,
         },
         ReturnConsumedCapacity: 'INDEXES',
         ReturnItemCollectionMetrics: 'SIZE',
@@ -375,7 +390,7 @@ export async function updateUserSession(
       () =>
         new DataIntegrityError(
           `Expected ${JSON.stringify({
-            id: input.id,
+            sessionId: input.sessionId,
           })} to update a UserSession but updated ${item._et} instead`
         )
     );
@@ -391,11 +406,11 @@ export async function updateUserSession(
         const readResult = await readUserSession(input);
       } catch {
         throw new NotFoundError('UserSession', {
-          id: input.id,
+          sessionId: input.sessionId,
         });
       }
       throw new OptimisticLockingError('UserSession', {
-        id: input.id,
+        sessionId: input.sessionId,
       });
     }
     throw err;
@@ -419,6 +434,7 @@ export function marshallUserSession(
     '#createdAt = :createdAt',
     '#expires = :expires',
     '#session = :session',
+    '#sessionId = :sessionId',
     '#updatedAt = :updatedAt',
     '#version = :version',
   ];
@@ -428,9 +444,10 @@ export function marshallUserSession(
     '#createdAt': '_ct',
     '#expires': 'ttl',
     '#session': 'session',
+    '#sessionId': 'session_id',
     '#updatedAt': '_md',
     '#version': '_v',
-    '#id': 'id',
+    '#pk': 'pk',
   };
 
   const eav: Record<string, unknown> = {
@@ -438,6 +455,7 @@ export function marshallUserSession(
     ':createdAt': now.getTime(),
     ':expires': now.getTime() + 86400000,
     ':session': input.session,
+    ':sessionId': input.sessionId,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version : 0) + 1,
   };
@@ -499,6 +517,16 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
       () => new DataIntegrityError('Expected session to be defined')
     );
   }
+  if ('session_id' in item) {
+    assert(
+      item.session_id !== null,
+      () => new DataIntegrityError('Expected sessionId to be non-null')
+    );
+    assert(
+      typeof item.session_id !== 'undefined',
+      () => new DataIntegrityError('Expected sessionId to be defined')
+    );
+  }
   if ('_md' in item) {
     assert(
       item._md !== null,
@@ -523,8 +551,9 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
   let result: UserSession = {
     createdAt: new Date(item._ct),
     expires: new Date(item.ttl),
-    id: item.id,
+    id: Base64.encode(`UserSession:${item.pk}`),
     session: item.session,
+    sessionId: item.session_id,
     updatedAt: new Date(item._md),
     version: item._v,
   };

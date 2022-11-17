@@ -1,4 +1,5 @@
 import {faker} from '@faker-js/faker';
+import Base64 from 'base64url';
 
 import {NotFoundError, OptimisticLockingError} from '../../src/runtime';
 
@@ -6,6 +7,7 @@ import {
   createUserLogin,
   deleteUserLogin,
   queryUserLogin,
+  queryUserLoginByNodeId,
   readUserLogin,
   touchUserLogin,
   updateUserLogin,
@@ -21,8 +23,6 @@ const itemMatcher = {
   capacity: {TableName: expect.any(String)},
   item: userLoginMatcher,
 };
-
-faker.seed(1701);
 
 describe('createUserLogin()', () => {
   it('creates a record', async () => {
@@ -70,7 +70,10 @@ describe('createUserLogin()', () => {
     );
 
     expect(result.item.id).toMatchInlineSnapshot(
-      `"USER#GITHUB#8943#LOGIN#Joshuah_Buckridge53"`
+      `"VXNlckxvZ2luOlVTRVIjR0lUSFVCIzg5NDMjOiNMT0dJTiNKb3NodWFoX0J1Y2tyaWRnZTUz"`
+    );
+    expect(Base64.decode(result.item.id)).toMatchInlineSnapshot(
+      `"UserLogin:USER#GITHUB#8943#:#LOGIN#Joshuah_Buckridge53"`
     );
     expect(result.item.createdAt.getTime()).not.toBeNaN();
 
@@ -166,9 +169,9 @@ describe('readUserLogin()', () => {
         },
         "item": {
           "createdAt": Any<Date>,
-          "externalId": "94988",
+          "externalId": "8943",
           "id": Any<String>,
-          "login": "Craig59",
+          "login": "Joshuah_Buckridge53",
           "updatedAt": Any<Date>,
           "vendor": "GITHUB",
           "version": 1,
@@ -222,9 +225,9 @@ describe('touchUserLogin()', () => {
         },
         "item": {
           "createdAt": Any<Date>,
-          "externalId": "97362",
+          "externalId": "8943",
           "id": Any<String>,
-          "login": "Moses.Parker",
+          "login": "Joshuah_Buckridge53",
           "updatedAt": Any<Date>,
           "vendor": "GITHUB",
           "version": 1,
@@ -255,9 +258,9 @@ describe('touchUserLogin()', () => {
         },
         "item": {
           "createdAt": Any<Date>,
-          "externalId": "97362",
+          "externalId": "8943",
           "id": Any<String>,
-          "login": "Moses.Parker",
+          "login": "Joshuah_Buckridge53",
           "updatedAt": Any<Date>,
           "vendor": "GITHUB",
           "version": 2,
@@ -318,9 +321,9 @@ describe('updateUserLogin()', () => {
         },
         "item": {
           "createdAt": Any<Date>,
-          "externalId": "82326",
+          "externalId": "8943",
           "id": Any<String>,
-          "login": "Cecile55",
+          "login": "Joshuah_Buckridge53",
           "updatedAt": Any<Date>,
           "vendor": "GITHUB",
           "version": 1,
@@ -358,9 +361,9 @@ describe('updateUserLogin()', () => {
         },
         "item": {
           "createdAt": Any<Date>,
-          "externalId": "82326",
+          "externalId": "8943",
           "id": Any<String>,
-          "login": "Cecile55",
+          "login": "Joshuah_Buckridge53",
           "updatedAt": Any<Date>,
           "vendor": "GITHUB",
           "version": 2,
@@ -390,9 +393,9 @@ describe('updateUserLogin()', () => {
         },
         "item": {
           "createdAt": Any<Date>,
-          "externalId": "82326",
+          "externalId": "8943",
           "id": Any<String>,
-          "login": "Cecile55",
+          "login": "Joshuah_Buckridge53",
           "updatedAt": Any<Date>,
           "vendor": "GITHUB",
           "version": 2,
@@ -414,7 +417,6 @@ describe('updateUserLogin()', () => {
       async () =>
         await updateUserLogin({
           externalId: 'does-not-exist',
-          id: 'does-not-exist',
           login: 'does-not-exist',
           vendor: 'GITHUB',
           version: 0,
@@ -559,27 +561,27 @@ describe('queryUserLogin()', () => {
         "items": [
           {
             "createdAt": Any<Date>,
-            "externalId": "60701",
+            "externalId": "48061",
             "id": Any<String>,
-            "login": "Cullen52",
+            "login": "Laurianne_Wiza40",
             "updatedAt": Any<Date>,
             "vendor": "GITHUB",
             "version": 1,
           },
           {
             "createdAt": Any<Date>,
-            "externalId": "60701",
+            "externalId": "48061",
             "id": Any<String>,
-            "login": "Elvis_Wilkinson",
+            "login": "Norval_Thompson",
             "updatedAt": Any<Date>,
             "vendor": "GITHUB",
             "version": 1,
           },
           {
             "createdAt": Any<Date>,
-            "externalId": "60701",
+            "externalId": "48061",
             "id": Any<String>,
-            "login": "Karli_Olson83",
+            "login": "Valentin8",
             "updatedAt": Any<Date>,
             "vendor": "GITHUB",
             "version": 1,
@@ -625,9 +627,9 @@ describe('queryUserLogin()', () => {
         "items": [
           {
             "createdAt": Any<Date>,
-            "externalId": "75754",
+            "externalId": "8943",
             "id": Any<String>,
-            "login": "Leopold44",
+            "login": "Joshuah_Buckridge53",
             "updatedAt": Any<Date>,
             "vendor": "GITHUB",
             "version": 1,
@@ -679,9 +681,9 @@ describe('queryUserLogin()', () => {
         "items": [
           {
             "createdAt": Any<Date>,
-            "externalId": "36807",
+            "externalId": "48061",
             "id": Any<String>,
-            "login": "Lamont61",
+            "login": "Norval_Thompson",
             "updatedAt": Any<Date>,
             "vendor": "GITHUB",
             "version": 1,
@@ -693,5 +695,134 @@ describe('queryUserLogin()', () => {
     expect(queryResult.items).toHaveLength(1);
 
     await cleanup({login2a, ...rest});
+  });
+});
+
+describe('queryUserLoginByNodeId()', () => {
+  async function prepare() {
+    const externalId1 = String(faker.datatype.number());
+    const login1a = faker.internet.userName();
+
+    await createUserLogin({
+      externalId: externalId1,
+      login: login1a,
+      vendor: 'GITHUB',
+    });
+
+    const externalId2 = String(faker.datatype.number());
+    const login2a = faker.internet.userName();
+    const login2b = faker.internet.userName();
+    const login2c = faker.internet.userName();
+
+    await createUserLogin({
+      externalId: externalId2,
+      login: login2a,
+      vendor: 'GITHUB',
+    });
+
+    await createUserLogin({
+      externalId: externalId2,
+      login: login2b,
+      vendor: 'GITHUB',
+    });
+
+    await createUserLogin({
+      externalId: externalId2,
+      login: login2c,
+      vendor: 'GITHUB',
+    });
+
+    return {
+      externalId1,
+      externalId2,
+      login1a,
+      login2a,
+      login2b,
+      login2c,
+    };
+  }
+
+  async function cleanup({
+    externalId1,
+    externalId2,
+    login1a,
+    login2a,
+    login2b,
+    login2c,
+  }: {
+    readonly externalId1: string;
+    readonly externalId2: string;
+    readonly login1a: string;
+    readonly login2a: string;
+    readonly login2b: string;
+    readonly login2c: string;
+  }) {
+    await deleteUserLogin({
+      externalId: externalId1,
+      login: login1a,
+      vendor: 'GITHUB',
+    });
+
+    await deleteUserLogin({
+      externalId: externalId2,
+      login: login2a,
+      vendor: 'GITHUB',
+    });
+
+    await deleteUserLogin({
+      externalId: externalId2,
+      login: login2b,
+      vendor: 'GITHUB',
+    });
+
+    await deleteUserLogin({
+      externalId: externalId2,
+      login: login2c,
+      vendor: 'GITHUB',
+    });
+  }
+
+  it('finds a record by a full primary key', async () => {
+    const {externalId1, login1a, ...rest} = await prepare();
+
+    const {item} = await readUserLogin({
+      externalId: externalId1,
+      login: login1a,
+      vendor: 'GITHUB',
+    });
+
+    const queryResult = await queryUserLoginByNodeId(item.id);
+
+    expect(queryResult).toMatchInlineSnapshot(
+      itemMatcher,
+      `
+      {
+        "capacity": {
+          "CapacityUnits": 0.5,
+          "GlobalSecondaryIndexes": undefined,
+          "LocalSecondaryIndexes": undefined,
+          "ReadCapacityUnits": undefined,
+          "Table": {
+            "CapacityUnits": 0.5,
+            "ReadCapacityUnits": undefined,
+            "WriteCapacityUnits": undefined,
+          },
+          "TableName": Any<String>,
+          "WriteCapacityUnits": undefined,
+        },
+        "item": {
+          "createdAt": Any<Date>,
+          "externalId": "8943",
+          "id": Any<String>,
+          "login": "Joshuah_Buckridge53",
+          "updatedAt": Any<Date>,
+          "vendor": "GITHUB",
+          "version": 1,
+        },
+      }
+    `
+    );
+
+    await cleanup({externalId1, login1a, ...rest});
   });
 });

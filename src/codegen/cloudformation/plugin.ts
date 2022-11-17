@@ -101,6 +101,13 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
       {} as Record<string, object>
     ),
     Parameters: {
+      LogRetentionInDays: {
+        Type: 'Number',
+        // eslint-disable-next-line sort-keys
+        Description: 'Log retention in days',
+        // eslint-disable-next-line sort-keys
+        Default: 3,
+      },
       StageName: {
         Type: 'String',
         // eslint-disable-next-line sort-keys

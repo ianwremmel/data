@@ -224,7 +224,7 @@ function makeLogGroup(functionName: string) {
       // eslint-disable-next-line sort-keys
       Properties: {
         LogGroupName: {'Fn::Sub': `/aws/lambda/\${${functionName}}`},
-        RetentionInDays: {Ref: 'LogRetentionDays'},
+        RetentionInDays: {Ref: 'LogRetentionInDays'},
       },
     },
   };

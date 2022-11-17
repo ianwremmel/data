@@ -27,6 +27,10 @@ Outputs:
     Value:
       Ref: TableUserSession
 Parameters:
+  LogRetentionInDays:
+    Type: Number
+    Description: Log retention in days
+    Default: 3
   StageName:
     Type: String
     AllowedValues:
@@ -40,11 +44,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
-        - AttributeName: id
+        - AttributeName: pk
           AttributeType: S
       BillingMode: PAY_PER_REQUEST
       KeySchema:
-        - AttributeName: id
+        - AttributeName: pk
           KeyType: HASH
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true

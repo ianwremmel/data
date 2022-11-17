@@ -10,6 +10,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
+import Base64 from 'base64url';
 import {v4 as uuidv4} from 'uuid';
 
 import {
@@ -62,9 +63,18 @@ export type Account = Model &
 /** CDC Event Types */
 export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
-/** Models are DynamoDB with a key schema that does not include a sort key. */
+/**
+ * Models are DynamoDB tables with a key schema that may or may not include a sort
+ * key. A Model must be decorated with either @partitionKey or @compositeKey.
+ *
+ * Note that, while Model does not explicitly implement Node, its `id` field
+ * behaves like `Node#id` typically does. This is to avoid defining Node in the
+ * injected schema if the consumer's schema also defined Node or defines it
+ * differently.
+ */
 export interface Model {
   createdAt: Scalars['Date'];
+  id: Scalars['ID'];
   updatedAt: Scalars['Date'];
   version: Scalars['Int'];
 }
@@ -346,7 +356,10 @@ export async function touchAccount(
   }
 }
 
-export type UpdateAccountInput = Omit<Account, 'createdAt' | 'updatedAt'>;
+export type UpdateAccountInput = Omit<
+  Account,
+  'createdAt' | 'id' | 'updatedAt'
+>;
 export type UpdateAccountOutput = ResultType<Account>;
 
 /**  */
@@ -491,6 +504,32 @@ export async function queryAccount(
       return unmarshallAccount(item);
     }),
   };
+}
+
+/** queries the Account table by primary key using a node id */
+export async function queryAccountByNodeId(
+  id: Scalars['ID']
+): Promise<Readonly<Omit<ResultType<Account>, 'metrics'>>> {
+  const primaryKeyValues = Base64.decode(id)
+    .split(':')
+    .slice(1)
+    .join(':')
+    .split('#');
+
+  const primaryKey: QueryAccountInput = {
+    vendor: primaryKeyValues[1] as Vendor,
+    externalId: primaryKeyValues[2],
+  };
+
+  const {capacity, items} = await queryAccount(primaryKey);
+
+  assert(items.length > 0, () => new NotFoundError('Account', primaryKey));
+  assert(
+    items.length < 2,
+    () => new DataIntegrityError(`Found multiple Account with id ${id}`)
+  );
+
+  return {capacity, item: items[0]};
 }
 
 export interface MarshallAccountOutput {
@@ -640,7 +679,7 @@ export function unmarshallAccount(item: Record<string, any>): Account {
     createdAt: new Date(item._ct),
     effectiveDate: new Date(item.effective_date),
     externalId: item.external_id,
-    id: `${item.pk}#${item.sk}`,
+    id: Base64.encode(`Account:${item.pk}#:#${item.sk}`),
     updatedAt: new Date(item._md),
     vendor: item.vendor,
     version: item._v,
@@ -878,7 +917,7 @@ export async function touchSubscription(
 
 export type UpdateSubscriptionInput = Omit<
   Subscription,
-  'createdAt' | 'updatedAt'
+  'createdAt' | 'id' | 'updatedAt'
 >;
 export type UpdateSubscriptionOutput = ResultType<Subscription>;
 
@@ -1039,6 +1078,38 @@ export async function querySubscription(
   };
 }
 
+/** queries the Subscription table by primary key using a node id */
+export async function querySubscriptionByNodeId(
+  id: Scalars['ID']
+): Promise<Readonly<Omit<ResultType<Subscription>, 'metrics'>>> {
+  const primaryKeyValues = Base64.decode(id)
+    .split(':')
+    .slice(1)
+    .join(':')
+    .split('#');
+
+  const primaryKey: QuerySubscriptionInput = {
+    vendor: primaryKeyValues[1] as Vendor,
+    externalId: primaryKeyValues[2],
+  };
+
+  if (typeof primaryKeyValues[2] !== 'undefined') {
+    // @ts-ignore - TSC will usually see this as an error because it determined
+    // that primaryKey is the no-sort-fields-specified version of the type.
+    primaryKey.effectiveDate = new Date(primaryKeyValues[5]);
+  }
+
+  const {capacity, items} = await querySubscription(primaryKey);
+
+  assert(items.length > 0, () => new NotFoundError('Subscription', primaryKey));
+  assert(
+    items.length < 2,
+    () => new DataIntegrityError(`Found multiple Subscription with id ${id}`)
+  );
+
+  return {capacity, item: items[0]};
+}
+
 export interface MarshallSubscriptionOutput {
   ExpressionAttributeNames: Record<string, string>;
   ExpressionAttributeValues: Record<string, NativeAttributeValue>;
@@ -1188,7 +1259,7 @@ export function unmarshallSubscription(
     createdAt: new Date(item._ct),
     effectiveDate: new Date(item.effective_date),
     externalId: item.external_id,
-    id: `${item.pk}#${item.sk}`,
+    id: Base64.encode(`Subscription:${item.pk}#:#${item.sk}`),
     updatedAt: new Date(item._md),
     vendor: item.vendor,
     version: item._v,

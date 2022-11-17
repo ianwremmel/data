@@ -10,8 +10,6 @@ import {
   readAccount,
 } from './__generated__/actions';
 
-faker.seed(1701);
-
 describe('Change Date Capture', () => {
   // some part of the eventbridge setup doesn't work in localstack. This means
   // there's no test for this in CI right now, but it works when tested locally
@@ -43,7 +41,7 @@ describe('Change Date Capture', () => {
       });
       expect(account.planName).toBe('ENTERPRISE');
       expect(account.onFreeTrial).toBe(true);
-      expect(account.cancelled).toBe(false);
+      expect(account.cancelled).not.toBe(true);
 
       const {item: subscription2} = await createSubscription({
         effectiveDate: faker.date.future(0, account.effectiveDate),
@@ -61,7 +59,7 @@ describe('Change Date Capture', () => {
       });
       expect(account.planName).toBe('ENTERPRISE');
       expect(account.onFreeTrial).toBe(false);
-      expect(account.cancelled).toBe(false);
+      expect(account.cancelled).not.toBe(true);
 
       const {item: subscription3} = await createSubscription({
         effectiveDate: faker.date.future(0, account.effectiveDate),
@@ -79,7 +77,7 @@ describe('Change Date Capture', () => {
       });
       expect(account.planName).toBe('SMALL_TEAM');
       expect(account.onFreeTrial).toBe(false);
-      expect(account.cancelled).toBe(false);
+      expect(account.cancelled).not.toBe(true);
 
       const {item: subscription4} = await createSubscription({
         cancelled: true,
