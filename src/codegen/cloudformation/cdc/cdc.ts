@@ -9,10 +9,12 @@ import {
   getDirective,
   hasDirective,
 } from '../../common/helpers';
+import {makeCdcDispatcher} from '../common/cdc-dispatcher';
+import {makeLogGroup} from '../common/log-group';
 import type {CloudformationPluginConfig} from '../config';
 import type {CloudFormationFragment} from '../types';
 
-import {makeHandler, makeTableDispatcher} from './lambdas';
+import {makeHandler} from './lambdas';
 
 /** Generates CDC config for a type */
 export function defineCdc(
@@ -44,9 +46,6 @@ export function defineCdc(
   );
   const destinationTable = produces;
 
-  const dispatcherFilename = `dispatcher-${kebabCase(tableName)}`;
-  const dispatcherFunctionName = `${tableName}CDCDispatcher`;
-
   const dependenciesModuleId = path.join(
     // Need to add a level because we're going deeper than the output file.
     '..',
@@ -58,14 +57,6 @@ export function defineCdc(
 
   const handlerPath = getArgStringValue('handler', directive);
   const handlerFunctionName = `${modelName}CDCHandler`;
-
-  makeTableDispatcher({
-    dependenciesModuleId,
-    libImportPath,
-    modelName,
-    outDir: path.join(path.dirname(info.outputFile), dispatcherFilename),
-    tableName,
-  });
 
   const handlerFilename = `handler-${kebabCase(modelName)}`;
   makeHandler({
@@ -81,53 +72,12 @@ export function defineCdc(
     type,
   });
 
+  const {resources, ...rest} = makeCdcDispatcher(config, type, info);
+
   return {
+    ...rest,
     resources: {
-      [dispatcherFunctionName]: {
-        Type: 'AWS::Serverless::Function',
-        // eslint-disable-next-line sort-keys
-        Properties: {
-          CodeUri: dispatcherFilename,
-          Events: {
-            Stream: {
-              Type: 'DynamoDB',
-              // eslint-disable-next-line sort-keys
-              Properties: {
-                BatchSize: 10,
-                FunctionResponseTypes: ['ReportBatchItemFailures'],
-                MaximumRetryAttempts: 3,
-                StartingPosition: 'TRIM_HORIZON',
-                Stream: {'Fn::GetAtt': [tableName, 'StreamArn']},
-              },
-            },
-          },
-          MemorySize: 384,
-          Policies: [
-            'AWSLambdaBasicExecutionRole',
-            'AWSLambda_ReadOnlyAccess',
-            'AWSXrayWriteOnlyAccess',
-            'CloudWatchLambdaInsightsExecutionRolePolicy',
-            {CloudWatchPutMetricPolicy: {}},
-            {
-              EventBridgePutEventsPolicy: {
-                EventBusName: 'default',
-              },
-            },
-          ],
-          Timeout: 60,
-        },
-        // eslint-disable-next-line sort-keys
-        Metadata: {
-          BuildMethod: 'esbuild',
-          BuildProperties: {
-            EntryPoints: ['./index'],
-            Minify: false,
-            Sourcemap: true,
-            Target: 'es2020',
-          },
-        },
-      },
-      ...makeLogGroup(dispatcherFunctionName),
+      ...resources,
       [`${handlerFunctionName}DLQ`]: {
         Type: 'AWS::SQS::Queue',
         // eslint-disable-next-line sort-keys
@@ -212,20 +162,6 @@ export function defineCdc(
         },
       },
       ...makeLogGroup(handlerFunctionName),
-    },
-  };
-}
-
-/** cloudformation generator */
-function makeLogGroup(functionName: string) {
-  return {
-    [`${functionName}LogGroup`]: {
-      Type: 'AWS::Logs::LogGroup',
-      // eslint-disable-next-line sort-keys
-      Properties: {
-        LogGroupName: {'Fn::Sub': `/aws/lambda/\${${functionName}}`},
-        RetentionInDays: {Ref: 'LogRetentionInDays'},
-      },
     },
   };
 }
