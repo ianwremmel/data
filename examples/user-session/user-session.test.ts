@@ -1,4 +1,5 @@
 import {faker} from '@faker-js/faker';
+import Base64 from 'base64url';
 
 import {NotFoundError, OptimisticLockingError} from '../../src/runtime';
 
@@ -48,7 +49,7 @@ describe('createUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "foo",
           },
@@ -59,6 +60,10 @@ describe('createUserSession()', () => {
         "metrics": undefined,
       }
     `
+    );
+
+    expect(Base64.decode(result.item.id)).toMatchInlineSnapshot(
+      `"UserSession:USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20"`
     );
 
     expect(result.item.createdAt.getTime()).not.toBeNaN();
@@ -141,7 +146,7 @@ describe('readUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "foo",
           },
@@ -193,7 +198,7 @@ describe('touchUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "foo",
           },
@@ -228,7 +233,7 @@ describe('touchUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "foo",
           },
@@ -283,7 +288,7 @@ describe('updateUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "foo",
           },
@@ -321,7 +326,7 @@ describe('updateUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "bar",
           },
@@ -356,7 +361,7 @@ describe('updateUserSession()', () => {
         "item": {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
-          "id": "USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20}",
+          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "session": {
             "foo": "bar",
           },

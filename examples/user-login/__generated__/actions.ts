@@ -10,6 +10,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
+import Base64 from 'base64url';
 import {v4 as uuidv4} from 'uuid';
 
 import {
@@ -638,7 +639,7 @@ export function unmarshallUserLogin(item: Record<string, any>): UserLogin {
   const result: UserLogin = {
     createdAt: new Date(item._ct),
     externalId: item.external_id,
-    id: `${item.pk}#${item.sk}`,
+    id: Base64.encode(`UserLogin:${item.pk}#:#${item.sk}`),
     login: item.login,
     updatedAt: new Date(item._md),
     vendor: item.vendor,

@@ -10,6 +10,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
+import Base64 from 'base64url';
 import {v4 as uuidv4} from 'uuid';
 
 import {
@@ -652,7 +653,7 @@ export function unmarshallAccount(item: Record<string, any>): Account {
     createdAt: new Date(item._ct),
     effectiveDate: new Date(item.effective_date),
     externalId: item.external_id,
-    id: `${item.pk}#${item.sk}`,
+    id: Base64.encode(`Account:${item.pk}#:#${item.sk}`),
     updatedAt: new Date(item._md),
     vendor: item.vendor,
     version: item._v,
@@ -1200,7 +1201,7 @@ export function unmarshallSubscription(
     createdAt: new Date(item._ct),
     effectiveDate: new Date(item.effective_date),
     externalId: item.external_id,
-    id: `${item.pk}#${item.sk}`,
+    id: Base64.encode(`Subscription:${item.pk}#:#${item.sk}`),
     updatedAt: new Date(item._md),
     vendor: item.vendor,
     version: item._v,

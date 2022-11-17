@@ -19,6 +19,8 @@ import {
 } from './helpers';
 import type {IndexFieldInfo} from './indexes';
 
+export const DIVIDER = '#:#';
+
 /** Generates the template for producing the desired primary key or index column */
 export function makeKeyTemplate(
   prefix: string,
@@ -108,9 +110,9 @@ function extractCompositeKeyInfo(
 
       return `${fieldName}: ${field.type};`;
     }),
-    // The embedded template is intentional.
-    // eslint-disable-next-line no-template-curly-in-string
-    unmarshall: ['id: `${item.pk}#${item.sk}`'].filter(Boolean),
+    unmarshall: [
+      `id: Base64.encode(\`${type.name}:\${item.pk}${DIVIDER}\${item.sk}\`)`,
+    ].filter(Boolean),
   };
 }
 
@@ -165,7 +167,7 @@ function extractPartitionKeyInfo(
       return `${fieldName}: ${field.type};`;
     }),
 
-    unmarshall: [`id: \`\${item.pk}}\``],
+    unmarshall: [`id: Base64.encode(\`${type.name}:\${item.pk}\`)`],
   };
 }
 /**

@@ -10,6 +10,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
+import Base64 from 'base64url';
 import {v4 as uuidv4} from 'uuid';
 
 import {
@@ -550,7 +551,7 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
   let result: UserSession = {
     createdAt: new Date(item._ct),
     expires: new Date(item.ttl),
-    id: `${item.pk}}`,
+    id: Base64.encode(`UserSession:${item.pk}`),
     session: item.session,
     sessionId: item.session_id,
     updatedAt: new Date(item._md),

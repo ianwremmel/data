@@ -1,4 +1,5 @@
 import {faker} from '@faker-js/faker';
+import Base64 from 'base64url';
 
 import {NotFoundError, OptimisticLockingError} from '../../src/runtime';
 
@@ -68,7 +69,10 @@ describe('createUserLogin()', () => {
     );
 
     expect(result.item.id).toMatchInlineSnapshot(
-      `"USER#GITHUB#8943#LOGIN#Joshuah_Buckridge53"`
+      `"VXNlckxvZ2luOlVTRVIjR0lUSFVCIzg5NDMjOiNMT0dJTiNKb3NodWFoX0J1Y2tyaWRnZTUz"`
+    );
+    expect(Base64.decode(result.item.id)).toMatchInlineSnapshot(
+      `"UserLogin:USER#GITHUB#8943#:#LOGIN#Joshuah_Buckridge53"`
     );
     expect(result.item.createdAt.getTime()).not.toBeNaN();
 
@@ -412,7 +416,6 @@ describe('updateUserLogin()', () => {
       async () =>
         await updateUserLogin({
           externalId: 'does-not-exist',
-          id: 'does-not-exist',
           login: 'does-not-exist',
           vendor: 'GITHUB',
           version: 0,
