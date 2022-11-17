@@ -72,12 +72,25 @@ export function defineCdc(
     type,
   });
 
-  const {resources, ...rest} = makeCdcDispatcher(config, type, info);
+  const dispatcherConfig = makeCdcDispatcher(config, type, info);
+  const logGroupConfig = makeLogGroup(modelName);
 
   return {
-    ...rest,
+    env: {
+      ...dispatcherConfig.env,
+      ...logGroupConfig.env,
+    },
+    output: {
+      ...dispatcherConfig.output,
+      ...logGroupConfig.output,
+    },
+    parameters: {
+      ...dispatcherConfig.parameters,
+      ...logGroupConfig.parameters,
+    },
     resources: {
-      ...resources,
+      ...dispatcherConfig.resources,
+      ...logGroupConfig.resources,
       [`${handlerFunctionName}DLQ`]: {
         Type: 'AWS::SQS::Queue',
         // eslint-disable-next-line sort-keys
@@ -161,7 +174,6 @@ export function defineCdc(
           },
         },
       },
-      ...makeLogGroup(handlerFunctionName),
     },
   };
 }

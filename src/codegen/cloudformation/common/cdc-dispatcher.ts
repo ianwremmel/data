@@ -76,8 +76,12 @@ export function makeCdcDispatcher(
     tableName,
   });
 
+  const logGroupConfig = makeLogGroup(modelName);
+
   return {
+    ...logGroupConfig,
     resources: {
+      ...logGroupConfig.resources,
       [dispatcherFunctionName]: {
         Type: 'AWS::Serverless::Function',
         // eslint-disable-next-line sort-keys
