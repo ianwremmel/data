@@ -1,6 +1,14 @@
-import type {GraphQLField, GraphQLObjectType} from 'graphql';
+import assert from 'assert';
 
-import {getTypeScriptTypeForField, hasDirective} from '../../../common/helpers';
+import type {GraphQLField, GraphQLObjectType} from 'graphql';
+import {isScalarType} from 'graphql';
+import {isEnumType} from 'graphql/type/definition';
+
+import {
+  getTypeScriptTypeForField,
+  hasDirective,
+  isType,
+} from '../../../common/helpers';
 import type {IndexFieldInfo} from '../../../common/indexes';
 import {makeKeyTemplate} from '../../../common/keys';
 
@@ -68,8 +76,34 @@ function renderFieldAsType(field: GraphQLField<unknown, unknown>): string {
   return `  ${field.name}: ${getTypeScriptTypeForField(field)};`;
 }
 
+/** helper */
+function fieldStringToFieldType(
+  field: GraphQLField<unknown, unknown>,
+  fragment: string
+): string {
+  if (isType('Date', field)) {
+    return `new Date(${fragment})`;
+  }
+
+  if (isType('Int', field) || isType('Float', field)) {
+    return `Number(${fragment})`;
+  }
+
+  if (isType('Boolean', field)) {
+    return `Boolean(${fragment})`;
+  }
+
+  if (isType('String', field)) {
+    return fragment;
+  }
+
+  return `${fragment} as ${field.type.toString().replace(/!$/, '')}`;
+}
+
 /** template */
 export function queryTpl({consistent, indexes, objType}: QueryTplInput) {
+  const primaryIndex = indexes.find((i) => !('name' in i));
+  assert(primaryIndex, 'Expected primary index to exist');
   const typeName = objType.name;
 
   const hasIndexes = hasDirective('compositeIndex', objType);
@@ -146,6 +180,48 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>): 
       return unmarshall${objType.name}(item);
     })
   };
+}
+
+/** queries the ${typeName} table by primary key using a node id */
+export async function query${typeName}ByNodeId(id: Scalars['ID']): Promise<Readonly<Omit<ResultType<${typeName}>, 'metrics'>>> {
+  const primaryKeyValues = Base64.decode(id).split(':').slice(1).join(':').split('#');
+
+  const primaryKey: Query${typeName}Input = {
+    ${primaryIndex.pkFields
+      .map(
+        (field, index) =>
+          `${field.name}: ${fieldStringToFieldType(
+            field,
+            `primaryKeyValues[${index + 1}]`
+          )},`
+      )
+      .join('\n')}
+  }
+
+  ${
+    'skFields' in primaryIndex &&
+    primaryIndex.skFields
+      .map(
+        (field, index) => `
+  if (typeof primaryKeyValues[${index + 2}] !== 'undefined') {
+    // @ts-ignore - TSC will usually see this as an error because it determined
+    // that primaryKey is the no-sort-fields-specified version of the type.
+    primaryKey.${field.name} = ${fieldStringToFieldType(
+          field,
+          `primaryKeyValues[${primaryIndex.pkFields.length + index + 3}]`
+        )};
+  }
+  `
+      )
+      .join('\n')
+  }
+
+  const {capacity, items} = await query${typeName}(primaryKey);
+
+  assert(items.length > 0, () => new NotFoundError('${typeName}', primaryKey));
+  assert(items.length < 2, () => new DataIntegrityError(\`Found multiple ${typeName} with id \${id}\`));
+
+  return {capacity, item: items[0]};
 }
   `;
 }

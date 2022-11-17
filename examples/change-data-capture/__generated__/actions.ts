@@ -506,6 +506,32 @@ export async function queryAccount(
   };
 }
 
+/** queries the Account table by primary key using a node id */
+export async function queryAccountByNodeId(
+  id: Scalars['ID']
+): Promise<Readonly<Omit<ResultType<Account>, 'metrics'>>> {
+  const primaryKeyValues = Base64.decode(id)
+    .split(':')
+    .slice(1)
+    .join(':')
+    .split('#');
+
+  const primaryKey: QueryAccountInput = {
+    vendor: primaryKeyValues[1] as Vendor,
+    externalId: primaryKeyValues[2],
+  };
+
+  const {capacity, items} = await queryAccount(primaryKey);
+
+  assert(items.length > 0, () => new NotFoundError('Account', primaryKey));
+  assert(
+    items.length < 2,
+    () => new DataIntegrityError(`Found multiple Account with id ${id}`)
+  );
+
+  return {capacity, item: items[0]};
+}
+
 export interface MarshallAccountOutput {
   ExpressionAttributeNames: Record<string, string>;
   ExpressionAttributeValues: Record<string, NativeAttributeValue>;
@@ -1050,6 +1076,38 @@ export async function querySubscription(
       return unmarshallSubscription(item);
     }),
   };
+}
+
+/** queries the Subscription table by primary key using a node id */
+export async function querySubscriptionByNodeId(
+  id: Scalars['ID']
+): Promise<Readonly<Omit<ResultType<Subscription>, 'metrics'>>> {
+  const primaryKeyValues = Base64.decode(id)
+    .split(':')
+    .slice(1)
+    .join(':')
+    .split('#');
+
+  const primaryKey: QuerySubscriptionInput = {
+    vendor: primaryKeyValues[1] as Vendor,
+    externalId: primaryKeyValues[2],
+  };
+
+  if (typeof primaryKeyValues[2] !== 'undefined') {
+    // @ts-ignore - TSC will usually see this as an error because it determined
+    // that primaryKey is the no-sort-fields-specified version of the type.
+    primaryKey.effectiveDate = new Date(primaryKeyValues[5]);
+  }
+
+  const {capacity, items} = await querySubscription(primaryKey);
+
+  assert(items.length > 0, () => new NotFoundError('Subscription', primaryKey));
+  assert(
+    items.length < 2,
+    () => new DataIntegrityError(`Found multiple Subscription with id ${id}`)
+  );
+
+  return {capacity, item: items[0]};
 }
 
 export interface MarshallSubscriptionOutput {

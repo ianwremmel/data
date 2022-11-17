@@ -505,6 +505,38 @@ export async function queryUserLogin(
   };
 }
 
+/** queries the UserLogin table by primary key using a node id */
+export async function queryUserLoginByNodeId(
+  id: Scalars['ID']
+): Promise<Readonly<Omit<ResultType<UserLogin>, 'metrics'>>> {
+  const primaryKeyValues = Base64.decode(id)
+    .split(':')
+    .slice(1)
+    .join(':')
+    .split('#');
+
+  const primaryKey: QueryUserLoginInput = {
+    vendor: primaryKeyValues[1] as Vendor,
+    externalId: primaryKeyValues[2],
+  };
+
+  if (typeof primaryKeyValues[2] !== 'undefined') {
+    // @ts-ignore - TSC will usually see this as an error because it determined
+    // that primaryKey is the no-sort-fields-specified version of the type.
+    primaryKey.login = primaryKeyValues[5];
+  }
+
+  const {capacity, items} = await queryUserLogin(primaryKey);
+
+  assert(items.length > 0, () => new NotFoundError('UserLogin', primaryKey));
+  assert(
+    items.length < 2,
+    () => new DataIntegrityError(`Found multiple UserLogin with id ${id}`)
+  );
+
+  return {capacity, item: items[0]};
+}
+
 export interface MarshallUserLoginOutput {
   ExpressionAttributeNames: Record<string, string>;
   ExpressionAttributeValues: Record<string, NativeAttributeValue>;
