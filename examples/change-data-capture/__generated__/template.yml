@@ -15,7 +15,7 @@ Globals:
           Ref: TableSubscription
     Handler: index.handler
     MemorySize: 256
-    Runtime: nodejs16.x
+    Runtime: nodejs18.x
     Timeout: 30
     Tracing: Active
 Outputs:
@@ -81,11 +81,11 @@ Resources:
             Ref: StageName
         - Key: TableName
           Value: TableAccount
-  SubscriptionLogGroup:
+  TableSubscriptionCDCDispatcherLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName:
-        Fn::Sub: /aws/lambda/${Subscription}
+        Fn::Sub: /aws/lambda/${TableSubscriptionCDCDispatcher}
       RetentionInDays:
         Ref: LogRetentionInDays
   TableSubscriptionCDCDispatcher:
@@ -123,19 +123,13 @@ Resources:
         Minify: false
         Sourcemap: true
         Target: es2020
-  parameters:
-    LogRetentionInDays:
-      Type: Number
-      Description: Log retention in days
-      Default: 3
-  resources:
-    TableSubscriptionCDCDispatcherLogGroup:
-      Type: AWS::Logs::LogGroup
-      Properties:
-        LogGroupName:
-          Fn::Sub: /aws/lambda/${TableSubscriptionCDCDispatcher}
-        RetentionInDays:
-          Ref: LogRetentionInDays
+  SubscriptionCDCHandlerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${SubscriptionCDCHandler}
+      RetentionInDays:
+        Ref: LogRetentionInDays
   SubscriptionCDCHandlerDLQ:
     Type: AWS::SQS::Queue
     Properties:

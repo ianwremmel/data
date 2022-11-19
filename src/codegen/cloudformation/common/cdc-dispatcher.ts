@@ -76,7 +76,7 @@ export function makeCdcDispatcher(
     tableName,
   });
 
-  const logGroupConfig = makeLogGroup(modelName);
+  const logGroupConfig = makeLogGroup(dispatcherFunctionName);
 
   return {
     ...logGroupConfig,
@@ -126,7 +126,6 @@ export function makeCdcDispatcher(
           },
         },
       },
-      ...makeLogGroup(dispatcherFunctionName),
     },
   };
 }

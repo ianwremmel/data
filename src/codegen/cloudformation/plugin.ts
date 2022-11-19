@@ -92,7 +92,7 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
         },
         Handler: 'index.handler',
         MemorySize: 256,
-        Runtime: 'nodejs16.x',
+        Runtime: 'nodejs18.x',
         Timeout: 30,
         Tracing: 'Active',
       },
