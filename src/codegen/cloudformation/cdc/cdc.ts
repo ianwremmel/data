@@ -73,7 +73,7 @@ export function defineCdc(
   });
 
   const dispatcherConfig = makeCdcDispatcher(config, type, info);
-  const logGroupConfig = makeLogGroup(modelName);
+  const logGroupConfig = makeLogGroup(handlerFunctionName);
 
   return {
     env: {
