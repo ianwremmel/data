@@ -45,14 +45,11 @@ export const handler = makeDynamoDBStreamDispatcher({
   return combineFragments(logGroup, {
     resources: {
       [functionName]: {
-        Type: 'AWS::Serverless::Function',
-        // eslint-disable-next-line sort-keys
+        Metadata: metadata,
         Properties: {
           CodeUri: filename,
           Events: {
             Stream: {
-              Type: 'DynamoDB',
-              // eslint-disable-next-line sort-keys
               Properties: {
                 BatchSize: batchSize,
                 FunctionResponseTypes: ['ReportBatchItemFailures'],
@@ -60,6 +57,7 @@ export const handler = makeDynamoDBStreamDispatcher({
                 StartingPosition: 'TRIM_HORIZON',
                 Stream: {'Fn::GetAtt': [tableName, 'StreamArn']},
               },
+              Type: 'DynamoDB',
             },
           },
           MemorySize: memorySize,
@@ -77,8 +75,7 @@ export const handler = makeDynamoDBStreamDispatcher({
           ],
           Timeout: timeout,
         },
-        // eslint-disable-next-line sort-keys
-        Metadata: metadata,
+        Type: 'AWS::Serverless::Function',
       },
     },
   });

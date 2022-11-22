@@ -59,8 +59,6 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
 
   const tpl = {
     AWSTemplateFormatVersion: '2010-09-09',
-    Transform: 'AWS::Serverless-2016-10-31',
-    // eslint-disable-next-line sort-keys
     Conditions: {
       IsProd: {'Fn::Equals': [{Ref: 'StageName'}, 'production']},
     },
@@ -80,15 +78,14 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
     Parameters: {
       ...allResources.parameters,
       StageName: {
-        Type: 'String',
-        // eslint-disable-next-line sort-keys
         AllowedValues: ['development', 'production', 'test'],
-        Description: 'The name of the stage',
-        // eslint-disable-next-line sort-keys
         Default: 'development',
+        Description: 'The name of the stage',
+        Type: 'String',
       },
     },
     Resources: allResources.resources,
+    Transform: 'AWS::Serverless-2016-10-31',
   };
 
   return yml.dump(tpl, {noRefs: true, sortKeys: true});

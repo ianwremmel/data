@@ -77,22 +77,19 @@ export function defineCdc(
   const handler = {
     resources: {
       [`${handlerFunctionName}DLQ`]: {
-        Type: 'AWS::SQS::Queue',
-        // eslint-disable-next-line sort-keys
         Properties: {
           KmsMasterKeyId: 'alias/aws/sqs',
         },
+        Type: 'AWS::SQS::Queue',
       },
       [`${handlerFunctionName}EventBridgeDLQ`]: {
-        Type: 'AWS::SQS::Queue',
-        // eslint-disable-next-line sort-keys
         Properties: {
           KmsMasterKeyId: 'alias/aws/sqs',
         },
+        Type: 'AWS::SQS::Queue',
       },
       [handlerFunctionName]: {
-        Type: 'AWS::Serverless::Function',
-        // eslint-disable-next-line sort-keys
+        Metadata: metadata,
         Properties: {
           CodeUri: handlerFilename,
           DeadLetterQueue: {
@@ -103,8 +100,6 @@ export function defineCdc(
           },
           Events: {
             [event]: {
-              Type: 'EventBridgeRule',
-              // eslint-disable-next-line sort-keys
               Properties: {
                 DeadLetterConfig: {
                   Arn: {'Fn::GetAtt': [`${handlerFunctionName}DLQ`, 'Arn']},
@@ -126,6 +121,7 @@ export function defineCdc(
                   source: [`${tableName}.${modelName}`],
                 },
               },
+              Type: 'EventBridgeRule',
             },
           },
           Policies: [
@@ -148,8 +144,7 @@ export function defineCdc(
             },
           ],
         },
-        // eslint-disable-next-line sort-keys
-        Metadata: metadata,
+        Type: 'AWS::Serverless::Function',
       },
     },
   };

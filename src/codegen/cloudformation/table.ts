@@ -118,9 +118,8 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
   }
 
   const resource = {
-    Type: 'AWS::DynamoDB::Table',
-    // eslint-disable-next-line sort-keys
     Properties: properties,
+    Type: 'AWS::DynamoDB::Table',
   };
 
   return {
