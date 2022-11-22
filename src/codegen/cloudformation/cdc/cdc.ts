@@ -9,9 +9,11 @@ import {
   getDirective,
   hasDirective,
 } from '../../common/helpers';
-import {makeCdcDispatcher} from '../common/cdc-dispatcher';
-import {makeLogGroup} from '../common/log-group';
 import type {CloudformationPluginConfig} from '../config';
+import {combineFragments} from '../fragments/combine-fragments';
+import {metadata} from '../fragments/lambda';
+import {makeLogGroup} from '../fragments/log-group';
+import {makeTableDispatcher} from '../fragments/table-dispatcher';
 import type {CloudFormationFragment} from '../types';
 
 import {makeHandler} from './lambdas';
@@ -72,25 +74,8 @@ export function defineCdc(
     type,
   });
 
-  const dispatcherConfig = makeCdcDispatcher(config, type, info);
-  const logGroupConfig = makeLogGroup(handlerFunctionName);
-
-  return {
-    env: {
-      ...dispatcherConfig.env,
-      ...logGroupConfig.env,
-    },
-    output: {
-      ...dispatcherConfig.output,
-      ...logGroupConfig.output,
-    },
-    parameters: {
-      ...dispatcherConfig.parameters,
-      ...logGroupConfig.parameters,
-    },
+  const handler = {
     resources: {
-      ...dispatcherConfig.resources,
-      ...logGroupConfig.resources,
       [`${handlerFunctionName}DLQ`]: {
         Type: 'AWS::SQS::Queue',
         // eslint-disable-next-line sort-keys
@@ -164,16 +149,19 @@ export function defineCdc(
           ],
         },
         // eslint-disable-next-line sort-keys
-        Metadata: {
-          BuildMethod: 'esbuild',
-          BuildProperties: {
-            EntryPoints: ['./index'],
-            Minify: false,
-            Sourcemap: true,
-            Target: 'es2020',
-          },
-        },
+        Metadata: metadata,
       },
     },
   };
+
+  return combineFragments(
+    makeTableDispatcher({
+      dependenciesModuleId,
+      libImportPath,
+      outDir: info.outputFile,
+      tableName,
+    }),
+    makeLogGroup({functionName: handlerFunctionName}),
+    handler
+  );
 }

@@ -5,6 +5,5 @@ import * as dependencies from '../../../dependencies';
 
 export const handler = makeDynamoDBStreamDispatcher({
   ...dependencies,
-  modelName: 'Subscription',
   tableName: 'TableSubscription',
 });

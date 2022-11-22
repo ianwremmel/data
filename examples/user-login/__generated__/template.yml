@@ -1,5 +1,4 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
 Conditions:
   IsProd:
     Fn::Equals:
@@ -28,16 +27,15 @@ Outputs:
       Ref: TableUserLogin
 Parameters:
   StageName:
-    Type: String
     AllowedValues:
       - development
       - production
       - test
-    Description: The name of the stage
     Default: development
+    Description: The name of the stage
+    Type: String
 Resources:
   TableUserLogin:
-    Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
         - AttributeName: pk
@@ -79,3 +77,5 @@ Resources:
             Ref: StageName
         - Key: TableName
           Value: TableUserLogin
+    Type: AWS::DynamoDB::Table
+Transform: AWS::Serverless-2016-10-31

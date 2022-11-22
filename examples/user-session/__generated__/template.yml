@@ -1,5 +1,4 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
 Conditions:
   IsProd:
     Fn::Equals:
@@ -28,16 +27,15 @@ Outputs:
       Ref: TableUserSession
 Parameters:
   StageName:
-    Type: String
     AllowedValues:
       - development
       - production
       - test
-    Description: The name of the stage
     Default: development
+    Description: The name of the stage
+    Type: String
 Resources:
   TableUserSession:
-    Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions:
         - AttributeName: pk
@@ -65,3 +63,5 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: ttl
         Enabled: true
+    Type: AWS::DynamoDB::Table
+Transform: AWS::Serverless-2016-10-31

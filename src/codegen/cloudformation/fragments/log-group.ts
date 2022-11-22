@@ -1,8 +1,14 @@
 /** cloudformation generator */
 import type {CloudFormationFragment} from '../types';
 
+export interface LogGroupInput {
+  functionName: string;
+}
+
 /** cloudformation generator */
-export function makeLogGroup(functionName: string): CloudFormationFragment {
+export function makeLogGroup({
+  functionName,
+}: LogGroupInput): CloudFormationFragment {
   return {
     parameters: {
       LogRetentionInDays: {

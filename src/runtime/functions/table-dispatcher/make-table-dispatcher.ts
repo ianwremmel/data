@@ -3,7 +3,6 @@ import type {Context, DynamoDBRecord, DynamoDBStreamHandler} from 'aws-lambda';
 
 import type {
   WithEventBridge,
-  WithModelName,
   WithTableName,
   WithTelemetry,
 } from '../../dependencies';
@@ -14,9 +13,8 @@ async function handleRecord(
   {
     captureException,
     eventBridge,
-    modelName,
     tableName,
-  }: WithEventBridge & WithModelName & WithTableName & WithTelemetry,
+  }: WithEventBridge & WithTableName & WithTelemetry,
   record: DynamoDBRecord,
   context: Context,
   batchItemFailures: string[]
@@ -31,7 +29,7 @@ async function handleRecord(
             Resources: record.eventSourceARN
               ? [record.eventSourceARN.split('/stream')[0]]
               : [],
-            Source: `${tableName}.${modelName}`,
+            Source: `${tableName}`,
             Time: record.dynamodb?.ApproximateCreationDateTime
               ? new Date(record.dynamodb.ApproximateCreationDateTime)
               : undefined,
@@ -56,7 +54,7 @@ async function handleRecord(
 
 /** Factory for creating a table dispatcher. */
 export function makeDynamoDBStreamDispatcher(
-  dependencies: WithEventBridge & WithModelName & WithTableName & WithTelemetry
+  dependencies: WithEventBridge & WithTableName & WithTelemetry
 ): DynamoDBStreamHandler {
   const {captureAsyncFunction} = dependencies;
   return async (event, context) =>
