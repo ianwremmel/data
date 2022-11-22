@@ -47,15 +47,9 @@ export default async function loadAwsEnv() {
     `"${process.env.TEST_MODE}" should have returned an array of stacks`
   );
 
-  let exampleStacks = glob
+  const exampleStacks = glob
     .sync('*/', {cwd: './examples'})
     .map((dir) => upperFirst(camelCase(dir)));
-
-  if (process.env.TEST_MODE === 'localstack') {
-    exampleStacks = exampleStacks.filter(
-      (stack) => stack !== 'ChangeDataCapture'
-    );
-  }
 
   for (const stackName of exampleStacks) {
     const stack: Stack | undefined = stackData.Stacks.find(
