@@ -14,6 +14,7 @@ import {hasInterface} from '../common/helpers';
 
 import {defineCdc} from './cdc';
 import type {CloudformationPluginConfig} from './config';
+import {combineFragments} from './fragments/combine-fragments';
 import {defineTable} from './table';
 
 /** @override */
@@ -34,42 +35,23 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
   const {outputFile} = info;
   assert(outputFile, 'outputFile is required');
 
-  const allResources = Object.keys(typesMap)
-    .filter((typeName) => {
-      const type = typesMap[typeName];
-      return isObjectType(type) && hasInterface('Model', type);
-    })
-    .map((typeName) => {
-      const objType = typesMap[typeName];
-      assertObjectType(objType);
-      const cdcResources = defineCdc(
-        schema,
-        config,
-        objType as GraphQLObjectType,
-        {
-          outputFile,
-        }
-      );
-      const tableResources = defineTable(objType as GraphQLObjectType);
-      return {
-        env: {
-          ...cdcResources.env,
-          ...tableResources.env,
-        },
-        output: {
-          ...cdcResources.output,
-          ...tableResources.output,
-        },
-        parameters: {
-          ...cdcResources.parameters,
-          ...tableResources.parameters,
-        },
-        resources: {
-          ...cdcResources.resources,
-          ...tableResources.resources,
-        },
-      };
-    });
+  const allResources = combineFragments(
+    ...Object.keys(typesMap)
+      .filter((typeName) => {
+        const type = typesMap[typeName];
+        return isObjectType(type) && hasInterface('Model', type);
+      })
+      .map((typeName) => {
+        const objType = typesMap[typeName];
+        assertObjectType(objType);
+        return combineFragments(
+          defineCdc(schema, config, objType as GraphQLObjectType, {
+            outputFile,
+          }),
+          defineTable(objType as GraphQLObjectType)
+        );
+      })
+  );
 
   // Eventually, this should modify an existing file by using Guard comments
   // and adding/replacing sections as relevant, but for now, we'll just do the
@@ -77,18 +59,13 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
 
   const tpl = {
     AWSTemplateFormatVersion: '2010-09-09',
-    Transform: 'AWS::Serverless-2016-10-31',
-    // eslint-disable-next-line sort-keys
     Conditions: {
       IsProd: {'Fn::Equals': [{Ref: 'StageName'}, 'production']},
     },
     Globals: {
       Function: {
         Environment: {
-          Variables: allResources.reduce(
-            (acc, {env}) => ({...acc, ...env}),
-            {} as Record<string, {Ref: string}>
-          ),
+          Variables: allResources.env,
         },
         Handler: 'index.handler',
         MemorySize: 256,
@@ -97,37 +74,19 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
         Tracing: 'Active',
       },
     },
-    Outputs: allResources.reduce(
-      (acc, {output}) => ({
-        ...acc,
-        ...output,
-      }),
-      {} as Record<string, object>
-    ),
-    Parameters: allResources.reduce(
-      (acc, {parameters}) => ({
-        ...acc,
-        ...parameters,
-      }),
-      {
-        StageName: {
-          Type: 'String',
-          // eslint-disable-next-line sort-keys
-          AllowedValues: ['development', 'production', 'test'],
-          Description: 'The name of the stage',
-          // eslint-disable-next-line sort-keys
-          Default: 'development',
-        },
-      }
-    ),
-    Resources: allResources.reduce(
-      (acc, {resources}) => ({
-        ...acc,
-        ...resources,
-      }),
-      {} as Record<string, object>
-    ),
+    Outputs: allResources.output,
+    Parameters: {
+      ...allResources.parameters,
+      StageName: {
+        AllowedValues: ['development', 'production', 'test'],
+        Default: 'development',
+        Description: 'The name of the stage',
+        Type: 'String',
+      },
+    },
+    Resources: allResources.resources,
+    Transform: 'AWS::Serverless-2016-10-31',
   };
 
-  return yml.dump(tpl);
+  return yml.dump(tpl, {noRefs: true, sortKeys: true});
 };

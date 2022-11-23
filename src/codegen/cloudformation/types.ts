@@ -1,6 +1,6 @@
 export interface CloudFormationFragment {
-  env?: Record<string, {Ref: string}>;
-  output?: Record<string, object>;
-  parameters?: Record<string, object>;
-  resources?: Record<string, object>;
+  readonly env?: Record<string, {Ref: string}>;
+  readonly output?: Record<string, object>;
+  readonly parameters?: Record<string, object>;
+  readonly resources?: Record<string, object>;
 }

@@ -4,10 +4,6 @@ export interface WithTableName {
   tableName: string;
 }
 
-export interface WithModelName {
-  modelName: string;
-}
-
 export interface WithEventBridge {
   eventBridge: EventBridgeClient;
 }

@@ -9,9 +9,11 @@ import {
   getDirective,
   hasDirective,
 } from '../../common/helpers';
-import {makeCdcDispatcher} from '../common/cdc-dispatcher';
-import {makeLogGroup} from '../common/log-group';
 import type {CloudformationPluginConfig} from '../config';
+import {combineFragments} from '../fragments/combine-fragments';
+import {metadata} from '../fragments/lambda';
+import {makeLogGroup} from '../fragments/log-group';
+import {makeTableDispatcher} from '../fragments/table-dispatcher';
 import type {CloudFormationFragment} from '../types';
 
 import {makeHandler} from './lambdas';
@@ -72,42 +74,22 @@ export function defineCdc(
     type,
   });
 
-  const dispatcherConfig = makeCdcDispatcher(config, type, info);
-  const logGroupConfig = makeLogGroup(handlerFunctionName);
-
-  return {
-    env: {
-      ...dispatcherConfig.env,
-      ...logGroupConfig.env,
-    },
-    output: {
-      ...dispatcherConfig.output,
-      ...logGroupConfig.output,
-    },
-    parameters: {
-      ...dispatcherConfig.parameters,
-      ...logGroupConfig.parameters,
-    },
+  const handler = {
     resources: {
-      ...dispatcherConfig.resources,
-      ...logGroupConfig.resources,
       [`${handlerFunctionName}DLQ`]: {
-        Type: 'AWS::SQS::Queue',
-        // eslint-disable-next-line sort-keys
         Properties: {
           KmsMasterKeyId: 'alias/aws/sqs',
         },
+        Type: 'AWS::SQS::Queue',
       },
       [`${handlerFunctionName}EventBridgeDLQ`]: {
-        Type: 'AWS::SQS::Queue',
-        // eslint-disable-next-line sort-keys
         Properties: {
           KmsMasterKeyId: 'alias/aws/sqs',
         },
+        Type: 'AWS::SQS::Queue',
       },
       [handlerFunctionName]: {
-        Type: 'AWS::Serverless::Function',
-        // eslint-disable-next-line sort-keys
+        Metadata: metadata,
         Properties: {
           CodeUri: handlerFilename,
           DeadLetterQueue: {
@@ -118,8 +100,6 @@ export function defineCdc(
           },
           Events: {
             [event]: {
-              Type: 'EventBridgeRule',
-              // eslint-disable-next-line sort-keys
               Properties: {
                 DeadLetterConfig: {
                   Arn: {'Fn::GetAtt': [`${handlerFunctionName}DLQ`, 'Arn']},
@@ -141,6 +121,7 @@ export function defineCdc(
                   source: [`${tableName}.${modelName}`],
                 },
               },
+              Type: 'EventBridgeRule',
             },
           },
           Policies: [
@@ -163,17 +144,19 @@ export function defineCdc(
             },
           ],
         },
-        // eslint-disable-next-line sort-keys
-        Metadata: {
-          BuildMethod: 'esbuild',
-          BuildProperties: {
-            EntryPoints: ['./index'],
-            Minify: false,
-            Sourcemap: true,
-            Target: 'es2020',
-          },
-        },
+        Type: 'AWS::Serverless::Function',
       },
     },
   };
+
+  return combineFragments(
+    makeTableDispatcher({
+      dependenciesModuleId,
+      libImportPath,
+      outDir: info.outputFile,
+      tableName,
+    }),
+    makeLogGroup({functionName: handlerFunctionName}),
+    handler
+  );
 }
