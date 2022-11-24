@@ -1,0 +1,34 @@
+"""
+Indicates which third-party this record came from.
+"""
+enum Vendor {
+  AZURE_DEV_OPS
+  GITHUB
+  GITLAB
+}
+
+"""
+An object to track a user's logins
+"""
+type UserLogin implements Model & Node & Timestamped & Versioned
+  @compositeKey(
+    pkFields: ["vendor", "externalId"]
+    pkPrefix: "USER"
+    skFields: ["login"]
+    skPrefix: "LOGIN"
+  )
+  @compositeIndex(
+    name: "gsi1"
+    pkFields: ["vendor", "login"]
+    pkPrefix: "LOGIN"
+    skFields: ["updatedAt"]
+    skPrefix: "MODIFIED"
+  ) {
+  createdAt: Date!
+  externalId: String!
+  id: ID!
+  login: String!
+  updatedAt: Date!
+  version: Int!
+  vendor: Vendor!
+}

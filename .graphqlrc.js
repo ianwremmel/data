@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 const {sync: glob} = require('glob');
 
 const examples = glob('*/', {cwd: 'examples'}).map((pathName) =>
@@ -6,6 +8,27 @@ const examples = glob('*/', {cwd: 'examples'}).map((pathName) =>
 
 /** @type {Record<string, import('graphql-config').IGraphQLProject>} */
 const init = {};
+
+/**
+ *
+ * @param {string} example
+ * @returns {string|undefined}
+ */
+function getSourceTemplate(example) {
+  try {
+    fs.statSync(`examples/${example}/template.json`)
+    return `examples/${example}/template.json`
+  }
+  catch {}
+
+  try {
+    fs.statSync(`examples/${example}/template.yml`);
+    return `examples/${example}/template.yml`;
+  }
+  catch {}
+
+  return undefined
+}
 
 /** @type {import('graphql-config').IGraphQLConfig } */
 const config = {
@@ -30,6 +53,7 @@ const config = {
               config: {
                 actionsModuleId: `./examples/${example}/__generated__/actions`,
                 dependenciesModuleId: './examples/dependencies',
+                sourceTemplate: getSourceTemplate(example),
               },
               plugins: ['./src/codegen/cloudformation'],
             },
