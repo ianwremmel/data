@@ -11,7 +11,7 @@ Globals:
         TABLE_USER_LOGIN:
           Ref: TableUserLogin
     Handler: index.handler
-    MemorySize: 256
+    MemorySize: 512
     Runtime: nodejs18.x
     Timeout: 30
     Tracing: Active
@@ -35,6 +35,8 @@ Parameters:
     Description: The name of the stage
     Type: String
 Resources:
+  SampleSqsQueue:
+    Type: AWS::SQS::Queue
   TableUserLogin:
     Properties:
       AttributeDefinitions:
