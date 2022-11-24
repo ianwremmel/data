@@ -59,9 +59,7 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
 
   const tpl = {
     AWSTemplateFormatVersion: '2010-09-09',
-    Conditions: {
-      IsProd: {'Fn::Equals': [{Ref: 'StageName'}, 'production']},
-    },
+    Conditions: allResources.conditions,
     Globals: {
       Function: {
         Environment: {

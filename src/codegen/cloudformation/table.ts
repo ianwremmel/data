@@ -123,6 +123,9 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
   };
 
   return {
+    conditions: {
+      IsProd: {'Fn::Equals': [{Ref: 'StageName'}, 'production']},
+    },
     env: {[`${snakeCase(tableName).toUpperCase()}`]: {Ref: tableName}},
     output: {
       [tableName]: {
