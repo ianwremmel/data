@@ -3,6 +3,7 @@ node_modules
 # Ignore build output
 .tmp
 .aws-sam
+dist
 
 # Ignore reports generated for CI
 reports

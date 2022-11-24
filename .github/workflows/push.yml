@@ -20,7 +20,8 @@ jobs:
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
-      - run: npm ci
+      - run: npm ci && npm i -g esbuild
+      - run: make clean build
       - run: npm run lint
         env:
           ESLINT_FORMAT_OPTIONS:
@@ -59,6 +60,7 @@ jobs:
             ${{ runner.os }}-build-
             ${{ runner.os }}-
       - run: npm ci && npm i -g esbuild
+      - run: make clean build
       - run: scripts/deploy-examples-to-localstack
       - run: TEST_MODE=localstack npm test
       - uses: check-run-reporter/action@v2.11.1
