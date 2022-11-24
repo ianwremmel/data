@@ -6,6 +6,7 @@ export function combineFragments(
 ): CloudFormationFragment {
   return fragments.reduce(
     (acc, fragment) => ({
+      conditions: {...acc.conditions, ...fragment.conditions},
       env: {...acc.env, ...fragment.env},
       output: {...acc.output, ...fragment.output},
       parameters: {...acc.parameters, ...fragment.parameters},

@@ -1,5 +1,5 @@
 import assert from 'assert';
-import {readFileSync} from 'fs';
+import fs, {readFileSync} from 'fs';
 import path from 'path';
 
 import type {
@@ -20,6 +20,25 @@ import {defineTable} from './table';
 /** @override */
 export function addToSchema(): AddToSchemaResult {
   return readFileSync(path.resolve(__dirname, '../schema.graphqls'), 'utf8');
+}
+
+/**
+ * Loads an existing consumer-generated CF template or returns a basic template
+ */
+function getInitialTemplate({sourceTemplate}: CloudformationPluginConfig) {
+  if (sourceTemplate) {
+    const raw = fs.readFileSync(sourceTemplate, 'utf8');
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return yml.load(raw);
+    }
+  }
+
+  return {
+    AWSTemplateFormatVersion: '2010-09-09',
+    Transform: 'AWS::Serverless-2016-10-31',
+  };
 }
 
 /** @override */
@@ -57,25 +76,35 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
   // and adding/replacing sections as relevant, but for now, we'll just do the
   // basic generation to prove the concept
 
+  const initialTemplate = getInitialTemplate(config);
+
   const tpl = {
-    AWSTemplateFormatVersion: '2010-09-09',
+    ...initialTemplate,
+
     Conditions: {
-      IsProd: {'Fn::Equals': [{Ref: 'StageName'}, 'production']},
+      ...initialTemplate.Conditions,
+      ...allResources.conditions,
     },
     Globals: {
       Function: {
-        Environment: {
-          Variables: allResources.env,
-        },
         Handler: 'index.handler',
         MemorySize: 256,
         Runtime: 'nodejs18.x',
         Timeout: 30,
         Tracing: 'Active',
+        ...initialTemplate?.Globals?.Function,
+        Environment: {
+          ...initialTemplate?.Globals?.Function?.Environment,
+          Variables: allResources.env,
+        },
       },
     },
-    Outputs: allResources.output,
+    Outputs: {
+      ...initialTemplate.Outputs,
+      ...allResources.output,
+    },
     Parameters: {
+      ...initialTemplate.Parameters,
       ...allResources.parameters,
       StageName: {
         AllowedValues: ['development', 'production', 'test'],
@@ -84,8 +113,10 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
         Type: 'String',
       },
     },
-    Resources: allResources.resources,
-    Transform: 'AWS::Serverless-2016-10-31',
+    Resources: {
+      ...initialTemplate.Resources,
+      ...allResources.resources,
+    },
   };
 
   return yml.dump(tpl, {noRefs: true, sortKeys: true});

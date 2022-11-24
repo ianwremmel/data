@@ -9,4 +9,10 @@ export interface CloudformationPluginConfig {
    * codegen config file
    */
   dependenciesModuleId: string;
+
+  /**
+   * Path to an existing CloudFormation template to merge with the generated
+   * template.
+   */
+  sourceTemplate?: string;
 }
