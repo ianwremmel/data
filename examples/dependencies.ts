@@ -13,7 +13,7 @@ import {
 } from 'aws-xray-sdk-core';
 
 // Pre SDKv3, XRay could safely run anywhere and just no-opped if it wasn't
-// inside a Lambda. Now, we have to decided to no-op manually.
+// inside a Lambda. Now, we have to decide to no-op manually.
 const isRunningInLambda =
   typeof process.env.AWS_LAMBDA_FUNCTION_NAME !== 'undefined';
 

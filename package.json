@@ -12,7 +12,15 @@
     "test": "TZ=UTC jest",
     "prepare": "husky install"
   },
-  "main": "src/runtime",
+  "main": "dist/cjs/runtime",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/runtime/index.js",
+      "require": "./dist/cjs/runtime/index.js"
+    },
+    "./codegen/actions": "./dist/codegen/actions",
+    "./codegen/cloudformation": "./dist/codegen/cloudformation"
+  },
   "engines": {
     "node": "18.x",
     "npm": "8.x"
@@ -22,6 +30,7 @@
   "license": "MIT",
   "devDependencies": {
     "@aws-sdk/client-cloudformation": "^3.137.0",
+    "@ianwremmel/data": "*",
     "@babel/preset-env": "^7.19.4",
     "@babel/preset-typescript": "^7.18.6",
     "@babel/register": "^7.18.9",
@@ -57,6 +66,7 @@
     "markdown-toc": "^1.2.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.7.1",
+    "semantic-release": "^19.0.5",
     "typescript": "^4.8.4"
   },
   "lint-staged": {
@@ -79,5 +89,10 @@
     "@aws-sdk/client-dynamodb": "^3.137.0",
     "@aws-sdk/client-eventbridge": "^3.137.0",
     "@aws-sdk/lib-dynamodb": "^3.137.0"
+  },
+  "workspaces": ["."],
+  "types": "dist/types",
+  "release": {
+    "branches": ["main"]
   }
 }

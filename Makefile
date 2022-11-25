@@ -50,15 +50,20 @@ EXAMPLE_OUTPUT           := $(foreach X,$(EXAMPLE_DIRS),$(foreach Y,$(addprefix 
 
 GENERATED_DIRS          := $(addsuffix /__generated__,$(EXAMPLE_DIRS))
 
+RUNTIME_SRC_TS      := $(shell find ./src -name '*.ts')
+RUNTIME_DIST_CJS_JS := $(subst .ts,.js,$(subst src,dist/cjs,$(RUNTIME_SRC_TS)))
+RUNTIME_DIST_EMS_JS := $(subst .ts,.js,$(subst src,dist/esm,$(RUNTIME_SRC_TS)))
+RUNTIME_TYPES       := $(subst .ts,.d.ts,$(subst src,dist/types,$(filter-out $(filter %.test.ts,$(RUNTIME_SRC_TS)),$(RUNTIME_SRC_TS))))
+
 ################################################################################
 ## Public Targets
 ################################################################################
 
-build: README.md $(EXAMPLE_OUTPUT) | $(SENTINEL_DIR) $(TMP_DIR)
+build: README.md dist/codegen/actions.js dist/codegen/cloudformation.js $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_EMS_JS) $(RUNTIME_TYPES) $(EXAMPLE_OUTPUT) | $(SENTINEL_DIR) $(TMP_DIR)
 .PHONY: build
 
 clean:
-	rm -rf $(EXAMPLE_OUTPUT) $(TMP_DIR) $(SENTINEL_DIR) $(GENERATED_DIRS)
+	rm -rf dist $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_EMS_JS) $(EXAMPLE_OUTPUT) $(TMP_DIR) $(SENTINEL_DIR) $(GENERATED_DIRS)
 .PHONY: clean
 
 ################################################################################
@@ -83,12 +88,35 @@ $(TMP_DIR):
 
 define GEN_EXAMPLE
 
-$(EXAMPLE_DIR)/__generated__/$(EXAMPLE_OUTPUT_FILES) &:
-	IS_EXAMPLE=true npx graphql-codegen --debug --verbose --project $(subst examples/,,$(EXAMPLE_DIR))
+$(EXAMPLE_DIR)/__generated__/$(EXAMPLE_OUTPUT_FILES) &: $(RUNTIME_DIST_EMS_JS)
+	npx graphql-codegen --debug --verbose --project $(subst examples/,,$(EXAMPLE_DIR))
 	npm run eslint -- --fix $(EXAMPLE_DIR)/__generated__
 
 endef
 $(foreach EXAMPLE_DIR,$(EXAMPLE_DIRS),$(eval $(GEN_EXAMPLE)))
+
+###############################################################################
+## Rules
+###############################################################################
+
+$(RUNTIME_DIST_CJS_JS) &: $(RUNTIME_SRC_TS)
+	$(NPX) esbuild $(?) --format=cjs --outbase=src --outdir=dist/cjs --platform=node
+
+$(RUNTIME_DIST_EMS_JS) &: $(RUNTIME_SRC_TS)
+	$(NPX) esbuild $(?) --format=esm --outbase=src --outdir=dist/esm --platform=node
+
+dist/codegen/actions.js: src/codegen/actions/index.ts dist/schema.graphqls $(shell find src/codegen -name *.ts)
+	$(NPX) esbuild $(<) --bundle --external:graphql --format=cjs --outfile=$@ --platform=node
+
+dist/codegen/cloudformation.js: src/codegen/cloudformation/index.ts dist/schema.graphqls $(shell find src/codegen -name *.ts)
+	$(NPX) esbuild $(<) --bundle --external:graphql --format=cjs --outfile=$@ --platform=node
+
+dist/schema.graphqls: src/codegen/schema.graphqls
+	mkdir -p dist
+	cp $(<) $(@)
+
+$(RUNTIME_TYPES) &:
+	$(NPX) tsc --emitDeclarationOnly --declaration --project tsconfig.build.json --outDir dist/types
 
 ###############################################################################
 ## Targets

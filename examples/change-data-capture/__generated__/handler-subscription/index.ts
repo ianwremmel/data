@@ -1,6 +1,7 @@
 // This file is generated. Do not edit by hand.
 
-import {assert, makeModelChangeHandler} from '../../../..';
+import {assert, makeModelChangeHandler} from '@ianwremmel/data';
+
 import * as dependencies from '../../../dependencies';
 import {handler as cdcHandler} from '../../handler';
 import {unmarshallSubscription} from '../actions';

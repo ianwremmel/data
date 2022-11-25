@@ -85,8 +85,7 @@ ${tableTypes
 
     assert(info?.outputFile, 'info.outputFile is required');
 
-    const isExample = !!process.env.IS_EXAMPLE;
-    const runtimeModuleId = isExample ? '../../..' : '@ianwremmel/data';
+    const runtimeModuleId = '@ianwremmel/data';
 
     return {
       content,
