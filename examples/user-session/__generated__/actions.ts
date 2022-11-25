@@ -10,15 +10,15 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
-import Base64 from 'base64url';
-import {v4 as uuidv4} from 'uuid';
-
 import {
   assert,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
-} from '../../..';
+} from '@ianwremmel/data';
+import Base64 from 'base64url';
+import {v4 as uuidv4} from 'uuid';
+
 import {ddbDocClient} from '../../dependencies';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;

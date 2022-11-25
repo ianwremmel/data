@@ -1,6 +1,6 @@
 import {faker} from '@faker-js/faker';
+import {NotFoundError} from '@ianwremmel/data';
 
-import {NotFoundError} from '../../src/runtime';
 import {waitFor} from '../test-helpers';
 
 import {

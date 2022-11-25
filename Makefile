@@ -83,8 +83,8 @@ $(TMP_DIR):
 
 define GEN_EXAMPLE
 
-$(EXAMPLE_DIR)/__generated__/$(EXAMPLE_OUTPUT_FILES) &:
-	IS_EXAMPLE=true npx graphql-codegen --debug --verbose --project $(subst examples/,,$(EXAMPLE_DIR))
+$(EXAMPLE_DIR)/__generated__/$(EXAMPLE_OUTPUT_FILES) &: $(RUNTIME_DIST_EMS_JS)
+	npx graphql-codegen --debug --verbose --project $(subst examples/,,$(EXAMPLE_DIR))
 	npm run eslint -- --fix $(EXAMPLE_DIR)/__generated__
 
 endef

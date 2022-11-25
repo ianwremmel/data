@@ -32,8 +32,7 @@ export function defineCdc(
 
   const event = getArgStringValue('event', directive);
 
-  const isExample = !!process.env.IS_EXAMPLE;
-  const libImportPath = isExample ? '../../../..' : '@ianwremmel/data';
+  const libImportPath = '@ianwremmel/data';
 
   const typeName = type.name;
 

@@ -1,7 +1,6 @@
 import {faker} from '@faker-js/faker';
+import {NotFoundError, OptimisticLockingError} from '@ianwremmel/data';
 import Base64 from 'base64url';
-
-import {NotFoundError, OptimisticLockingError} from '../../src/runtime';
 
 import {
   createUserSession,
