@@ -76,7 +76,6 @@
     "*.tsx": "npm run eslint -- ",
     "bin/**": "npm run eslint -- "
   },
-  "private": true,
   "dependencies": {
     "@graphql-codegen/plugin-helpers": "^2.7.1",
     "@types/aws-lambda": "^8.10.108",
