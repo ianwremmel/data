@@ -93,5 +93,8 @@
   "types": "dist/types",
   "release": {
     "branches": ["main"]
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
