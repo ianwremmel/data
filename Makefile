@@ -50,22 +50,21 @@ EXAMPLE_OUTPUT           := $(foreach X,$(EXAMPLE_DIRS),$(foreach Y,$(addprefix 
 
 GENERATED_DIRS          := $(addsuffix /__generated__,$(EXAMPLE_DIRS))
 
-RUNTIME_SRC_TS := $(shell find ./src -name '*.ts')
+RUNTIME_SRC_TS      := $(shell find ./src -name '*.ts')
 RUNTIME_DIST_CJS_JS := $(subst .ts,.js,$(subst src,dist/cjs,$(RUNTIME_SRC_TS)))
 RUNTIME_DIST_EMS_JS := $(subst .ts,.js,$(subst src,dist/esm,$(RUNTIME_SRC_TS)))
+RUNTIME_TYPES       := $(subst .ts,.d.ts,$(subst src,dist/types,$(filter-out $(filter %.test.ts,$(RUNTIME_SRC_TS)),$(RUNTIME_SRC_TS))))
 
 ################################################################################
 ## Public Targets
 ################################################################################
 
-build: README.md dist/codegen/actions.js dist/codegen/cloudformation.js $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_EMS_JS) $(EXAMPLE_OUTPUT) | $(SENTINEL_DIR) $(TMP_DIR)
+build: README.md dist/codegen/actions.js dist/codegen/cloudformation.js $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_EMS_JS) $(RUNTIME_TYPES) $(EXAMPLE_OUTPUT) | $(SENTINEL_DIR) $(TMP_DIR)
 .PHONY: build
 
 clean:
 	rm -rf dist $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_EMS_JS) $(EXAMPLE_OUTPUT) $(TMP_DIR) $(SENTINEL_DIR) $(GENERATED_DIRS)
 .PHONY: clean
-
-dist: $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_EMS_JS)
 
 ################################################################################
 ## Helpers
@@ -115,6 +114,9 @@ dist/codegen/cloudformation.js: src/codegen/cloudformation/index.ts dist/schema.
 dist/schema.graphqls: src/codegen/schema.graphqls
 	mkdir -p dist
 	cp $(<) $(@)
+
+$(RUNTIME_TYPES) &:
+	$(NPX) tsc --emitDeclarationOnly --declaration --project tsconfig.build.json --outDir dist/types
 
 ###############################################################################
 ## Targets

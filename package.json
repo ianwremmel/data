@@ -91,6 +91,7 @@
     "@aws-sdk/lib-dynamodb": "^3.137.0"
   },
   "workspaces": ["."],
+  "types": "dist/types",
   "release": {
     "branches": ["main"]
   }
