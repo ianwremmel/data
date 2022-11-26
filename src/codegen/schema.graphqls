@@ -49,7 +49,7 @@ directive @cdc(
   The model type that will be updated by this stream.
   """
   produces: String!
-) on OBJECT
+) repeatable on OBJECT
 
 """
 Indicates this Model has a composite key generated from the specified fields.
