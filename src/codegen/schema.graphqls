@@ -77,7 +77,7 @@ directive @compositeIndex(
   pkPrefix: String
   skFields: [String!]!
   skPrefix: String
-) on OBJECT
+) repeatable on OBJECT
 
 """
 Indicates the field will be configured as the DynamoDB ttl field for this type.
