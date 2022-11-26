@@ -7,7 +7,8 @@ type Account implements Model & Node & Timestamped & Versioned
     pkFields: ["vendor", "externalId"]
     skPrefix: "SUMMARY"
     skFields: []
-  ) {
+  )
+  @secondaryIndex(name: "lsi1", fields: ["createdAt"], prefix: "INSTANCE") {
   cancelled: Boolean
   createdAt: Date!
   effectiveDate: Date!
