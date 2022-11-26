@@ -1,5 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Conditions:
+  IsDev:
+    Fn::Equals:
+      - Ref: Environment
+      - development
   IsProd:
     Fn::Equals:
       - Ref: StageName
@@ -26,6 +30,9 @@ Outputs:
     Value:
       Ref: TableUserLogin
 Parameters:
+  Environment:
+    Default: production
+    Type: String
   StageName:
     AllowedValues:
       - development
@@ -36,6 +43,7 @@ Parameters:
     Type: String
 Resources:
   SampleSqsQueue:
+    Condition: IsDev
     Type: AWS::SQS::Queue
   TableUserLogin:
     Properties:
