@@ -47,7 +47,7 @@ const config = {
                 strictScalars: true,
                 dependenciesModuleId: './examples/dependencies',
               },
-              plugins: ['typescript', './dist/codegen/actions.js'],
+              plugins: ['typescript', '@ianwremmel/data/codegen/actions'],
             },
             [`examples/${example}/__generated__/template.yml`]: {
               config: {
@@ -55,7 +55,7 @@ const config = {
                 dependenciesModuleId: './examples/dependencies',
                 sourceTemplate: getSourceTemplate(example),
               },
-              plugins: ['./dist/codegen/cloudformation.js'],
+              plugins: ['@ianwremmel/data/codegen/cloudformation'],
             },
           },
         },

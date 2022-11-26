@@ -18,8 +18,8 @@
       "import": "./dist/esm/runtime/index.js",
       "require": "./dist/cjs/runtime/index.js"
     },
-    "./codegen/actions": "./dist/codegen/actions",
-    "./codegen/cloudformation": "./dist/codegen/cloudformation"
+    "./codegen/actions": "./dist/codegen/actions.js",
+    "./codegen/cloudformation": "./dist/codegen/cloudformation.js"
   },
   "engines": {
     "node": "18.x",
