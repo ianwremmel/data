@@ -3,6 +3,15 @@ Transform: AWS::Serverless-2016-10-31
 Globals:
   Function:
     MemorySize: 512
+Parameters:
+  Environment:
+    Default: production
+    Type: String
+Conditions:
+  IsDev: !Equals
+    - !Ref Environment
+    - development
 Resources:
   SampleSqsQueue:
+    Condition: IsDev
     Type: AWS::SQS::Queue

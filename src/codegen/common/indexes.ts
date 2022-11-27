@@ -1,5 +1,8 @@
-import type {GraphQLObjectType} from 'graphql';
-import type {GraphQLField} from 'graphql/index';
+import type {
+  ConstDirectiveNode,
+  GraphQLObjectType,
+  GraphQLField,
+} from 'graphql';
 
 import {getArgFieldTypeValues, getOptionalArgStringValue} from './helpers';
 import {makeKeyTemplate} from './keys';
@@ -12,20 +15,20 @@ export interface IndexInfo {
 }
 
 export interface PartitionKeyIndexInfo {
-  readonly name?: string;
   readonly pkPrefix?: string;
   readonly pkFields: readonly GraphQLField<unknown, unknown>[];
 }
 
-export interface ComposityKeyIndexInfo {
-  readonly name?: string;
+export interface CompositeKeyIndexInfo {
   readonly pkPrefix?: string;
   readonly skPrefix?: string;
   readonly pkFields: readonly GraphQLField<unknown, unknown>[];
   readonly skFields: readonly GraphQLField<unknown, unknown>[];
 }
 
-export type IndexFieldInfo = PartitionKeyIndexInfo | ComposityKeyIndexInfo;
+export type PrimaryIndex = PartitionKeyIndexInfo | CompositeKeyIndexInfo;
+
+export type IndexFieldInfo = PrimaryIndex | GSI | LSI;
 
 /**
  * Returns the index info for the given object type.
@@ -33,7 +36,8 @@ export type IndexFieldInfo = PartitionKeyIndexInfo | ComposityKeyIndexInfo;
 export function extractIndexInfo(type: GraphQLObjectType): IndexInfo {
   const directives =
     type?.astNode?.directives?.filter(
-      (d) => d.name.value === 'compositeIndex'
+      (d) =>
+        d.name.value === 'compositeIndex' || d.name.value === 'secondaryIndex'
     ) ?? [];
 
   if (!directives.length) {
@@ -51,29 +55,86 @@ export function extractIndexInfo(type: GraphQLObjectType): IndexInfo {
   const updateExpressions = [];
 
   for (const directive of directives) {
-    const name = getOptionalArgStringValue('name', directive);
+    const result =
+      directive.name.value === 'secondaryIndex'
+        ? extractLocalSecondaryIndexInfo(type, directive)
+        : extractGlobalSecondaryIndexInfo(type, directive);
 
-    const pkFields = getArgFieldTypeValues('pkFields', type, directive);
-    const skFields = getArgFieldTypeValues('skFields', type, directive);
-    const pkPrefix = getOptionalArgStringValue('pkPrefix', directive);
-    const skPrefix = getOptionalArgStringValue('skPrefix', directive);
+    ean.push(...result.ean);
+    eav.push(...result.eav);
 
-    ean.push(`'#${name}pk': '${name}pk'`);
-    ean.push(`'#${name}sk': '${name}sk'`);
-    eav.push(`':${name}pk': \`${makeKeyTemplate(pkPrefix, pkFields)}\``);
-    eav.push(`':${name}sk': \`${makeKeyTemplate(skPrefix, skFields)}\``);
+    updateExpressions.push(...result.updateExpressions);
 
-    updateExpressions.push(`#${name}pk = :${name}pk`);
-    updateExpressions.push(`#${name}sk = :${name}sk`);
+    indexes.push(result.index);
+  }
 
-    indexes.push({
+  return {ean, eav, indexes, updateExpressions};
+}
+
+export interface SpecificIndexInfo<T> {
+  readonly ean: readonly string[];
+  readonly eav: readonly string[];
+  readonly index: T;
+  readonly updateExpressions: readonly string[];
+}
+
+export type GSI = (PartitionKeyIndexInfo | CompositeKeyIndexInfo) & {
+  name: string;
+};
+
+/** helper */
+export function extractGlobalSecondaryIndexInfo(
+  type: GraphQLObjectType,
+  directive: ConstDirectiveNode
+): SpecificIndexInfo<GSI> {
+  const name = getOptionalArgStringValue('name', directive);
+
+  const pkFields = getArgFieldTypeValues('pkFields', type, directive);
+  const skFields = getArgFieldTypeValues('skFields', type, directive);
+  const pkPrefix = getOptionalArgStringValue('pkPrefix', directive);
+  const skPrefix = getOptionalArgStringValue('skPrefix', directive);
+
+  return {
+    ean: [`'#${name}pk': '${name}pk'`, `'#${name}sk': '${name}sk'`],
+    eav: [
+      `':${name}pk': \`${makeKeyTemplate(pkPrefix, pkFields)}\``,
+      `':${name}sk': \`${makeKeyTemplate(skPrefix, skFields)}\``,
+    ],
+    index: {
       name,
       pkFields,
       pkPrefix,
       skFields,
       skPrefix,
-    });
-  }
+    },
+    updateExpressions: [`#${name}pk = :${name}pk`, `#${name}sk = :${name}sk`],
+  };
+}
 
-  return {ean, eav, indexes, updateExpressions};
+export interface LSI {
+  name: string;
+  readonly skPrefix?: string;
+  readonly skFields: readonly GraphQLField<unknown, unknown>[];
+}
+
+/** helper */
+export function extractLocalSecondaryIndexInfo(
+  type: GraphQLObjectType,
+  directive: ConstDirectiveNode
+): SpecificIndexInfo<LSI> {
+  const name = getOptionalArgStringValue('name', directive);
+
+  const skFields = getArgFieldTypeValues('fields', type, directive);
+  const skPrefix = getOptionalArgStringValue('prefix', directive);
+
+  return {
+    ean: [`'#${name}sk': '${name}sk'`],
+    eav: [`':${name}sk': \`${makeKeyTemplate(skPrefix, skFields)}\``],
+    index: {
+      name,
+      skFields,
+      skPrefix,
+    },
+    updateExpressions: [`#${name}sk = :${name}sk`],
+  };
 }

@@ -9,6 +9,7 @@ import type {
 import type {GraphQLObjectType} from 'graphql';
 import {assertObjectType, isObjectType} from 'graphql';
 import yml from 'js-yaml';
+import {CLOUDFORMATION_SCHEMA} from 'js-yaml-cloudformation-schema';
 
 import {hasInterface} from '../common/helpers';
 
@@ -31,7 +32,7 @@ function getInitialTemplate({sourceTemplate}: CloudformationPluginConfig) {
     try {
       return JSON.parse(raw);
     } catch {
-      return yml.load(raw);
+      return yml.load(raw, {schema: CLOUDFORMATION_SCHEMA});
     }
   }
 

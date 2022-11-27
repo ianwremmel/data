@@ -8,16 +8,13 @@ import type {
 import {isNonNullType, isScalarType} from 'graphql';
 
 import {
-  getArg,
   getArgFieldTypeValues,
   getDirective,
   getOptionalArgStringValue,
   hasDirective,
-  hasInterface,
   marshalField,
-  unmarshalField,
 } from './helpers';
-import type {IndexFieldInfo} from './indexes';
+import type {PrimaryIndex} from './indexes';
 
 export const DIVIDER = '#:#';
 
@@ -42,7 +39,7 @@ export function makeKeyTemplate(
 export interface KeyInfo {
   readonly conditionField: string;
   readonly ean: readonly string[];
-  readonly index?: IndexFieldInfo;
+  readonly index?: PrimaryIndex;
   readonly fields: Set<string>;
   readonly inputToPrimaryKey: readonly string[];
   readonly keyForCreate: readonly string[];
@@ -170,6 +167,7 @@ function extractPartitionKeyInfo(
     unmarshall: [`id: Base64.encode(\`${type.name}:\${item.pk}\`)`],
   };
 }
+
 /**
  * Parses out a types key fields and generates the necessary code for
  * marshalling/unmarshalling them.

@@ -440,15 +440,25 @@ export async function updateAccount(
   }
 }
 
-export interface QueryAccountInput {
-  externalId: Scalars['String'];
-  vendor: Vendor;
-}
+export type QueryAccountInput =
+  | {
+      externalId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {index: 'lsi1'; externalId: Scalars['String']; vendor: Vendor}
+  | {
+      index: 'lsi1';
+      createdAt: Scalars['Date'];
+      externalId: Scalars['String'];
+      vendor: Vendor;
+    };
 export type QueryAccountOutput = MultiResultType<Account>;
 
 /** helper */
 function makePartitionKeyForQueryAccount(input: QueryAccountInput): string {
   if (!('index' in input)) {
+    return `ACCOUNT#${input.vendor}#${input.externalId}`;
+  } else if ('index' in input && input.index === 'lsi1') {
     return `ACCOUNT#${input.vendor}#${input.externalId}`;
   }
 
@@ -461,6 +471,10 @@ function makeSortKeyForQueryAccount(
 ): string | undefined {
   if (!('index' in input)) {
     return ['SUMMARY'].filter(Boolean).join('#');
+  } else if ('index' in input && input.index === 'lsi1') {
+    return ['INSTANCE', 'createdAt' in input && input.createdAt]
+      .filter(Boolean)
+      .join('#');
   }
 
   throw new Error('Could not construct sort key from input');
@@ -552,6 +566,7 @@ export function marshallAccount(
     '#updatedAt = :updatedAt',
     '#vendor = :vendor',
     '#version = :version',
+    '#lsi1sk = :lsi1sk',
   ];
 
   const ean: Record<string, string> = {
@@ -563,6 +578,7 @@ export function marshallAccount(
     '#vendor': 'vendor',
     '#version': '_v',
     '#pk': 'pk',
+    '#lsi1sk': 'lsi1sk',
   };
 
   const eav: Record<string, unknown> = {
@@ -573,6 +589,7 @@ export function marshallAccount(
     ':updatedAt': now.getTime(),
     ':vendor': input.vendor,
     ':version': ('version' in input ? input.version : 0) + 1,
+    ':lsi1sk': `INSTANCE#${now.getTime()}`,
   };
 
   if ('cancelled' in input && typeof input.cancelled !== 'undefined') {
