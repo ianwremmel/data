@@ -9,7 +9,7 @@ import {
   hasDirective,
   isType,
 } from '../../../common/helpers';
-import type {IndexFieldInfo} from '../../../common/indexes';
+import type {IndexFieldInfo, PrimaryIndex} from '../../../common/indexes';
 import {makeKeyTemplate} from '../../../common/keys';
 
 import {ensureTableTemplate} from './ensure-table';
@@ -32,13 +32,16 @@ function makePartialKeyTemplate(
 
 /** Generates the type signature for the query function */
 function indexInfoToTypeSignature(
+  primaryIndex: PrimaryIndex,
   indexInfo: IndexFieldInfo
 ): string | string[] {
-  if ('skFields' in indexInfo) {
-    const {name, pkFields, skFields} = indexInfo;
+  const name = 'name' in indexInfo ? `index: '${indexInfo.name}'` : '';
+
+  if ('pkFields' in indexInfo && 'skFields' in indexInfo) {
+    const {pkFields, skFields} = indexInfo;
     return [undefined, ...skFields].map((_, index) =>
       [
-        name ? `index: '${name}'` : '',
+        name,
         ...[
           ...pkFields.map(renderFieldAsType),
           ...skFields.slice(0, index).map(renderFieldAsType),
@@ -47,19 +50,31 @@ function indexInfoToTypeSignature(
     );
   }
 
-  const {name, pkFields} = indexInfo;
-  return [name ? `index: '${name}'` : '', ...pkFields.map(renderFieldAsType)]
-    .sort()
-    .join('\n');
+  if ('pkFields' in indexInfo) {
+    const {pkFields} = indexInfo;
+    return [name, ...pkFields.map(renderFieldAsType)].sort().join('\n');
+  }
+
+  const {pkFields} = primaryIndex;
+  const {skFields} = indexInfo;
+  return [undefined, ...skFields].map((_, index) =>
+    [
+      name,
+      ...[
+        ...pkFields.map(renderFieldAsType),
+        ...skFields.slice(0, index).map(renderFieldAsType),
+      ].sort(),
+    ].join('\n')
+  );
 }
 
 /** Generates the sort key for the query function */
 function indexToSortKey(indexInfo: IndexFieldInfo): string {
   if ('skFields' in indexInfo) {
-    const {name, skFields, skPrefix} = indexInfo;
-    if (name) {
+    const {skFields, skPrefix} = indexInfo;
+    if ('name' in indexInfo) {
       return `
-if ('index' in input && input.index === '${name}') {
+if ('index' in input && input.index === '${indexInfo.name}') {
   return ${makePartialKeyTemplate(skPrefix ?? '', skFields)};
 }`;
     }
@@ -102,7 +117,7 @@ function fieldStringToFieldType(
 
 /** template */
 export function queryTpl({consistent, indexes, objType}: QueryTplInput) {
-  const primaryIndex = indexes.find((i) => !('name' in i));
+  const primaryIndex = indexes.find((i) => !('name' in i)) as PrimaryIndex;
   assert(primaryIndex, 'Expected primary index to exist');
   const typeName = objType.name;
 
@@ -115,7 +130,7 @@ export function queryTpl({consistent, indexes, objType}: QueryTplInput) {
   const outputTypeName = `Query${typeName}Output`;
 
   const typeSignature = indexes
-    .flatMap(indexInfoToTypeSignature)
+    .flatMap((indexInfo) => indexInfoToTypeSignature(primaryIndex, indexInfo))
     .map((t) => `{${t}}`)
     .join(' | ');
 
@@ -126,10 +141,12 @@ export type ${outputTypeName} = MultiResultType<${typeName}>;
 /** helper */
 function makePartitionKeyForQuery${typeName}(input: ${inputTypeName}): string {
   ${indexes
-    .map(({name, pkFields, pkPrefix}) => {
-      if (name) {
+    .map((indexInfo) => {
+      const {pkFields, pkPrefix} =
+        'pkFields' in indexInfo ? indexInfo : primaryIndex;
+      if ('name' in indexInfo) {
         return `
-if ('index' in input && input.index === '${name}') {
+if ('index' in input && input.index === '${indexInfo.name}') {
   return \`${makeKeyTemplate(pkPrefix ?? '', pkFields)}\`;
 }`;
       }

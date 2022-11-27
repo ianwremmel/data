@@ -1,5 +1,5 @@
 import type {GraphQLObjectType} from 'graphql';
-import {assertObjectType} from 'graphql/index';
+import {assertObjectType} from 'graphql';
 import {snakeCase} from 'lodash';
 
 import {extractTtlInfo} from '../common/fields';
@@ -8,6 +8,7 @@ import {extractIndexInfo} from '../common/indexes';
 
 import type {CloudFormationFragment} from './types';
 
+/* eslint-disable complexity */
 /** cloudformation generator */
 export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
   const tableName = `Table${type.name}`;
@@ -49,41 +50,75 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
       ];
 
   const globalSecondaryIndexes = [];
+  const localSecondaryIndexes = [];
   for (const index of indexInfo.indexes) {
-    attributeDefinitions.push(
-      {
-        AttributeName: `${index.name}pk`,
-        AttributeType: 'S',
-      },
-      {
-        AttributeName: `${index.name}sk`,
-        AttributeType: 'S',
+    if ('name' in index) {
+      if ('pkFields' in index) {
+        attributeDefinitions.push(
+          {
+            AttributeName: `${index.name}pk`,
+            AttributeType: 'S',
+          },
+          {
+            AttributeName: `${index.name}sk`,
+            AttributeType: 'S',
+          }
+        );
+      } else {
+        attributeDefinitions.push({
+          AttributeName: index.name,
+          AttributeType: 'S',
+        });
       }
-    );
 
-    globalSecondaryIndexes.push({
-      IndexName: index.name,
-      KeySchema: [
-        {
-          AttributeName: `${index.name}pk`,
-          KeyType: 'HASH',
-        },
-        {
-          AttributeName: `${index.name}sk`,
-          KeyType: 'RANGE',
-        },
-      ],
-      Projection: {
-        ProjectionType: 'ALL',
-      },
-    });
+      if ('pkFields' in index) {
+        globalSecondaryIndexes.push({
+          IndexName: index.name,
+          KeySchema: [
+            {
+              AttributeName: `${index.name}pk`,
+              KeyType: 'HASH',
+            },
+            {
+              AttributeName: `${index.name}sk`,
+              KeyType: 'RANGE',
+            },
+          ],
+          Projection: {
+            ProjectionType: 'ALL',
+          },
+        });
+      } else if ('skFields' in index) {
+        localSecondaryIndexes.push({
+          IndexName: index.name,
+          KeySchema: [
+            {
+              AttributeName: 'pk',
+              KeyType: 'HASH',
+            },
+            {
+              AttributeName: index.name,
+              KeyType: 'RANGE',
+            },
+          ],
+          Projection: {
+            ProjectionType: 'ALL',
+          },
+        });
+      }
+    }
   }
 
   const properties: Record<string, unknown> = {
     AttributeDefinitions: attributeDefinitions,
     BillingMode: 'PAY_PER_REQUEST',
-    GlobalSecondaryIndexes: globalSecondaryIndexes,
+    GlobalSecondaryIndexes: globalSecondaryIndexes.length
+      ? globalSecondaryIndexes
+      : undefined,
     KeySchema: keySchema,
+    LocalSecondaryIndexes: localSecondaryIndexes.length
+      ? localSecondaryIndexes
+      : undefined,
     PointInTimeRecoverySpecification: {
       PointInTimeRecoveryEnabled: true,
     },
@@ -142,3 +177,5 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
     },
   };
 }
+
+/* eslint-enable complexity */
