@@ -95,7 +95,6 @@ ${tableTypes
         `import Base64 from 'base64url';`,
         `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '${runtimeModuleId}';`,
         `import {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';`,
-        `import {v4 as uuidv4} from 'uuid';`,
         `import {ddbDocClient} from "${path.relative(
           path.resolve(process.cwd(), path.dirname(info.outputFile)),
           path.resolve(process.cwd(), config.dependenciesModuleId)
