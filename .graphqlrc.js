@@ -1,12 +1,12 @@
-const fs = require('fs');
+const fs = require("fs");
 
-const {sync: glob} = require('glob');
+const { sync: glob } = require("glob");
 
-const examples = glob('*/', {cwd: 'examples'}).map((pathName) =>
-  pathName.replace(/\/$/, '')
+const examples = glob("*/", { cwd: "examples" }).map((pathName) =>
+  pathName.replace(/\/$/, "")
 );
 
-/** @type {Record<string, import('graphql-config').IGraphQLProject>} */
+/** @type {Record<string, import("graphql-config").IGraphQLProject>} */
 const init = {};
 
 /**
@@ -16,21 +16,23 @@ const init = {};
  */
 function getSourceTemplate(example) {
   try {
-    fs.statSync(`examples/${example}/template.json`)
-    return `examples/${example}/template.json`
+    fs.statSync(`examples/${example}/template.json`);
+    return `examples/${example}/template.json`;
+  } catch {
   }
-  catch {}
 
   try {
     fs.statSync(`examples/${example}/template.yml`);
     return `examples/${example}/template.yml`;
+  } catch {
   }
-  catch {}
 
-  return undefined
+  return undefined;
 }
 
-/** @type {import('graphql-config').IGraphQLConfig } */
+const importBasePath = process.env.CI ? "@ianwremmel/data" : "./src";
+
+/** @type {import("graphql-config").IGraphQLConfig } */
 const config = {
   projects: examples.reduce((acc, example) => {
     acc[example] = {
@@ -41,31 +43,31 @@ const config = {
               config: {
                 enumsAsTypes: true,
                 scalars: {
-                  Date: 'Date',
-                  JSONObject: 'Record<string, unknown>',
+                  Date: "Date",
+                  JSONObject: "Record<string, unknown>"
                 },
                 strictScalars: true,
-                dependenciesModuleId: './examples/dependencies',
+                dependenciesModuleId: "./examples/dependencies"
               },
-              plugins: ['typescript', '@ianwremmel/data/codegen/actions'],
+              plugins: ["typescript", `${importBasePath}/codegen/actions`]
             },
             [`examples/${example}/__generated__/template.yml`]: {
               config: {
                 actionsModuleId: `./examples/${example}/__generated__/actions`,
-                dependenciesModuleId: './examples/dependencies',
-                sourceTemplate: getSourceTemplate(example),
+                dependenciesModuleId: "./examples/dependencies",
+                sourceTemplate: getSourceTemplate(example)
               },
-              plugins: ['@ianwremmel/data/codegen/cloudformation'],
-            },
-          },
-        },
+              plugins: [`${importBasePath}/codegen/cloudformation`]
+            }
+          }
+        }
       },
       schema: [
-        'examples/common.graphqls',
+        "examples/common.graphqls",
         `examples/${example}/schema/**/*.graphqls`,
         // This line shouldn't be here, but addToSchema doesn't seem to work.
-        'src/codegen/schema.graphqls',
-      ],
+        "src/codegen/schema.graphqls"
+      ]
     };
     return acc;
   }, init)
