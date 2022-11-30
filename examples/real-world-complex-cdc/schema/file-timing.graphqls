@@ -1,0 +1,31 @@
+"""
+Describes the stability and duration of each submitted file
+"""
+type FileTiming implements Model & Timestamped & Versioned
+  @compositeKey(
+    pkPrefix: "TIMING"
+    pkFields: ["vendor", "repoId", "branchName", "label"]
+    skPrefix: "FILE"
+    skFields: ["filename"]
+  )
+  # Reminder this needs to be gsi2 so it can be used in conjunction with the other
+  # gsi2 entities in this table (well, if I ever add single-table support. Right
+  # now, it doesn't actually matter).
+  @compositeIndex(
+    name: "gsi2"
+    pkFields: ["vendor", "repoId", "branchName"]
+    pkPrefix: "BRANCH"
+    skFields: []
+    skPrefix: "FILE"
+  ) {
+  branchName: String!
+  createdAt: Date!
+  duration: Float!
+  filename: String!
+  id: ID!
+  label: String
+  repoId: String!
+  updatedAt: Date!
+  vendor: Vendor!
+  version: Int!
+}
