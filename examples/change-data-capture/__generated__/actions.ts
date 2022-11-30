@@ -468,15 +468,15 @@ function makePartitionKeyForQueryAccount(input: QueryAccountInput): string {
 function makeSortKeyForQueryAccount(
   input: QueryAccountInput
 ): string | undefined {
-  if (!('index' in input)) {
-    return ['SUMMARY'].filter(Boolean).join('#');
-  } else if ('index' in input && input.index === 'lsi1') {
+  if ('index' in input && input.index === 'lsi1') {
     return ['INSTANCE', 'createdAt' in input && input.createdAt]
       .filter(Boolean)
       .join('#');
   }
 
-  throw new Error('Could not construct sort key from input');
+  assert(!('index' in input), 'Invalid index name');
+
+  return ['SUMMARY'].filter(Boolean).join('#');
 }
 
 /** queryAccount */
@@ -1045,13 +1045,11 @@ function makePartitionKeyForQuerySubscription(
 function makeSortKeyForQuerySubscription(
   input: QuerySubscriptionInput
 ): string | undefined {
-  if (!('index' in input)) {
-    return ['SUBSCRIPTION', 'effectiveDate' in input && input.effectiveDate]
-      .filter(Boolean)
-      .join('#');
-  }
+  assert(!('index' in input), 'Invalid index name');
 
-  throw new Error('Could not construct sort key from input');
+  return ['SUBSCRIPTION', 'effectiveDate' in input && input.effectiveDate]
+    .filter(Boolean)
+    .join('#');
 }
 
 /** querySubscription */

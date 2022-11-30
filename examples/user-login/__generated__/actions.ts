@@ -453,15 +453,15 @@ function makePartitionKeyForQueryUserLogin(input: QueryUserLoginInput): string {
 function makeSortKeyForQueryUserLogin(
   input: QueryUserLoginInput
 ): string | undefined {
-  if (!('index' in input)) {
-    return ['LOGIN', 'login' in input && input.login].filter(Boolean).join('#');
-  } else if ('index' in input && input.index === 'gsi1') {
+  if ('index' in input && input.index === 'gsi1') {
     return ['MODIFIED', 'updatedAt' in input && input.updatedAt]
       .filter(Boolean)
       .join('#');
   }
 
-  throw new Error('Could not construct sort key from input');
+  assert(!('index' in input), 'Invalid index name');
+
+  return ['LOGIN', 'login' in input && input.login].filter(Boolean).join('#');
 }
 
 /** queryUserLogin */

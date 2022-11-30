@@ -78,9 +78,7 @@ if ('index' in input && input.index === '${indexInfo.name}') {
   return ${makePartialKeyTemplate(skPrefix ?? '', skFields)};
 }`;
     }
-    return `if (!('index' in input)) {
-  return ${makePartialKeyTemplate(skPrefix ?? '', skFields)}
-}`;
+    return `return ${makePartialKeyTemplate(skPrefix ?? '', skFields)}`;
   }
 
   return '';
@@ -161,9 +159,17 @@ if ('index' in input && input.index === '${indexInfo.name}') {
 
 /** helper */
 function makeSortKeyForQuery${typeName}(input: ${inputTypeName}): string | undefined {
-${indexes.map(indexToSortKey).join('\n else ')};
+${indexes
+  .filter((indexInfo) => 'name' in indexInfo)
+  .map(indexToSortKey)
+  .join('\n else ')};
 
-  throw new Error('Could not construct sort key from input');
+  assert(!('index' in input), 'Invalid index name');
+
+${indexes
+  .filter((indexInfo) => !('name' in indexInfo))
+  .map(indexToSortKey)
+  .join('')};
 }
 
 /** query${typeName} */
