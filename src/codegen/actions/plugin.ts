@@ -95,9 +95,9 @@ ${tableTypes
         `import Base64 from 'base64url';`,
         `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError} from '${runtimeModuleId}';`,
         `import {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';`,
-        `import {ddbDocClient} from "${path.relative(
-          path.resolve(process.cwd(), path.dirname(info.outputFile)),
-          path.resolve(process.cwd(), config.dependenciesModuleId)
+        `import {ddbDocClient} from "${resolveDependenciesPath(
+          info.outputFile,
+          config.dependenciesModuleId
         )}";`,
       ],
     };
@@ -107,3 +107,19 @@ ${tableTypes
     throw err;
   }
 };
+
+/** helper */
+function resolveDependenciesPath(outputFile: string, depsModuleId: string) {
+  if (depsModuleId.startsWith('.')) {
+    const fullPathToOutputFile = path.resolve(
+      process.cwd(),
+      path.dirname(outputFile)
+    );
+    const fullPathToDependenciesFile = path.resolve(
+      process.cwd(),
+      depsModuleId
+    );
+    return path.relative(fullPathToOutputFile, fullPathToDependenciesFile);
+  }
+  return depsModuleId;
+}
