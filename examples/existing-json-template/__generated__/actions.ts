@@ -401,7 +401,7 @@ export async function updateUserLogin(
   } catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
       try {
-        const readResult = await readUserLogin(input);
+        await readUserLogin(input);
       } catch {
         throw new NotFoundError('UserLogin', {
           externalId: input.externalId,

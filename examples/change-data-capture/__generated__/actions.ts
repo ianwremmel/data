@@ -423,7 +423,7 @@ export async function updateAccount(
   } catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
       try {
-        const readResult = await readAccount(input);
+        await readAccount(input);
       } catch {
         throw new NotFoundError('Account', {
           externalId: input.externalId,
@@ -1000,7 +1000,7 @@ export async function updateSubscription(
   } catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
       try {
-        const readResult = await readSubscription(input);
+        await readSubscription(input);
       } catch {
         throw new NotFoundError('Subscription', {
           effectiveDate: input.effectiveDate,

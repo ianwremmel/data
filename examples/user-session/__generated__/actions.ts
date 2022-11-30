@@ -402,7 +402,7 @@ export async function updateUserSession(
   } catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
       try {
-        const readResult = await readUserSession(input);
+        await readUserSession(input);
       } catch {
         throw new NotFoundError('UserSession', {
           sessionId: input.sessionId,

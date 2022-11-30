@@ -80,7 +80,7 @@ ${key.map((k) => `        ${k},`).join('\n')}
   catch (err) {
     if (err instanceof ConditionalCheckFailedException) {
       try {
-        const readResult = await read${typeName}(input);
+        await read${typeName}(input);
       }
       catch {
         throw new NotFoundError('${typeName}', {
