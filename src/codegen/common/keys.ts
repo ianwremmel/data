@@ -158,10 +158,10 @@ function extractPartitionKeyInfo(
       }
 
       if (isScalarType(field.type)) {
-        return `${fieldName}: Scalars['${field.type}'];`;
+        return `${fieldName}?: Maybe<Scalars['${field.type}']>;`;
       }
 
-      return `${fieldName}: ${field.type};`;
+      return `${fieldName}?: Maybe<${field.type}>;`;
     }),
 
     unmarshall: [`id: Base64.encode(\`${type.name}:\${item.pk}\`)`],
