@@ -468,15 +468,15 @@ function makePartitionKeyForQueryAccount(input: QueryAccountInput): string {
 function makeSortKeyForQueryAccount(
   input: QueryAccountInput
 ): string | undefined {
-  if ('index' in input && input.index === 'lsi1') {
-    return ['INSTANCE', 'createdAt' in input && input.createdAt]
-      .filter(Boolean)
-      .join('#');
+  if ('index' in input) {
+    if (input.index === 'lsi1') {
+      return ['INSTANCE', 'createdAt' in input && input.createdAt]
+        .filter(Boolean)
+        .join('#');
+    }
+  } else {
+    return ['SUMMARY'].filter(Boolean).join('#');
   }
-
-  assert(!('index' in input), 'Invalid index name');
-
-  return ['SUMMARY'].filter(Boolean).join('#');
 }
 
 /** queryAccount */
@@ -1045,8 +1045,6 @@ function makePartitionKeyForQuerySubscription(
 function makeSortKeyForQuerySubscription(
   input: QuerySubscriptionInput
 ): string | undefined {
-  assert(!('index' in input), 'Invalid index name');
-
   return ['SUBSCRIPTION', 'effectiveDate' in input && input.effectiveDate]
     .filter(Boolean)
     .join('#');

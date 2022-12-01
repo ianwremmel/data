@@ -74,7 +74,7 @@ function indexToSortKey(indexInfo: IndexFieldInfo): string {
     const {skFields, skPrefix} = indexInfo;
     if ('name' in indexInfo) {
       return `
-if ('index' in input && input.index === '${indexInfo.name}') {
+if (input.index === '${indexInfo.name}') {
   return ${makePartialKeyTemplate(skPrefix ?? '', skFields)};
 }`;
     }
@@ -159,17 +159,7 @@ if ('index' in input && input.index === '${indexInfo.name}') {
 
 /** helper */
 function makeSortKeyForQuery${typeName}(input: ${inputTypeName}): string | undefined {
-${indexes
-  .filter((indexInfo) => 'name' in indexInfo)
-  .map(indexToSortKey)
-  .join('\n else ')};
-
-  assert(!('index' in input), 'Invalid index name');
-
-${indexes
-  .filter((indexInfo) => !('name' in indexInfo))
-  .map(indexToSortKey)
-  .join('')};
+${makeMakeSortKeyForQuery(indexes)}
 }
 
 /** query${typeName} */
@@ -246,5 +236,25 @@ export async function query${typeName}ByNodeId(id: Scalars['ID']): Promise<Reado
 
   return {capacity, item: items[0]};
 }
+  `;
+}
+
+/** helper */
+function makeMakeSortKeyForQuery(indexes: readonly IndexFieldInfo[]) {
+  const indexInfos = indexes.filter((indexInfo) => 'name' in indexInfo);
+  const primaryIndex = indexes.find((indexInfo) => !('name' in indexInfo));
+  assert(primaryIndex, 'Expected primary index to exist');
+
+  if (indexInfos.length === 0) {
+    return indexToSortKey(primaryIndex);
+  }
+
+  return `
+  if ('index' in input) {
+${indexInfos.map(indexToSortKey).join('\n else ')};
+  }
+  else {
+  ${indexToSortKey(primaryIndex)};
+  }
   `;
 }

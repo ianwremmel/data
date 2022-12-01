@@ -90,23 +90,9 @@ function extractCompositeKeyInfo(
     keyForCreate: [`pk: \`${pkTemplate}\``, `sk: \`${skTemplate}\``],
     keyForReadAndUpdate: [`pk: \`${pkTemplate}\``, `sk: \`${skTemplate}\``],
     omitForCreate: ['id'].filter(Boolean),
-    primaryKeyType: fieldNames.map((fieldName) => {
-      const field = fields[fieldName];
-
-      if (isNonNullType(field.type)) {
-        if (isScalarType(field.type.ofType)) {
-          return `${fieldName}: Scalars['${field.type.ofType}'];`;
-        }
-
-        return `${fieldName}: ${field.type.ofType};`;
-      }
-
-      if (isScalarType(field.type)) {
-        return `${fieldName}: Scalars['${field.type}'];`;
-      }
-
-      return `${fieldName}: ${field.type};`;
-    }),
+    primaryKeyType: fieldNames.map((fieldName) =>
+      mapFieldToPrimaryKeyType(fields[fieldName])
+    ),
     unmarshall: [
       `id: Base64.encode(\`${type.name}:\${item.pk}${DIVIDER}\${item.sk}\`)`,
     ].filter(Boolean),
@@ -146,24 +132,9 @@ function extractPartitionKeyInfo(
     keyForCreate: [`pk: \`${pkTemplate}\``],
     keyForReadAndUpdate: [`pk: \`${pkTemplate}\``],
     omitForCreate: ['id'],
-    primaryKeyType: fieldNames.map((fieldName) => {
-      const field = fields[fieldName];
-
-      if (isNonNullType(field.type)) {
-        if (isScalarType(field.type.ofType)) {
-          return `${fieldName}: Scalars['${field.type.ofType}'];`;
-        }
-
-        return `${fieldName}: ${field.type.ofType};`;
-      }
-
-      if (isScalarType(field.type)) {
-        return `${fieldName}?: Maybe<Scalars['${field.type}']>;`;
-      }
-
-      return `${fieldName}?: Maybe<${field.type}>;`;
-    }),
-
+    primaryKeyType: fieldNames.map((fieldName) =>
+      mapFieldToPrimaryKeyType(fields[fieldName])
+    ),
     unmarshall: [`id: Base64.encode(\`${type.name}:\${item.pk}\`)`],
   };
 }
@@ -184,4 +155,23 @@ export function extractKeyInfo(type: GraphQLObjectType): KeyInfo {
   assert.fail(
     `Expected type ${type.name} to have a @partitionKey or @compositeKey directive`
   );
+}
+
+/** helper */
+function mapFieldToPrimaryKeyType(
+  field: GraphQLField<unknown, unknown>
+): string {
+  if (isNonNullType(field.type)) {
+    if (isScalarType(field.type.ofType)) {
+      return `${field.name}: Scalars['${field.type.ofType}'];`;
+    }
+
+    return `${field.name}: ${field.type.ofType};`;
+  }
+
+  if (isScalarType(field.type)) {
+    return `${field.name}?: Maybe<Scalars['${field.type}']>;`;
+  }
+
+  return `${field.name}?: Maybe<${field.type}>;`;
 }
