@@ -55,6 +55,9 @@ const config = {
               config: {
                 actionsModuleId: `./examples/${example}/__generated__/actions`,
                 dependenciesModuleId: "./examples/dependencies",
+                outputConfig: {
+                  format: "yaml"
+                },
                 sourceTemplate: getSourceTemplate(example)
               },
               plugins: [`${importBasePath}/codegen/cloudformation`]

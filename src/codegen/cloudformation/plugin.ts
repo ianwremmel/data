@@ -119,6 +119,14 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
       ...allResources.resources,
     },
   };
+  const format = config.outputConfig?.format ?? 'json';
+  if (format === 'json') {
+    return JSON.stringify(tpl, null, 2);
+  }
 
-  return yml.dump(tpl, {noRefs: true, sortKeys: true});
+  return yml.dump(tpl, {
+    noRefs: true,
+    sortKeys: true,
+    ...config.outputConfig?.yamlConfig,
+  });
 };
