@@ -96,7 +96,10 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
         ...initialTemplate?.Globals?.Function,
         Environment: {
           ...initialTemplate?.Globals?.Function?.Environment,
-          Variables: allResources.env,
+          Variables: {
+            ...initialTemplate?.Globals?.Function?.Environment?.Variables,
+            ...allResources.env,
+          },
         },
       },
     },
