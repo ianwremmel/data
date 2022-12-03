@@ -99,6 +99,10 @@ ${tableTypes
           info.outputFile,
           config.dependenciesModuleId
         )}";`,
+        `export interface QueryOptions {
+  limit?: number;
+  reverse?: boolean;
+}`,
       ],
     };
   } catch (err) {

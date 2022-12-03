@@ -28,6 +28,10 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
   [SubKey in K]: Maybe<T[SubKey]>;
 };
+export interface QueryOptions {
+  limit?: number;
+  reverse?: boolean;
+}
 /** All built-in and custom scalars, mapped to their actual values */
 export interface Scalars {
   ID: string;
@@ -481,7 +485,8 @@ function makeSortKeyForQueryAccount(
 
 /** queryAccount */
 export async function queryAccount(
-  input: Readonly<QueryAccountInput>
+  input: Readonly<QueryAccountInput>,
+  {limit = undefined, reverse = false}: QueryOptions = {}
 ): Promise<Readonly<QueryAccountOutput>> {
   const tableName = process.env.TABLE_ACCOUNT;
   assert(tableName, 'TABLE_ACCOUNT is not set');
@@ -500,7 +505,9 @@ export async function queryAccount(
         },
         IndexName: undefined,
         KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
+        ScanIndexForward: !reverse,
         TableName: tableName,
       })
     );
@@ -1052,7 +1059,8 @@ function makeSortKeyForQuerySubscription(
 
 /** querySubscription */
 export async function querySubscription(
-  input: Readonly<QuerySubscriptionInput>
+  input: Readonly<QuerySubscriptionInput>,
+  {limit = undefined, reverse = false}: QueryOptions = {}
 ): Promise<Readonly<QuerySubscriptionOutput>> {
   const tableName = process.env.TABLE_SUBSCRIPTION;
   assert(tableName, 'TABLE_SUBSCRIPTION is not set');
@@ -1071,7 +1079,9 @@ export async function querySubscription(
         },
         IndexName: undefined,
         KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
+        ScanIndexForward: !reverse,
         TableName: tableName,
       })
     );

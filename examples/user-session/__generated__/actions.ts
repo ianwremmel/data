@@ -28,6 +28,10 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
   [SubKey in K]: Maybe<T[SubKey]>;
 };
+export interface QueryOptions {
+  limit?: number;
+  reverse?: boolean;
+}
 /** All built-in and custom scalars, mapped to their actual values */
 export interface Scalars {
   ID: string;

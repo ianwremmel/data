@@ -7,7 +7,7 @@ import type {
   GraphQLObjectType,
   ObjectTypeDefinitionNode,
 } from 'graphql';
-import {isNonNullType, isScalarType, isListType} from 'graphql';
+import {isListType, isNonNullType, isScalarType} from 'graphql';
 import {snakeCase} from 'lodash';
 
 /** Gets the specified argument from the given directive. */
@@ -113,17 +113,25 @@ export function getTypeScriptTypeForField(
   field: GraphQLField<unknown, unknown>
 ): string {
   let fieldType = field.type;
+  let isNonNull = false;
   if (isNonNullType(fieldType)) {
+    isNonNull = true;
     fieldType = fieldType.ofType;
   }
 
   if (isScalarType(fieldType)) {
-    return `Scalars['${fieldType.name}']`;
+    if (isNonNull) {
+      return `Scalars['${fieldType.name}']`;
+    }
+    return `Scalars['${fieldType.name}'] | undefined`;
   }
 
   assert(!isListType(fieldType), 'List types are not supported');
 
-  return fieldType.name;
+  if (isNonNull) {
+    return fieldType.name;
+  }
+  return `${fieldType.name} | undefined`;
 }
 
 /** Indicates if objType contains the specified directive */
@@ -167,11 +175,9 @@ export function isType(
 export function marshalField(field: GraphQLField<unknown, unknown>): string {
   const fieldName = field.name;
 
-  const str = isType('Date', field)
+  return isType('Date', field)
     ? `input.${fieldName}.getTime()`
     : `input.${fieldName}`;
-
-  return str;
 }
 
 /**

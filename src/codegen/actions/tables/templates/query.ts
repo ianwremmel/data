@@ -163,7 +163,7 @@ ${makeMakeSortKeyForQuery(indexes)}
 }
 
 /** query${typeName} */
-export async function query${typeName}(input: Readonly<Query${typeName}Input>): Promise<Readonly<${outputTypeName}>> {
+export async function query${typeName}(input: Readonly<Query${typeName}Input>, {limit = undefined, reverse = false}: QueryOptions = {}): Promise<Readonly<${outputTypeName}>> {
   ${ensureTableTemplate(objType)}
 
   const {ConsumedCapacity: capacity, Items: items = []} = await ddbDocClient.send(new QueryCommand({
@@ -180,7 +180,9 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>): 
       hasIndexes ? `'index' in input ? input.index : undefined` : 'undefined'
     },
     KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+    Limit: limit,
     ReturnConsumedCapacity: 'INDEXES',
+    ScanIndexForward: !reverse,
     TableName: tableName,
   }));
 

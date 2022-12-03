@@ -21,6 +21,12 @@ type CaseInstance implements Model & Timestamped & Versioned
     pkPrefix: "CASE"
     skFields: ["label", "sha"]
     skPrefix: "INSTANCE"
+  )
+  @secondaryIndex(fields: ["createdAt"], name: "lsi1", prefix: "INSTANCE")
+  @secondaryIndex(
+    fields: ["conclusion", "createdAt"]
+    name: "lsi2"
+    prefix: "INSTANCE"
   ) {
   branchName: String!
   conclusion: String!

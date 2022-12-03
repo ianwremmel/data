@@ -17,7 +17,8 @@ type FileTiming implements Model & Timestamped & Versioned
     pkPrefix: "BRANCH"
     skFields: []
     skPrefix: "FILE"
-  ) {
+  )
+  @secondaryIndex(fields: ["duration"], name: "lsi1", prefix: "FILE") {
   branchName: String!
   createdAt: Date!
   duration: Float!
