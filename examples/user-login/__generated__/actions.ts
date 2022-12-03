@@ -28,6 +28,10 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
   [SubKey in K]: Maybe<T[SubKey]>;
 };
+export interface QueryOptions {
+  limit?: number;
+  reverse?: boolean;
+}
 /** All built-in and custom scalars, mapped to their actual values */
 export interface Scalars {
   ID: string;
@@ -466,7 +470,8 @@ function makeSortKeyForQueryUserLogin(
 
 /** queryUserLogin */
 export async function queryUserLogin(
-  input: Readonly<QueryUserLoginInput>
+  input: Readonly<QueryUserLoginInput>,
+  {limit = undefined, reverse = false}: QueryOptions = {}
 ): Promise<Readonly<QueryUserLoginOutput>> {
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
@@ -485,7 +490,9 @@ export async function queryUserLogin(
         },
         IndexName: 'index' in input ? input.index : undefined,
         KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
+        ScanIndexForward: !reverse,
         TableName: tableName,
       })
     );

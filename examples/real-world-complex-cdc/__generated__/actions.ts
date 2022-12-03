@@ -28,6 +28,10 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
   [SubKey in K]: Maybe<T[SubKey]>;
 };
+export interface QueryOptions {
+  limit?: number;
+  reverse?: boolean;
+}
 /** All built-in and custom scalars, mapped to their actual values */
 export interface Scalars {
   ID: string;
@@ -670,7 +674,8 @@ function makeSortKeyForQueryCaseInstance(
 
 /** queryCaseInstance */
 export async function queryCaseInstance(
-  input: Readonly<QueryCaseInstanceInput>
+  input: Readonly<QueryCaseInstanceInput>,
+  {limit = undefined, reverse = false}: QueryOptions = {}
 ): Promise<Readonly<QueryCaseInstanceOutput>> {
   const tableName = process.env.TABLE_CASE_INSTANCE;
   assert(tableName, 'TABLE_CASE_INSTANCE is not set');
@@ -689,7 +694,9 @@ export async function queryCaseInstance(
         },
         IndexName: 'index' in input ? input.index : undefined,
         KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
+        ScanIndexForward: !reverse,
         TableName: tableName,
       })
     );
@@ -1390,7 +1397,8 @@ function makeSortKeyForQueryCaseSummary(
 
 /** queryCaseSummary */
 export async function queryCaseSummary(
-  input: Readonly<QueryCaseSummaryInput>
+  input: Readonly<QueryCaseSummaryInput>,
+  {limit = undefined, reverse = false}: QueryOptions = {}
 ): Promise<Readonly<QueryCaseSummaryOutput>> {
   const tableName = process.env.TABLE_CASE_SUMMARY;
   assert(tableName, 'TABLE_CASE_SUMMARY is not set');
@@ -1409,7 +1417,9 @@ export async function queryCaseSummary(
         },
         IndexName: 'index' in input ? input.index : undefined,
         KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
+        ScanIndexForward: !reverse,
         TableName: tableName,
       })
     );
@@ -2039,7 +2049,8 @@ function makeSortKeyForQueryFileTiming(
 
 /** queryFileTiming */
 export async function queryFileTiming(
-  input: Readonly<QueryFileTimingInput>
+  input: Readonly<QueryFileTimingInput>,
+  {limit = undefined, reverse = false}: QueryOptions = {}
 ): Promise<Readonly<QueryFileTimingOutput>> {
   const tableName = process.env.TABLE_FILE_TIMING;
   assert(tableName, 'TABLE_FILE_TIMING is not set');
@@ -2058,7 +2069,9 @@ export async function queryFileTiming(
         },
         IndexName: 'index' in input ? input.index : undefined,
         KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
+        ScanIndexForward: !reverse,
         TableName: tableName,
       })
     );
