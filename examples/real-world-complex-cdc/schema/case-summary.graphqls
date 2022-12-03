@@ -21,7 +21,8 @@ type CaseSummary implements Model & Timestamped & Versioned
     pkPrefix: "BRANCH"
     skFields: ["label"]
     skPrefix: "INSTANCE"
-  ) {
+  )
+  @secondaryIndex(fields: ["stability"], name: "lsi1", prefix: "INSTANCE") {
   branchName: String!
   createdAt: Date!
   duration: Float!

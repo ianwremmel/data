@@ -488,14 +488,14 @@ export async function updateCaseInstance(
 export type QueryCaseInstanceInput =
   | {
       branchName: Scalars['String'];
-      label: Scalars['String'];
+      label: Scalars['String'] | undefined;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       vendor: Vendor;
     }
   | {
       branchName: Scalars['String'];
-      label: Scalars['String'];
+      label: Scalars['String'] | undefined;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       sha: Scalars['String'];
@@ -503,34 +503,7 @@ export type QueryCaseInstanceInput =
     }
   | {
       branchName: Scalars['String'];
-      label: Scalars['String'];
-      lineage: Scalars['String'];
-      repoId: Scalars['String'];
-      retry: Scalars['Int'];
-      sha: Scalars['String'];
-      vendor: Vendor;
-    }
-  | {
-      index: 'gsi1';
-      branchName: Scalars['String'];
-      label: Scalars['String'];
-      repoId: Scalars['String'];
-      sha: Scalars['String'];
-      vendor: Vendor;
-    }
-  | {
-      index: 'gsi1';
-      branchName: Scalars['String'];
-      label: Scalars['String'];
-      lineage: Scalars['String'];
-      repoId: Scalars['String'];
-      sha: Scalars['String'];
-      vendor: Vendor;
-    }
-  | {
-      index: 'gsi1';
-      branchName: Scalars['String'];
-      label: Scalars['String'];
+      label: Scalars['String'] | undefined;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       retry: Scalars['Int'];
@@ -538,24 +511,95 @@ export type QueryCaseInstanceInput =
       vendor: Vendor;
     }
   | {
-      index: 'gsi2';
+      index: 'gsi1';
       branchName: Scalars['String'];
-      repoId: Scalars['String'];
-      vendor: Vendor;
-    }
-  | {
-      index: 'gsi2';
-      branchName: Scalars['String'];
-      label: Scalars['String'];
-      repoId: Scalars['String'];
-      vendor: Vendor;
-    }
-  | {
-      index: 'gsi2';
-      branchName: Scalars['String'];
-      label: Scalars['String'];
+      label: Scalars['String'] | undefined;
       repoId: Scalars['String'];
       sha: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'gsi1';
+      branchName: Scalars['String'];
+      label: Scalars['String'] | undefined;
+      lineage: Scalars['String'];
+      repoId: Scalars['String'];
+      sha: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'gsi1';
+      branchName: Scalars['String'];
+      label: Scalars['String'] | undefined;
+      lineage: Scalars['String'];
+      repoId: Scalars['String'];
+      retry: Scalars['Int'];
+      sha: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'gsi2';
+      branchName: Scalars['String'];
+      repoId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'gsi2';
+      branchName: Scalars['String'];
+      label: Scalars['String'] | undefined;
+      repoId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'gsi2';
+      branchName: Scalars['String'];
+      label: Scalars['String'] | undefined;
+      repoId: Scalars['String'];
+      sha: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'lsi1';
+      branchName: Scalars['String'];
+      label: Scalars['String'] | undefined;
+      lineage: Scalars['String'];
+      repoId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'lsi1';
+      branchName: Scalars['String'];
+      createdAt: Scalars['Date'];
+      label: Scalars['String'] | undefined;
+      lineage: Scalars['String'];
+      repoId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'lsi2';
+      branchName: Scalars['String'];
+      label: Scalars['String'] | undefined;
+      lineage: Scalars['String'];
+      repoId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'lsi2';
+      branchName: Scalars['String'];
+      conclusion: Scalars['String'];
+      label: Scalars['String'] | undefined;
+      lineage: Scalars['String'];
+      repoId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'lsi2';
+      branchName: Scalars['String'];
+      conclusion: Scalars['String'];
+      createdAt: Scalars['Date'];
+      label: Scalars['String'] | undefined;
+      lineage: Scalars['String'];
+      repoId: Scalars['String'];
       vendor: Vendor;
     };
 export type QueryCaseInstanceOutput = MultiResultType<CaseInstance>;
@@ -570,6 +614,10 @@ function makePartitionKeyForQueryCaseInstance(
     return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.sha}`;
   } else if ('index' in input && input.index === 'gsi2') {
     return `CASE#${input.vendor}#${input.repoId}#${input.branchName}`;
+  } else if ('index' in input && input.index === 'lsi1') {
+    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`;
+  } else if ('index' in input && input.index === 'lsi2') {
+    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`;
   }
 
   throw new Error('Could not construct partition key from input');
@@ -593,6 +641,18 @@ function makeSortKeyForQueryCaseInstance(
         'INSTANCE',
         'label' in input && input.label,
         'sha' in input && input.sha,
+      ]
+        .filter(Boolean)
+        .join('#');
+    } else if (input.index === 'lsi1') {
+      return ['INSTANCE', 'createdAt' in input && input.createdAt]
+        .filter(Boolean)
+        .join('#');
+    } else if (input.index === 'lsi2') {
+      return [
+        'INSTANCE',
+        'conclusion' in input && input.conclusion,
+        'createdAt' in input && input.createdAt,
       ]
         .filter(Boolean)
         .join('#');
@@ -717,6 +777,8 @@ export function marshallCaseInstance(
     '#gsi1sk = :gsi1sk',
     '#gsi2pk = :gsi2pk',
     '#gsi2sk = :gsi2sk',
+    '#lsi1sk = :lsi1sk',
+    '#lsi2sk = :lsi2sk',
   ];
 
   const ean: Record<string, string> = {
@@ -736,6 +798,8 @@ export function marshallCaseInstance(
     '#gsi1sk': 'gsi1sk',
     '#gsi2pk': 'gsi2pk',
     '#gsi2sk': 'gsi2sk',
+    '#lsi1sk': 'lsi1sk',
+    '#lsi2sk': 'lsi2sk',
   };
 
   const eav: Record<string, unknown> = {
@@ -754,6 +818,8 @@ export function marshallCaseInstance(
     ':gsi1sk': `INSTANCE#${input.lineage}#${input.retry}`,
     ':gsi2pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}`,
     ':gsi2sk': `INSTANCE#${input.label}#${input.sha}`,
+    ':lsi1sk': `INSTANCE#${now.getTime()}`,
+    ':lsi2sk': `INSTANCE#${input.conclusion}#${now.getTime()}`,
   };
 
   if ('duration' in input && typeof input.duration !== 'undefined') {
@@ -1240,7 +1306,7 @@ export async function updateCaseSummary(
 export type QueryCaseSummaryInput =
   | {
       branchName: Scalars['String'];
-      label: Scalars['String'];
+      label: Scalars['String'] | undefined;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       vendor: Vendor;
@@ -1248,7 +1314,7 @@ export type QueryCaseSummaryInput =
   | {
       index: 'gsi1';
       branchName: Scalars['String'];
-      label: Scalars['String'];
+      label: Scalars['String'] | undefined;
       repoId: Scalars['String'];
       vendor: Vendor;
     }
@@ -1261,8 +1327,25 @@ export type QueryCaseSummaryInput =
   | {
       index: 'gsi2';
       branchName: Scalars['String'];
-      label: Scalars['String'];
+      label: Scalars['String'] | undefined;
       repoId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'lsi1';
+      branchName: Scalars['String'];
+      label: Scalars['String'] | undefined;
+      lineage: Scalars['String'];
+      repoId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'lsi1';
+      branchName: Scalars['String'];
+      label: Scalars['String'] | undefined;
+      lineage: Scalars['String'];
+      repoId: Scalars['String'];
+      stability: Scalars['Float'];
       vendor: Vendor;
     };
 export type QueryCaseSummaryOutput = MultiResultType<CaseSummary>;
@@ -1277,6 +1360,8 @@ function makePartitionKeyForQueryCaseSummary(
     return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`;
   } else if ('index' in input && input.index === 'gsi2') {
     return `BRANCH#${input.vendor}#${input.repoId}#${input.branchName}`;
+  } else if ('index' in input && input.index === 'lsi1') {
+    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`;
   }
 
   throw new Error('Could not construct partition key from input');
@@ -1291,6 +1376,10 @@ function makeSortKeyForQueryCaseSummary(
       return ['SUMMARY'].filter(Boolean).join('#');
     } else if (input.index === 'gsi2') {
       return ['INSTANCE', 'label' in input && input.label]
+        .filter(Boolean)
+        .join('#');
+    } else if (input.index === 'lsi1') {
+      return ['INSTANCE', 'stability' in input && input.stability]
         .filter(Boolean)
         .join('#');
     }
@@ -1395,6 +1484,7 @@ export function marshallCaseSummary(
     '#gsi1sk = :gsi1sk',
     '#gsi2pk = :gsi2pk',
     '#gsi2sk = :gsi2sk',
+    '#lsi1sk = :lsi1sk',
   ];
 
   const ean: Record<string, string> = {
@@ -1413,6 +1503,7 @@ export function marshallCaseSummary(
     '#gsi1sk': 'gsi1sk',
     '#gsi2pk': 'gsi2pk',
     '#gsi2sk': 'gsi2sk',
+    '#lsi1sk': 'lsi1sk',
   };
 
   const eav: Record<string, unknown> = {
@@ -1430,6 +1521,7 @@ export function marshallCaseSummary(
     ':gsi1sk': `SUMMARY`,
     ':gsi2pk': `BRANCH#${input.vendor}#${input.repoId}#${input.branchName}`,
     ':gsi2sk': `INSTANCE#${input.label}`,
+    ':lsi1sk': `INSTANCE#${input.stability}`,
   };
 
   if ('label' in input && typeof input.label !== 'undefined') {
@@ -1877,20 +1969,35 @@ export async function updateFileTiming(
 export type QueryFileTimingInput =
   | {
       branchName: Scalars['String'];
-      label: Scalars['String'];
+      label: Scalars['String'] | undefined;
       repoId: Scalars['String'];
       vendor: Vendor;
     }
   | {
       branchName: Scalars['String'];
       filename: Scalars['String'];
-      label: Scalars['String'];
+      label: Scalars['String'] | undefined;
       repoId: Scalars['String'];
       vendor: Vendor;
     }
   | {
       index: 'gsi2';
       branchName: Scalars['String'];
+      repoId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'lsi1';
+      branchName: Scalars['String'];
+      label: Scalars['String'] | undefined;
+      repoId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'lsi1';
+      branchName: Scalars['String'];
+      duration: Scalars['Float'];
+      label: Scalars['String'] | undefined;
       repoId: Scalars['String'];
       vendor: Vendor;
     };
@@ -1904,6 +2011,8 @@ function makePartitionKeyForQueryFileTiming(
     return `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`;
   } else if ('index' in input && input.index === 'gsi2') {
     return `BRANCH#${input.vendor}#${input.repoId}#${input.branchName}`;
+  } else if ('index' in input && input.index === 'lsi1') {
+    return `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`;
   }
 
   throw new Error('Could not construct partition key from input');
@@ -1916,6 +2025,10 @@ function makeSortKeyForQueryFileTiming(
   if ('index' in input) {
     if (input.index === 'gsi2') {
       return ['FILE'].filter(Boolean).join('#');
+    } else if (input.index === 'lsi1') {
+      return ['FILE', 'duration' in input && input.duration]
+        .filter(Boolean)
+        .join('#');
     }
   } else {
     return ['FILE', 'filename' in input && input.filename]
@@ -2022,6 +2135,7 @@ export function marshallFileTiming(
     '#version = :version',
     '#gsi2pk = :gsi2pk',
     '#gsi2sk = :gsi2sk',
+    '#lsi1sk = :lsi1sk',
   ];
 
   const ean: Record<string, string> = {
@@ -2037,6 +2151,7 @@ export function marshallFileTiming(
     '#pk': 'pk',
     '#gsi2pk': 'gsi2pk',
     '#gsi2sk': 'gsi2sk',
+    '#lsi1sk': 'lsi1sk',
   };
 
   const eav: Record<string, unknown> = {
@@ -2051,6 +2166,7 @@ export function marshallFileTiming(
     ':version': ('version' in input ? input.version : 0) + 1,
     ':gsi2pk': `BRANCH#${input.vendor}#${input.repoId}#${input.branchName}`,
     ':gsi2sk': `FILE`,
+    ':lsi1sk': `FILE#${input.duration}`,
   };
 
   if ('label' in input && typeof input.label !== 'undefined') {
