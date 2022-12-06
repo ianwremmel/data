@@ -79,7 +79,8 @@ export interface SpecificIndexInfo<T> {
 }
 
 export type GSI = (PartitionKeyIndexInfo | CompositeKeyIndexInfo) & {
-  name: string;
+  readonly name: string;
+  readonly type: 'gsi';
 };
 
 /** helper */
@@ -106,13 +107,15 @@ export function extractGlobalSecondaryIndexInfo(
       pkPrefix,
       skFields,
       skPrefix,
+      type: 'gsi',
     },
     updateExpressions: [`#${name}pk = :${name}pk`, `#${name}sk = :${name}sk`],
   };
 }
 
 export interface LSI {
-  name: string;
+  readonly name: string;
+  readonly type: 'lsi';
   readonly skPrefix?: string;
   readonly skFields: readonly GraphQLField<unknown, unknown>[];
 }
@@ -134,6 +137,7 @@ export function extractLocalSecondaryIndexInfo(
       name,
       skFields,
       skPrefix,
+      type: 'lsi',
     },
     updateExpressions: [`#${name}sk = :${name}sk`],
   };

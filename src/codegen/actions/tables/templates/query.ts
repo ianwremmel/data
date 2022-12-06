@@ -1,8 +1,6 @@
 import assert from 'assert';
 
 import type {GraphQLField, GraphQLObjectType} from 'graphql';
-import {isScalarType} from 'graphql';
-import {isEnumType} from 'graphql/type/definition';
 
 import {
   getTypeScriptTypeForField,
@@ -132,6 +130,10 @@ export function queryTpl({consistent, indexes, objType}: QueryTplInput) {
     .map((t) => `{${t}}`)
     .join(' | ');
 
+  const lsis = indexes
+    .filter((info) => 'type' in info && info.type === 'gsi')
+    .map((info) => `'${'name' in info && info.name}'`);
+
   return `
 export type ${inputTypeName} = ${typeSignature};
 export type ${outputTypeName} = MultiResultType<${typeName}>;
@@ -162,6 +164,25 @@ function makeSortKeyForQuery${typeName}(input: ${inputTypeName}): string | undef
 ${makeMakeSortKeyForQuery(indexes)}
 }
 
+/** helper */
+function makeEavPkForQuery${typeName}(input: ${inputTypeName}): string {
+  ${
+    lsis.length === 0
+      ? `return 'pk';`
+      : `
+  const lsis = [${lsis.join(', ')}];
+  if ('index' in input) {
+    if (lsis.length && lsis.includes(input.index)) {
+      return \`\${input.index}pk\`;
+    }
+  }
+  return 'pk'
+  `
+  }
+
+
+}
+
 /** query${typeName} */
 export async function query${typeName}(input: Readonly<Query${typeName}Input>, {limit = undefined, reverse = false}: QueryOptions = {}): Promise<Readonly<${outputTypeName}>> {
   ${ensureTableTemplate(objType)}
@@ -169,7 +190,7 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>, {
   const {ConsumedCapacity: capacity, Items: items = []} = await ddbDocClient.send(new QueryCommand({
     ConsistentRead: ${consistent ? `!('index' in input)` : 'false'},
     ExpressionAttributeNames: {
-      '#pk': \`${eavPrefix}pk\`,
+      '#pk': makeEavPkForQuery${typeName}(input),
       '#sk': \`${eavPrefix}sk\`,
     },
     ExpressionAttributeValues: {

@@ -672,6 +672,17 @@ function makeSortKeyForQueryCaseInstance(
   }
 }
 
+/** helper */
+function makeEavPkForQueryCaseInstance(input: QueryCaseInstanceInput): string {
+  const lsis = ['gsi1', 'gsi2'];
+  if ('index' in input) {
+    if (lsis.length && lsis.includes(input.index)) {
+      return `${input.index}pk`;
+    }
+  }
+  return 'pk';
+}
+
 /** queryCaseInstance */
 export async function queryCaseInstance(
   input: Readonly<QueryCaseInstanceInput>,
@@ -685,7 +696,7 @@ export async function queryCaseInstance(
       new QueryCommand({
         ConsistentRead: false,
         ExpressionAttributeNames: {
-          '#pk': `${'index' in input ? input.index : ''}pk`,
+          '#pk': makeEavPkForQueryCaseInstance(input),
           '#sk': `${'index' in input ? input.index : ''}sk`,
         },
         ExpressionAttributeValues: {
@@ -1395,6 +1406,17 @@ function makeSortKeyForQueryCaseSummary(
   }
 }
 
+/** helper */
+function makeEavPkForQueryCaseSummary(input: QueryCaseSummaryInput): string {
+  const lsis = ['gsi1', 'gsi2'];
+  if ('index' in input) {
+    if (lsis.length && lsis.includes(input.index)) {
+      return `${input.index}pk`;
+    }
+  }
+  return 'pk';
+}
+
 /** queryCaseSummary */
 export async function queryCaseSummary(
   input: Readonly<QueryCaseSummaryInput>,
@@ -1408,7 +1430,7 @@ export async function queryCaseSummary(
       new QueryCommand({
         ConsistentRead: false,
         ExpressionAttributeNames: {
-          '#pk': `${'index' in input ? input.index : ''}pk`,
+          '#pk': makeEavPkForQueryCaseSummary(input),
           '#sk': `${'index' in input ? input.index : ''}sk`,
         },
         ExpressionAttributeValues: {
@@ -2047,6 +2069,17 @@ function makeSortKeyForQueryFileTiming(
   }
 }
 
+/** helper */
+function makeEavPkForQueryFileTiming(input: QueryFileTimingInput): string {
+  const lsis = ['gsi2'];
+  if ('index' in input) {
+    if (lsis.length && lsis.includes(input.index)) {
+      return `${input.index}pk`;
+    }
+  }
+  return 'pk';
+}
+
 /** queryFileTiming */
 export async function queryFileTiming(
   input: Readonly<QueryFileTimingInput>,
@@ -2060,7 +2093,7 @@ export async function queryFileTiming(
       new QueryCommand({
         ConsistentRead: false,
         ExpressionAttributeNames: {
-          '#pk': `${'index' in input ? input.index : ''}pk`,
+          '#pk': makeEavPkForQueryFileTiming(input),
           '#sk': `${'index' in input ? input.index : ''}sk`,
         },
         ExpressionAttributeValues: {
