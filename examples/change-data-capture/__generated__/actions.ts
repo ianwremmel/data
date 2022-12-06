@@ -483,6 +483,11 @@ function makeSortKeyForQueryAccount(
   }
 }
 
+/** helper */
+function makeEavPkForQueryAccount(input: QueryAccountInput): string {
+  return 'pk';
+}
+
 /** queryAccount */
 export async function queryAccount(
   input: Readonly<QueryAccountInput>,
@@ -496,7 +501,7 @@ export async function queryAccount(
       new QueryCommand({
         ConsistentRead: false,
         ExpressionAttributeNames: {
-          '#pk': `pk`,
+          '#pk': makeEavPkForQueryAccount(input),
           '#sk': `sk`,
         },
         ExpressionAttributeValues: {
@@ -1057,6 +1062,11 @@ function makeSortKeyForQuerySubscription(
     .join('#');
 }
 
+/** helper */
+function makeEavPkForQuerySubscription(input: QuerySubscriptionInput): string {
+  return 'pk';
+}
+
 /** querySubscription */
 export async function querySubscription(
   input: Readonly<QuerySubscriptionInput>,
@@ -1070,7 +1080,7 @@ export async function querySubscription(
       new QueryCommand({
         ConsistentRead: false,
         ExpressionAttributeNames: {
-          '#pk': `pk`,
+          '#pk': makeEavPkForQuerySubscription(input),
           '#sk': `sk`,
         },
         ExpressionAttributeValues: {

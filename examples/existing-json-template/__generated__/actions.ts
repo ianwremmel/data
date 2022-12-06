@@ -468,6 +468,17 @@ function makeSortKeyForQueryUserLogin(
   }
 }
 
+/** helper */
+function makeEavPkForQueryUserLogin(input: QueryUserLoginInput): string {
+  const lsis = ['gsi1'];
+  if ('index' in input) {
+    if (lsis.length && lsis.includes(input.index)) {
+      return `${input.index}pk`;
+    }
+  }
+  return 'pk';
+}
+
 /** queryUserLogin */
 export async function queryUserLogin(
   input: Readonly<QueryUserLoginInput>,
@@ -481,7 +492,7 @@ export async function queryUserLogin(
       new QueryCommand({
         ConsistentRead: false,
         ExpressionAttributeNames: {
-          '#pk': `${'index' in input ? input.index : ''}pk`,
+          '#pk': makeEavPkForQueryUserLogin(input),
           '#sk': `${'index' in input ? input.index : ''}sk`,
         },
         ExpressionAttributeValues: {
