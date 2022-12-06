@@ -111,6 +111,36 @@ function fieldStringToFieldType(
   return `${fragment} as ${field.type.toString().replace(/!$/, '')}`;
 }
 
+/** helper */
+function pkEavTemplate(
+  lsis: readonly string[],
+  gsis: readonly string[]
+): string {
+  if (gsis.length === 0) {
+    return "return 'pk'";
+  }
+
+  if (lsis.length === 0) {
+    return `
+if ('index' in input) {
+  return \`\${input.index}pk\`;
+}
+return 'pk';
+    `;
+  }
+
+  return `
+if ('index' in input) {
+  const lsis = [${lsis.map((l) => l).join(', ')}];
+  if (lsis.includes(input.index)) {
+    return 'pk';
+  }
+  return \`\${input.index}pk\`;
+}
+return 'pk'
+`;
+}
+
 /** template */
 export function queryTpl({consistent, indexes, objType}: QueryTplInput) {
   const primaryIndex = indexes.find((i) => !('name' in i)) as PrimaryIndex;
@@ -130,8 +160,12 @@ export function queryTpl({consistent, indexes, objType}: QueryTplInput) {
     .map((t) => `{${t}}`)
     .join(' | ');
 
-  const lsis = indexes
+  const gsis = indexes
     .filter((info) => 'type' in info && info.type === 'gsi')
+    .map((info) => `'${'name' in info && info.name}'`);
+
+  const lsis = indexes
+    .filter((info) => 'type' in info && info.type === 'lsi')
     .map((info) => `'${'name' in info && info.name}'`);
 
   return `
@@ -166,21 +200,7 @@ ${makeMakeSortKeyForQuery(indexes)}
 
 /** helper */
 function makeEavPkForQuery${typeName}(input: ${inputTypeName}): string {
-  ${
-    lsis.length === 0
-      ? `return 'pk';`
-      : `
-  const lsis = [${lsis.join(', ')}];
-  if ('index' in input) {
-    if (lsis.length && lsis.includes(input.index)) {
-      return \`\${input.index}pk\`;
-    }
-  }
-  return 'pk'
-  `
-  }
-
-
+  ${pkEavTemplate(lsis, gsis)}
 }
 
 /** query${typeName} */
