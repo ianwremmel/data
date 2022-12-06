@@ -674,11 +674,12 @@ function makeSortKeyForQueryCaseInstance(
 
 /** helper */
 function makeEavPkForQueryCaseInstance(input: QueryCaseInstanceInput): string {
-  const lsis = ['gsi1', 'gsi2'];
   if ('index' in input) {
-    if (lsis.length && lsis.includes(input.index)) {
-      return `${input.index}pk`;
+    const lsis = ['lsi1', 'lsi2'];
+    if (lsis.includes(input.index)) {
+      return 'pk';
     }
+    return `${input.index}pk`;
   }
   return 'pk';
 }
@@ -1408,11 +1409,12 @@ function makeSortKeyForQueryCaseSummary(
 
 /** helper */
 function makeEavPkForQueryCaseSummary(input: QueryCaseSummaryInput): string {
-  const lsis = ['gsi1', 'gsi2'];
   if ('index' in input) {
-    if (lsis.length && lsis.includes(input.index)) {
-      return `${input.index}pk`;
+    const lsis = ['lsi1'];
+    if (lsis.includes(input.index)) {
+      return 'pk';
     }
+    return `${input.index}pk`;
   }
   return 'pk';
 }
@@ -2071,11 +2073,12 @@ function makeSortKeyForQueryFileTiming(
 
 /** helper */
 function makeEavPkForQueryFileTiming(input: QueryFileTimingInput): string {
-  const lsis = ['gsi2'];
   if ('index' in input) {
-    if (lsis.length && lsis.includes(input.index)) {
-      return `${input.index}pk`;
+    const lsis = ['lsi1'];
+    if (lsis.includes(input.index)) {
+      return 'pk';
     }
+    return `${input.index}pk`;
   }
   return 'pk';
 }

@@ -470,11 +470,8 @@ function makeSortKeyForQueryUserLogin(
 
 /** helper */
 function makeEavPkForQueryUserLogin(input: QueryUserLoginInput): string {
-  const lsis = ['gsi1'];
   if ('index' in input) {
-    if (lsis.length && lsis.includes(input.index)) {
-      return `${input.index}pk`;
-    }
+    return `${input.index}pk`;
   }
   return 'pk';
 }
