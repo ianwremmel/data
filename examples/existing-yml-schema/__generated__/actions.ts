@@ -476,6 +476,14 @@ function makeEavPkForQueryUserLogin(input: QueryUserLoginInput): string {
   return 'pk';
 }
 
+/** helper */
+function makeEavSkForQueryUserLogin(input: QueryUserLoginInput): string {
+  if ('index' in input) {
+    return `${input.index}sk`;
+  }
+  return 'sk';
+}
+
 /** queryUserLogin */
 export async function queryUserLogin(
   input: Readonly<QueryUserLoginInput>,
@@ -490,7 +498,7 @@ export async function queryUserLogin(
         ConsistentRead: false,
         ExpressionAttributeNames: {
           '#pk': makeEavPkForQueryUserLogin(input),
-          '#sk': `${'index' in input ? input.index : ''}sk`,
+          '#sk': makeEavSkForQueryUserLogin(input),
         },
         ExpressionAttributeValues: {
           ':pk': makePartitionKeyForQueryUserLogin(input),

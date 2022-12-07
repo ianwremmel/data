@@ -488,6 +488,11 @@ function makeEavPkForQueryAccount(input: QueryAccountInput): string {
   return 'pk';
 }
 
+/** helper */
+function makeEavSkForQueryAccount(input: QueryAccountInput): string {
+  return 'sk';
+}
+
 /** queryAccount */
 export async function queryAccount(
   input: Readonly<QueryAccountInput>,
@@ -502,7 +507,7 @@ export async function queryAccount(
         ConsistentRead: false,
         ExpressionAttributeNames: {
           '#pk': makeEavPkForQueryAccount(input),
-          '#sk': `sk`,
+          '#sk': makeEavSkForQueryAccount(input),
         },
         ExpressionAttributeValues: {
           ':pk': makePartitionKeyForQueryAccount(input),
@@ -1067,6 +1072,11 @@ function makeEavPkForQuerySubscription(input: QuerySubscriptionInput): string {
   return 'pk';
 }
 
+/** helper */
+function makeEavSkForQuerySubscription(input: QuerySubscriptionInput): string {
+  return 'sk';
+}
+
 /** querySubscription */
 export async function querySubscription(
   input: Readonly<QuerySubscriptionInput>,
@@ -1081,7 +1091,7 @@ export async function querySubscription(
         ConsistentRead: false,
         ExpressionAttributeNames: {
           '#pk': makeEavPkForQuerySubscription(input),
-          '#sk': `sk`,
+          '#sk': makeEavSkForQuerySubscription(input),
         },
         ExpressionAttributeValues: {
           ':pk': makePartitionKeyForQuerySubscription(input),
