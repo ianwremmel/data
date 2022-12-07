@@ -684,6 +684,18 @@ function makeEavPkForQueryCaseInstance(input: QueryCaseInstanceInput): string {
   return 'pk';
 }
 
+/** helper */
+function makeEavSkForQueryCaseInstance(input: QueryCaseInstanceInput): string {
+  if ('index' in input) {
+    const lsis = ['lsi1', 'lsi2'];
+    if (lsis.includes(input.index)) {
+      return input.index;
+    }
+    return `${input.index}sk`;
+  }
+  return 'sk';
+}
+
 /** queryCaseInstance */
 export async function queryCaseInstance(
   input: Readonly<QueryCaseInstanceInput>,
@@ -698,7 +710,7 @@ export async function queryCaseInstance(
         ConsistentRead: false,
         ExpressionAttributeNames: {
           '#pk': makeEavPkForQueryCaseInstance(input),
-          '#sk': `${'index' in input ? input.index : ''}sk`,
+          '#sk': makeEavSkForQueryCaseInstance(input),
         },
         ExpressionAttributeValues: {
           ':pk': makePartitionKeyForQueryCaseInstance(input),
@@ -1419,6 +1431,18 @@ function makeEavPkForQueryCaseSummary(input: QueryCaseSummaryInput): string {
   return 'pk';
 }
 
+/** helper */
+function makeEavSkForQueryCaseSummary(input: QueryCaseSummaryInput): string {
+  if ('index' in input) {
+    const lsis = ['lsi1'];
+    if (lsis.includes(input.index)) {
+      return input.index;
+    }
+    return `${input.index}sk`;
+  }
+  return 'sk';
+}
+
 /** queryCaseSummary */
 export async function queryCaseSummary(
   input: Readonly<QueryCaseSummaryInput>,
@@ -1433,7 +1457,7 @@ export async function queryCaseSummary(
         ConsistentRead: false,
         ExpressionAttributeNames: {
           '#pk': makeEavPkForQueryCaseSummary(input),
-          '#sk': `${'index' in input ? input.index : ''}sk`,
+          '#sk': makeEavSkForQueryCaseSummary(input),
         },
         ExpressionAttributeValues: {
           ':pk': makePartitionKeyForQueryCaseSummary(input),
@@ -2083,6 +2107,18 @@ function makeEavPkForQueryFileTiming(input: QueryFileTimingInput): string {
   return 'pk';
 }
 
+/** helper */
+function makeEavSkForQueryFileTiming(input: QueryFileTimingInput): string {
+  if ('index' in input) {
+    const lsis = ['lsi1'];
+    if (lsis.includes(input.index)) {
+      return input.index;
+    }
+    return `${input.index}sk`;
+  }
+  return 'sk';
+}
+
 /** queryFileTiming */
 export async function queryFileTiming(
   input: Readonly<QueryFileTimingInput>,
@@ -2097,7 +2133,7 @@ export async function queryFileTiming(
         ConsistentRead: false,
         ExpressionAttributeNames: {
           '#pk': makeEavPkForQueryFileTiming(input),
-          '#sk': `${'index' in input ? input.index : ''}sk`,
+          '#sk': makeEavSkForQueryFileTiming(input),
         },
         ExpressionAttributeValues: {
           ':pk': makePartitionKeyForQueryFileTiming(input),

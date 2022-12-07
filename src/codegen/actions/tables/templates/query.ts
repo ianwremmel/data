@@ -141,6 +141,36 @@ return 'pk'
 `;
 }
 
+/** helper */
+function skEavTemplate(
+  lsis: readonly string[],
+  gsis: readonly string[]
+): string {
+  if (gsis.length === 0) {
+    return "return 'sk'";
+  }
+
+  if (lsis.length === 0) {
+    return `
+if ('index' in input) {
+  return \`\${input.index}sk\`;
+}
+return 'sk';
+    `;
+  }
+
+  return `
+if ('index' in input) {
+  const lsis = [${lsis.map((l) => l).join(', ')}];
+  if (lsis.includes(input.index)) {
+    return input.index;
+  }
+  return \`\${input.index}sk\`;
+}
+return 'sk'
+`;
+}
+
 /** template */
 export function queryTpl({consistent, indexes, objType}: QueryTplInput) {
   const primaryIndex = indexes.find((i) => !('name' in i)) as PrimaryIndex;
@@ -203,6 +233,11 @@ function makeEavPkForQuery${typeName}(input: ${inputTypeName}): string {
   ${pkEavTemplate(lsis, gsis)}
 }
 
+/** helper */
+function makeEavSkForQuery${typeName}(input: ${inputTypeName}): string {
+  ${skEavTemplate(lsis, gsis)}
+}
+
 /** query${typeName} */
 export async function query${typeName}(input: Readonly<Query${typeName}Input>, {limit = undefined, reverse = false}: QueryOptions = {}): Promise<Readonly<${outputTypeName}>> {
   ${ensureTableTemplate(objType)}
@@ -211,7 +246,7 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>, {
     ConsistentRead: ${consistent ? `!('index' in input)` : 'false'},
     ExpressionAttributeNames: {
       '#pk': makeEavPkForQuery${typeName}(input),
-      '#sk': \`${eavPrefix}sk\`,
+      '#sk': makeEavSkForQuery${typeName}(input),
     },
     ExpressionAttributeValues: {
       ':pk': makePartitionKeyForQuery${typeName}(input),
