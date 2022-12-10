@@ -30,6 +30,13 @@ export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
 };
 export interface QueryOptions {
   limit?: number;
+  /**
+   * All operators supported by DynamoDB are except `between`. `between` is
+   * not supported because it requires two values and that makes the codegen
+   * quite a bit more tedious. If it's needed, please open a ticket and we can
+   * look into adding it.
+   */
+  operator?: 'begins_with' | '=' | '<' | '<=' | '>' | '>=';
   reverse?: boolean;
 }
 /** All built-in and custom scalars, mapped to their actual values */
@@ -496,7 +503,11 @@ function makeEavSkForQueryAccount(input: QueryAccountInput): string {
 /** queryAccount */
 export async function queryAccount(
   input: Readonly<QueryAccountInput>,
-  {limit = undefined, reverse = false}: QueryOptions = {}
+  {
+    limit = undefined,
+    operator = 'begins_with',
+    reverse = false,
+  }: QueryOptions = {}
 ): Promise<Readonly<QueryAccountOutput>> {
   const tableName = process.env.TABLE_ACCOUNT;
   assert(tableName, 'TABLE_ACCOUNT is not set');
@@ -514,7 +525,11 @@ export async function queryAccount(
           ':sk': makeSortKeyForQueryAccount(input),
         },
         IndexName: undefined,
-        KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        KeyConditionExpression: `#pk = :pk AND ${
+          operator === 'begins_with'
+            ? 'begins_with(#sk, :sk)'
+            : `#sk ${operator} :sk`
+        }`,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,
@@ -1080,7 +1095,11 @@ function makeEavSkForQuerySubscription(input: QuerySubscriptionInput): string {
 /** querySubscription */
 export async function querySubscription(
   input: Readonly<QuerySubscriptionInput>,
-  {limit = undefined, reverse = false}: QueryOptions = {}
+  {
+    limit = undefined,
+    operator = 'begins_with',
+    reverse = false,
+  }: QueryOptions = {}
 ): Promise<Readonly<QuerySubscriptionOutput>> {
   const tableName = process.env.TABLE_SUBSCRIPTION;
   assert(tableName, 'TABLE_SUBSCRIPTION is not set');
@@ -1098,7 +1117,11 @@ export async function querySubscription(
           ':sk': makeSortKeyForQuerySubscription(input),
         },
         IndexName: undefined,
-        KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        KeyConditionExpression: `#pk = :pk AND ${
+          operator === 'begins_with'
+            ? 'begins_with(#sk, :sk)'
+            : `#sk ${operator} :sk`
+        }`,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,

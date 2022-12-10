@@ -178,9 +178,6 @@ export function queryTpl({consistent, indexes, objType}: QueryTplInput) {
   const typeName = objType.name;
 
   const hasIndexes = hasDirective('compositeIndex', objType);
-  const eavPrefix = hasIndexes
-    ? '${' + `'index' in input ? input.index : ''` + '}'
-    : '';
 
   const inputTypeName = `Query${typeName}Input`;
   const outputTypeName = `Query${typeName}Output`;
@@ -239,7 +236,7 @@ function makeEavSkForQuery${typeName}(input: ${inputTypeName}): string {
 }
 
 /** query${typeName} */
-export async function query${typeName}(input: Readonly<Query${typeName}Input>, {limit = undefined, reverse = false}: QueryOptions = {}): Promise<Readonly<${outputTypeName}>> {
+export async function query${typeName}(input: Readonly<Query${typeName}Input>, {limit = undefined, operator = 'begins_with', reverse = false}: QueryOptions = {}): Promise<Readonly<${outputTypeName}>> {
   ${ensureTableTemplate(objType)}
 
   const {ConsumedCapacity: capacity, Items: items = []} = await ddbDocClient.send(new QueryCommand({
@@ -255,7 +252,7 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>, {
     IndexName: ${
       hasIndexes ? `'index' in input ? input.index : undefined` : 'undefined'
     },
-    KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+    KeyConditionExpression: \`#pk = :pk AND \${operator === 'begins_with' ? 'begins_with(#sk, :sk)' : \`#sk \${operator} :sk\`}\`,
     Limit: limit,
     ReturnConsumedCapacity: 'INDEXES',
     ScanIndexForward: !reverse,
