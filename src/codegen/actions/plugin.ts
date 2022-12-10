@@ -101,6 +101,13 @@ ${tableTypes
         )}";`,
         `export interface QueryOptions {
   limit?: number;
+  /**
+   * All operators supported by DynamoDB are except \`between\`. \`between\` is
+   * not supported because it requires two values and that makes the codegen
+   * quite a bit more tedious. If it's needed, please open a ticket and we can
+   * look into adding it.
+   */
+  operator?: 'begins_with' | '=' | '<' | '<=' | '>' | '>=';
   reverse?: boolean;
 }`,
       ],

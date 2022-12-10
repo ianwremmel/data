@@ -30,6 +30,13 @@ export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
 };
 export interface QueryOptions {
   limit?: number;
+  /**
+   * All operators supported by DynamoDB are except `between`. `between` is
+   * not supported because it requires two values and that makes the codegen
+   * quite a bit more tedious. If it's needed, please open a ticket and we can
+   * look into adding it.
+   */
+  operator?: 'begins_with' | '=' | '<' | '<=' | '>' | '>=';
   reverse?: boolean;
 }
 /** All built-in and custom scalars, mapped to their actual values */
@@ -699,7 +706,11 @@ function makeEavSkForQueryCaseInstance(input: QueryCaseInstanceInput): string {
 /** queryCaseInstance */
 export async function queryCaseInstance(
   input: Readonly<QueryCaseInstanceInput>,
-  {limit = undefined, reverse = false}: QueryOptions = {}
+  {
+    limit = undefined,
+    operator = 'begins_with',
+    reverse = false,
+  }: QueryOptions = {}
 ): Promise<Readonly<QueryCaseInstanceOutput>> {
   const tableName = process.env.TABLE_CASE_INSTANCE;
   assert(tableName, 'TABLE_CASE_INSTANCE is not set');
@@ -717,7 +728,11 @@ export async function queryCaseInstance(
           ':sk': makeSortKeyForQueryCaseInstance(input),
         },
         IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        KeyConditionExpression: `#pk = :pk AND ${
+          operator === 'begins_with'
+            ? 'begins_with(#sk, :sk)'
+            : `#sk ${operator} :sk`
+        }`,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,
@@ -1446,7 +1461,11 @@ function makeEavSkForQueryCaseSummary(input: QueryCaseSummaryInput): string {
 /** queryCaseSummary */
 export async function queryCaseSummary(
   input: Readonly<QueryCaseSummaryInput>,
-  {limit = undefined, reverse = false}: QueryOptions = {}
+  {
+    limit = undefined,
+    operator = 'begins_with',
+    reverse = false,
+  }: QueryOptions = {}
 ): Promise<Readonly<QueryCaseSummaryOutput>> {
   const tableName = process.env.TABLE_CASE_SUMMARY;
   assert(tableName, 'TABLE_CASE_SUMMARY is not set');
@@ -1464,7 +1483,11 @@ export async function queryCaseSummary(
           ':sk': makeSortKeyForQueryCaseSummary(input),
         },
         IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        KeyConditionExpression: `#pk = :pk AND ${
+          operator === 'begins_with'
+            ? 'begins_with(#sk, :sk)'
+            : `#sk ${operator} :sk`
+        }`,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,
@@ -2122,7 +2145,11 @@ function makeEavSkForQueryFileTiming(input: QueryFileTimingInput): string {
 /** queryFileTiming */
 export async function queryFileTiming(
   input: Readonly<QueryFileTimingInput>,
-  {limit = undefined, reverse = false}: QueryOptions = {}
+  {
+    limit = undefined,
+    operator = 'begins_with',
+    reverse = false,
+  }: QueryOptions = {}
 ): Promise<Readonly<QueryFileTimingOutput>> {
   const tableName = process.env.TABLE_FILE_TIMING;
   assert(tableName, 'TABLE_FILE_TIMING is not set');
@@ -2140,7 +2167,11 @@ export async function queryFileTiming(
           ':sk': makeSortKeyForQueryFileTiming(input),
         },
         IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        KeyConditionExpression: `#pk = :pk AND ${
+          operator === 'begins_with'
+            ? 'begins_with(#sk, :sk)'
+            : `#sk ${operator} :sk`
+        }`,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,

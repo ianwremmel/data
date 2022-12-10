@@ -30,6 +30,13 @@ export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
 };
 export interface QueryOptions {
   limit?: number;
+  /**
+   * All operators supported by DynamoDB are except `between`. `between` is
+   * not supported because it requires two values and that makes the codegen
+   * quite a bit more tedious. If it's needed, please open a ticket and we can
+   * look into adding it.
+   */
+  operator?: 'begins_with' | '=' | '<' | '<=' | '>' | '>=';
   reverse?: boolean;
 }
 /** All built-in and custom scalars, mapped to their actual values */
@@ -487,7 +494,11 @@ function makeEavSkForQueryUserLogin(input: QueryUserLoginInput): string {
 /** queryUserLogin */
 export async function queryUserLogin(
   input: Readonly<QueryUserLoginInput>,
-  {limit = undefined, reverse = false}: QueryOptions = {}
+  {
+    limit = undefined,
+    operator = 'begins_with',
+    reverse = false,
+  }: QueryOptions = {}
 ): Promise<Readonly<QueryUserLoginOutput>> {
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
@@ -505,7 +516,11 @@ export async function queryUserLogin(
           ':sk': makeSortKeyForQueryUserLogin(input),
         },
         IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :sk)',
+        KeyConditionExpression: `#pk = :pk AND ${
+          operator === 'begins_with'
+            ? 'begins_with(#sk, :sk)'
+            : `#sk ${operator} :sk`
+        }`,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,

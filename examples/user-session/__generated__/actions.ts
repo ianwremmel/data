@@ -30,6 +30,13 @@ export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
 };
 export interface QueryOptions {
   limit?: number;
+  /**
+   * All operators supported by DynamoDB are except `between`. `between` is
+   * not supported because it requires two values and that makes the codegen
+   * quite a bit more tedious. If it's needed, please open a ticket and we can
+   * look into adding it.
+   */
+  operator?: 'begins_with' | '=' | '<' | '<=' | '>' | '>=';
   reverse?: boolean;
 }
 /** All built-in and custom scalars, mapped to their actual values */
