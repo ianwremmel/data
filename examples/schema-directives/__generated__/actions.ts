@@ -108,6 +108,12 @@ export type UserSession = Model &
     createdAt: Scalars['Date'];
     expires: Scalars['Date'];
     id: Scalars['ID'];
+    /**
+     * This field has nothing to do with UserSession, but this was the easiest place
+     * to add it for testing. The intent is to prove that we can write an object,
+     * when an optional field is absent from the payload.
+     */
+    optionalField?: Maybe<Scalars['String']>;
     session: Scalars['JSONObject'];
     /**
      * Since `id` is a reserved field, sessionId is the field we'll use to inject a
@@ -464,6 +470,12 @@ export function marshallUserSession(
     ':version': ('version' in input ? input.version : 0) + 1,
   };
 
+  if ('optionalField' in input && typeof input.optionalField !== 'undefined') {
+    ean['#optionalField'] = 'optional_field';
+    eav[':optionalField'] = input.optionalField;
+    updateExpression.push('#optionalField = :optionalField');
+  }
+
   updateExpression.sort();
 
   return {
@@ -546,7 +558,7 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
     );
   }
 
-  const result: UserSession = {
+  let result: UserSession = {
     createdAt: new Date(item._ct),
     expires: new Date(item.ttl),
     id: Base64.encode(`UserSession:${item.pk}`),
@@ -555,6 +567,13 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
     updatedAt: new Date(item._md),
     version: item._v,
   };
+
+  if ('optional_field' in item) {
+    result = {
+      ...result,
+      optionalField: item.optional_field,
+    };
+  }
 
   return result;
 }

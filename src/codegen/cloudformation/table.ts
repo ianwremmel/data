@@ -3,20 +3,33 @@ import {assertObjectType} from 'graphql';
 import {snakeCase} from 'lodash';
 
 import {extractTtlInfo} from '../common/fields';
-import {hasDirective} from '../common/helpers';
+import {
+  getOptionalArgBooleanValue,
+  getOptionalDirective,
+  hasDirective,
+} from '../common/helpers';
 import {extractIndexInfo} from '../common/indexes';
+import {extractTableName} from '../common/objects';
 
 import type {CloudFormationFragment} from './types';
 
 /* eslint-disable complexity */
 /** cloudformation generator */
 export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
-  const tableName = `Table${type.name}`;
+  const tableName = extractTableName(type);
+  const tableDirective = getOptionalDirective('table', type);
+  const enablePointInTimeRecovery = tableDirective
+    ? getOptionalArgBooleanValue(
+        'enablePointInTimeRecovery',
+        tableDirective
+      ) !== false
+    : true;
 
   assertObjectType(type);
   const isCompositeKey = hasDirective(`compositeKey`, type);
   const indexInfo = extractIndexInfo(type);
   const ttlInfo = extractTtlInfo(type);
+  const hasCdc = hasDirective('cdc', type);
 
   const attributeDefinitions = isCompositeKey
     ? [
@@ -119,15 +132,19 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
     LocalSecondaryIndexes: localSecondaryIndexes.length
       ? localSecondaryIndexes
       : undefined,
-    PointInTimeRecoverySpecification: {
-      PointInTimeRecoveryEnabled: true,
-    },
+    PointInTimeRecoverySpecification: enablePointInTimeRecovery
+      ? {
+          PointInTimeRecoveryEnabled: true,
+        }
+      : undefined,
     SSESpecification: {
       SSEEnabled: {'Fn::If': ['IsProd', true, false]},
     },
-    StreamSpecification: {
-      StreamViewType: 'NEW_AND_OLD_IMAGES',
-    },
+    StreamSpecification: hasCdc
+      ? {
+          StreamViewType: 'NEW_AND_OLD_IMAGES',
+        }
+      : undefined,
     Tags: [
       {
         Key: 'StageName',
