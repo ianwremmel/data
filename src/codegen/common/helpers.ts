@@ -44,6 +44,26 @@ export function getArgStringValue(
 }
 
 /**
+ * Gets the boolean value of the specified argument from the given directive.
+ * Returns undefined
+ */
+export function getOptionalArgBooleanValue(
+  fieldName: string,
+  directive: ConstDirectiveNode
+): boolean | undefined {
+  const prefixArg = getOptionalArg(fieldName, directive);
+  if (!prefixArg) {
+    return undefined;
+  }
+  assert(
+    prefixArg.value.kind === 'BooleanValue',
+    `Expected @${directive.name.value} directive argument "${fieldName}" to be a boolean, but got ${prefixArg.value.kind}`
+  );
+
+  return Boolean(prefixArg.value.value);
+}
+
+/**
  * Gets the string value of the specified argument from the given directive.
  * Returns an empty string if the argument is not present.
  */

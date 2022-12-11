@@ -44,8 +44,6 @@ Resources:
       KeySchema:
         - AttributeName: pk
           KeyType: HASH
-      PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true
       SSESpecification:
         SSEEnabled:
           Fn::If:

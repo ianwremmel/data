@@ -96,11 +96,21 @@ directive @secondaryIndex(
 ) repeatable on OBJECT
 
 """
-Allows overriding the generated table name for a Model. Generally, this is not
-recommended, but you might want to use this if you're migrating an existing set
-tables to use this library.
+Allows customizing the generated attributes for a table.
 """
-directive @tableName(name: String!) on OBJECT
+directive @table(
+  """
+  Defaults to true
+  """
+  enablePointInTimeRecovery: Boolean
+  """
+  Allows overriding the generated table name for a Model. Generally, this is not
+  recommended, but you might want to use this if you're migrating an existing
+  set of tables to use this library.
+  Defaults to the PascalCased name of the Model prefixed with Table
+  """
+  name: String
+) on OBJECT
 
 """
 Indicates the field will be configured as the DynamoDB ttl field for this type.
