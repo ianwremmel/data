@@ -1,6 +1,7 @@
 import assert from 'assert';
 import path from 'path';
 
+import {assertObjectType} from 'graphql';
 import type {GraphQLObjectType, GraphQLSchema} from 'graphql';
 import {kebabCase} from 'lodash';
 
@@ -9,6 +10,7 @@ import {
   getDirective,
   hasDirective,
 } from '../../common/helpers';
+import {extractTableName} from '../../common/objects';
 import type {CloudformationPluginConfig} from '../config';
 import {combineFragments} from '../fragments/combine-fragments';
 import {metadata} from '../fragments/lambda';
@@ -37,7 +39,7 @@ export function defineCdc(
   const typeName = type.name;
 
   const modelName = typeName;
-  const tableName = `Table${typeName}`;
+  const tableName = extractTableName(type);
 
   const produces = getArgStringValue('produces', directive);
   const targetModel = schema.getType(produces);
@@ -45,7 +47,8 @@ export function defineCdc(
     targetModel,
     `\`produces\` arg on @cdc for ${modelName} identifies ${produces}, which does not appear to identify a type`
   );
-  const destinationTable = produces;
+
+  const destinationTable = extractTableName(assertObjectType(targetModel));
 
   const dependenciesModuleId = path.join(
     // Need to add a level because we're going deeper than the output file.
@@ -131,7 +134,7 @@ export function defineCdc(
             {CloudWatchPutMetricPolicy: {}},
             {
               DynamoDBCrudPolicy: {
-                TableName: {Ref: `Table${destinationTable}`},
+                TableName: {Ref: destinationTable},
               },
             },
             {

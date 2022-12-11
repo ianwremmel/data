@@ -108,6 +108,18 @@ export function getDirective(
   return directive;
 }
 
+/** Gets the specified directive from the given field. */
+export function getOptionalDirective(
+  name: string,
+  nodeOrType: FieldDefinitionNode | ObjectTypeDefinitionNode | GraphQLObjectType
+): ConstDirectiveNode | undefined {
+  if ('getFields' in nodeOrType) {
+    assert(nodeOrType.astNode, 'Expected type to have an AST node');
+    nodeOrType = nodeOrType.astNode;
+  }
+  return nodeOrType.directives?.find((d) => d.name.value === name);
+}
+
 /** Gets the TypeScript type for that corresponds to the field. */
 export function getTypeScriptTypeForField(
   field: GraphQLField<unknown, unknown>

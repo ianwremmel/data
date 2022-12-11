@@ -5,13 +5,14 @@ import {snakeCase} from 'lodash';
 import {extractTtlInfo} from '../common/fields';
 import {hasDirective} from '../common/helpers';
 import {extractIndexInfo} from '../common/indexes';
+import {extractTableName} from '../common/objects';
 
 import type {CloudFormationFragment} from './types';
 
 /* eslint-disable complexity */
 /** cloudformation generator */
 export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
-  const tableName = `Table${type.name}`;
+  const tableName = extractTableName(type);
 
   assertObjectType(type);
   const isCompositeKey = hasDirective(`compositeKey`, type);
