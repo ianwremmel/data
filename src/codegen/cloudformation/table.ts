@@ -29,6 +29,7 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
   const isCompositeKey = hasDirective(`compositeKey`, type);
   const indexInfo = extractIndexInfo(type);
   const ttlInfo = extractTtlInfo(type);
+  const hasCdc = hasDirective('cdc', type);
 
   const attributeDefinitions = isCompositeKey
     ? [
@@ -139,9 +140,11 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
     SSESpecification: {
       SSEEnabled: {'Fn::If': ['IsProd', true, false]},
     },
-    StreamSpecification: {
-      StreamViewType: 'NEW_AND_OLD_IMAGES',
-    },
+    StreamSpecification: hasCdc
+      ? {
+          StreamViewType: 'NEW_AND_OLD_IMAGES',
+        }
+      : undefined,
     Tags: [
       {
         Key: 'StageName',

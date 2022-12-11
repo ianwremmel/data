@@ -124,8 +124,6 @@ Resources:
             - IsProd
             - true
             - false
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
       Tags:
         - Key: StageName
           Value:
@@ -190,8 +188,6 @@ Resources:
             - IsProd
             - true
             - false
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
       Tags:
         - Key: StageName
           Value:
@@ -244,8 +240,6 @@ Resources:
             - IsProd
             - true
             - false
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
       Tags:
         - Key: StageName
           Value:
