@@ -21,7 +21,7 @@ Globals:
     Tracing: Active
 Outputs:
   TableUserLogin:
-    Description: The name of the DynamoDB table for UserLogin
+    Description: The name of the DynamoDB table for TableUserLogin
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableUserLogin

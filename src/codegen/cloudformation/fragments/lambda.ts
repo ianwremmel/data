@@ -2,10 +2,12 @@ import fs from 'fs';
 import path from 'path';
 
 export interface LambdaInput {
+  readonly codeUri: string;
   readonly dependenciesModuleId: string;
+  readonly functionName: string;
   readonly libImportPath: string;
   readonly memorySize?: number;
-  readonly outDir: string;
+  readonly outputPath: string;
   readonly timeout?: number;
 }
 

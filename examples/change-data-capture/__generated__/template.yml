@@ -19,7 +19,7 @@ Globals:
     Tracing: Active
 Outputs:
   TableAccount:
-    Description: The name of the DynamoDB table for Account
+    Description: The name of the DynamoDB table for TableAccount
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableAccount
@@ -28,7 +28,7 @@ Outputs:
     Value:
       Ref: TableAccount
   TableSubscription:
-    Description: The name of the DynamoDB table for Subscription
+    Description: The name of the DynamoDB table for TableSubscription
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableSubscription

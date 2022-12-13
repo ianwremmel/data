@@ -1,17 +1,4 @@
-import assert from 'assert';
-import path from 'path';
-
-import {assertObjectType} from 'graphql';
-import type {GraphQLObjectType, GraphQLSchema} from 'graphql';
-import {kebabCase} from 'lodash';
-
-import {
-  getArgStringValue,
-  getDirective,
-  hasDirective,
-} from '../../common/helpers';
-import {extractTableName} from '../../common/objects';
-import type {CloudformationPluginConfig} from '../config';
+import type {Table} from '../../parser';
 import {combineFragments} from '../fragments/combine-fragments';
 import {metadata} from '../fragments/lambda';
 import {makeLogGroup} from '../fragments/log-group';
@@ -21,59 +8,37 @@ import type {CloudFormationFragment} from '../types';
 import {makeHandler} from './lambdas';
 
 /** Generates CDC config for a type */
-export function defineCdc(
-  schema: GraphQLSchema,
-  config: CloudformationPluginConfig,
-  type: GraphQLObjectType,
-  info: {outputFile: string}
-): CloudFormationFragment {
-  if (!hasDirective('cdc', type)) {
+export function defineCdc(table: Table): CloudFormationFragment {
+  if (!table.changeDataCaptureConfig) {
     return {};
   }
-  const directive = getDirective('cdc', type);
 
-  const event = getArgStringValue('event', directive);
-
-  const libImportPath = '@ianwremmel/data';
-
-  const typeName = type.name;
-
-  const modelName = typeName;
-  const tableName = extractTableName(type);
-
-  const produces = getArgStringValue('produces', directive);
-  const targetModel = schema.getType(produces);
-  assert(
-    targetModel,
-    `\`produces\` arg on @cdc for ${modelName} identifies ${produces}, which does not appear to identify a type`
-  );
-
-  const destinationTable = extractTableName(assertObjectType(targetModel));
-
-  const dependenciesModuleId = path.join(
-    // Need to add a level because we're going deeper than the output file.
-    '..',
-    path.relative(
-      path.resolve(process.cwd(), path.dirname(info.outputFile)),
-      path.resolve(process.cwd(), config.dependenciesModuleId)
-    )
-  );
-
-  const handlerPath = getArgStringValue('handler', directive);
-  const handlerFunctionName = `${modelName}CDCHandler`;
-
-  const handlerFilename = `handler-${kebabCase(modelName)}`;
-  makeHandler({
-    actionsModuleId: path.relative(info.outputFile, config.actionsModuleId),
+  const {
+    changeDataCaptureConfig: {
+      actionsModuleId,
+      dispatcherOutputPath,
+      dispatcherFileName,
+      dispatcherFunctionName,
+      handlerFileName,
+      handlerFunctionName,
+      handlerModuleId,
+      handlerOutputPath,
+      event,
+      sourceModelName,
+      targetTable,
+    },
     dependenciesModuleId,
-    // add an extra level of nesting because we know we're putting the generated
-    // file in a folder.
-    handlerPath: handlerPath.startsWith('.')
-      ? path.join('..', handlerPath)
-      : handlerPath,
     libImportPath,
-    outDir: path.join(path.dirname(info.outputFile), handlerFilename),
-    type,
+    name: tableName,
+  } = table;
+
+  makeHandler({
+    actionsModuleId,
+    dependenciesModuleId,
+    handlerModuleId,
+    handlerOutputPath,
+    libImportPath,
+    typeName: sourceModelName,
   });
 
   const handler = {
@@ -93,7 +58,7 @@ export function defineCdc(
       [handlerFunctionName]: {
         Metadata: metadata,
         Properties: {
-          CodeUri: handlerFilename,
+          CodeUri: handlerFileName,
           DeadLetterQueue: {
             TargetArn: {
               'Fn::GetAtt': [`${handlerFunctionName}EventBridgeDLQ`, 'Arn'],
@@ -112,7 +77,7 @@ export function defineCdc(
                     dynamodb: {
                       NewImage: {
                         _et: {
-                          S: [`${modelName}`],
+                          S: [`${sourceModelName}`],
                         },
                       },
                     },
@@ -120,7 +85,7 @@ export function defineCdc(
                   'detail-type':
                     event === 'UPSERT' ? ['INSERT', 'MODIFY'] : [event],
                   resources: [{'Fn::GetAtt': [tableName, 'Arn']}],
-                  source: [`${tableName}.${modelName}`],
+                  source: [`${tableName}.${sourceModelName}`],
                 },
               },
               Type: 'EventBridgeRule',
@@ -134,7 +99,7 @@ export function defineCdc(
             {CloudWatchPutMetricPolicy: {}},
             {
               DynamoDBCrudPolicy: {
-                TableName: {Ref: destinationTable},
+                TableName: {Ref: targetTable},
               },
             },
             {
@@ -153,9 +118,11 @@ export function defineCdc(
 
   return combineFragments(
     makeTableDispatcher({
+      codeUri: dispatcherFileName,
       dependenciesModuleId,
+      functionName: dispatcherFunctionName,
       libImportPath,
-      outDir: info.outputFile,
+      outputPath: dispatcherOutputPath,
       tableName,
     }),
     makeLogGroup({functionName: handlerFunctionName}),

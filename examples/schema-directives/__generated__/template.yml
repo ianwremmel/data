@@ -17,7 +17,7 @@ Globals:
     Tracing: Active
 Outputs:
   TableUserSessions:
-    Description: The name of the DynamoDB table for UserSession
+    Description: The name of the DynamoDB table for TableUserSessions
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableUserSessions
