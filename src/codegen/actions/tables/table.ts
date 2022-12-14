@@ -119,7 +119,8 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
     ean,
     eav,
     key: keyInfo.keyForReadAndUpdate,
-    objType,
+    tableName: `Table${objType.name}`,
+    typeName: objType.name,
     updateExpressions,
   });
 }
