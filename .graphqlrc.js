@@ -28,6 +28,7 @@ function getSourceTemplate(example) {
   return undefined;
 }
 
+// use 'src' in development for simpler stack traces
 const importBasePath = process.env.CI ? '@ianwremmel/data' : './src';
 
 /** @type {import("graphql-config").IGraphQLConfig } */

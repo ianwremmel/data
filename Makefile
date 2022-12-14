@@ -87,6 +87,9 @@ $(TMP_DIR):
 
 define GEN_EXAMPLE
 
+$(EXAMPLE_DIR)/__generated__/actions.ts: dist/codegen/actions.js
+$(EXAMPLE_DIR)/__generated__/template.yml: dist/codegen/cloudformation.js
+
 $(addprefix $(EXAMPLE_DIR)/__generated__/,$(EXAMPLE_OUTPUT_FILES)) &: $(RUNTIME_DIST_ESM_JS)
 	npx graphql-codegen --debug --verbose --project $(subst examples/,,$(EXAMPLE_DIR))
 	npm run eslint -- --fix $(EXAMPLE_DIR)/__generated__
