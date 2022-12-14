@@ -72,12 +72,11 @@ export function queryTemplate(objType: GraphQLObjectType) {
 export function readItemTemplate(objType: GraphQLObjectType) {
   const keyInfo = extractKeyInfo(objType);
 
-  const consistent = hasDirective('consistent', objType);
-
   return readItemTpl({
-    consistent,
+    consistent: irTable.consistent,
     key: keyInfo.keyForReadAndUpdate,
-    objType,
+    tableName: `Table${objType.name}`,
+    typeName: objType.name,
   });
 }
 
