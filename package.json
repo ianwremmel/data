@@ -91,7 +91,7 @@
   "workspaces": [
     "."
   ],
-  "types": "dist/types",
+  "types": "dist/types/runtime",
   "release": {
     "branches": [
       "main"
