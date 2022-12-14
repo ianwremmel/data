@@ -43,7 +43,7 @@ export function parse<
   assert(outputFile, 'outputFile is required');
 
   const typesMap = schema.getTypeMap();
-  const ir = Object.keys(typesMap)
+  return Object.keys(typesMap)
     .filter((typeName) => {
       const type = schema.getTypeMap()[typeName];
       return isObjectType(type) && hasInterface('Model', type);
@@ -63,15 +63,14 @@ export function parse<
           path.resolve(process.cwd(), config.dependenciesModuleId)
         ),
         libImportPath: '@ianwremmel/data',
-        name: extractTableName(type),
         primaryKey: extractPrimaryKey(type),
         secondaryIndexes: extractSecondaryIndexes(type),
+        tableName: extractTableName(type),
         ttlConfig: extractTTLConfig(type),
+        typeName: type.name,
         ...extractTableInfo(type),
       };
     });
-
-  return ir;
 }
 
 /** helper */

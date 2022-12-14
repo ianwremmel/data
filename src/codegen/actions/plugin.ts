@@ -11,6 +11,7 @@ import {assertObjectType, isObjectType} from 'graphql';
 
 import {hasInterface} from '../common/helpers';
 import {extractKeyInfo} from '../common/keys';
+import {extractTableName, parse} from '../parser';
 
 import type {ActionPluginConfig} from './config';
 import {
@@ -39,6 +40,8 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   try {
     const typesMap = schema.getTypeMap();
 
+    const ir = parse(schema, documents, config, info);
+
     const tableTypes = Object.keys(typesMap)
       .filter((typeName) => {
         const type = typesMap[typeName];
@@ -65,16 +68,20 @@ ${tableTypes
   .map((objType) => {
     const keyInfo = extractKeyInfo(objType);
 
+    // This is a temporary measure to transition to the new parser without
+    // changing every piece of code in a single commit.
+    const irTable = ir.find((t) => t.tableName === extractTableName(objType));
+    assert(irTable, `table not found in IR`);
     return [
       `export interface ${objType.name}PrimaryKey {
           ${keyInfo.primaryKeyType.join('\n')}
         }`,
-      createItemTemplate(objType),
-      deleteItemTemplate(objType),
-      readItemTemplate(objType),
-      touchItemTemplate(objType),
-      updateItemTemplate(objType),
-      queryTemplate(objType),
+      createItemTemplate(objType, irTable),
+      deleteItemTemplate(objType, irTable),
+      readItemTemplate(objType, irTable),
+      touchItemTemplate(objType, irTable),
+      updateItemTemplate(objType, irTable),
+      queryTemplate(objType, irTable),
       marshallTpl({objType}),
       unmarshallTpl({objType}),
     ]

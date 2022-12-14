@@ -4,7 +4,8 @@ export interface Table {
   readonly dependenciesModuleId: string;
   readonly enablePointInTimeRecovery: boolean;
   readonly libImportPath: string;
-  readonly name: string;
+  readonly tableName: string;
+  readonly typeName: string;
   readonly primaryKey: PrimaryKeyConfig;
   readonly secondaryIndexes: readonly SecondaryIndex[];
   readonly ttlConfig?: TTLConfig;

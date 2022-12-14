@@ -5,6 +5,7 @@ import {hasDirective} from '../../common/helpers';
 import type {IndexFieldInfo} from '../../common/indexes';
 import {extractIndexInfo} from '../../common/indexes';
 import {extractKeyInfo} from '../../common/keys';
+import type {Table} from '../../parser';
 
 import {createItemTpl} from './templates/create-item';
 import {deleteItemTpl} from './templates/delete-item';
@@ -16,7 +17,7 @@ import {updateItemTpl} from './templates/update-item';
 /**
  * Generates the createItem function for a table
  */
-export function createItemTemplate(objType: GraphQLObjectType) {
+export function createItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   const keyInfo = extractKeyInfo(objType);
   const ttlInfo = extractTtlInfo(objType);
 
@@ -24,30 +25,30 @@ export function createItemTemplate(objType: GraphQLObjectType) {
     conditionField: keyInfo.conditionField,
     key: keyInfo.keyForCreate,
     omit: ['id', ttlInfo?.fieldName ?? ''].filter(Boolean),
-    tableName: `Table${objType.name}`,
-    typeName: objType.name,
+    tableName: irTable.tableName,
+    typeName: irTable.typeName,
   });
 }
 
 /**
  * Generates the deleteItem function for a table
  */
-export function deleteItemTemplate(objType: GraphQLObjectType) {
+export function deleteItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   const keyInfo = extractKeyInfo(objType);
 
   return deleteItemTpl({
     conditionField: keyInfo.conditionField,
     ean: keyInfo.ean,
     key: keyInfo.keyForReadAndUpdate,
-    tableName: `Table${objType.name}`,
-    typeName: objType.name,
+    tableName: irTable.tableName,
+    typeName: irTable.typeName,
   });
 }
 
 /**
  * Generates the query function for a table
  */
-export function queryTemplate(objType: GraphQLObjectType) {
+export function queryTemplate(objType: GraphQLObjectType, irTable: Table) {
   const indexInfo = extractIndexInfo(objType);
   const keyInfo = extractKeyInfo(objType);
 
@@ -62,29 +63,29 @@ export function queryTemplate(objType: GraphQLObjectType) {
     indexes: [keyInfo.index, ...indexInfo.indexes].filter(
       Boolean
     ) as IndexFieldInfo[],
-    tableName: `Table${objType.name}`,
-    typeName: objType.name,
+    tableName: irTable.tableName,
+    typeName: irTable.typeName,
   });
 }
 
 /**
  * Generates the readItem function for a table
  */
-export function readItemTemplate(objType: GraphQLObjectType) {
+export function readItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   const keyInfo = extractKeyInfo(objType);
 
   return readItemTpl({
     consistent: irTable.consistent,
     key: keyInfo.keyForReadAndUpdate,
-    tableName: `Table${objType.name}`,
-    typeName: objType.name,
+    tableName: irTable.tableName,
+    typeName: irTable.typeName,
   });
 }
 
 /**
  * Generates the updateItem function for a table
  */
-export function touchItemTemplate(objType: GraphQLObjectType) {
+export function touchItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   const keyInfo = extractKeyInfo(objType);
   const ttlInfo = extractTtlInfo(objType);
 
@@ -120,8 +121,8 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
     ean,
     eav,
     key: keyInfo.keyForReadAndUpdate,
-    tableName: `Table${objType.name}`,
-    typeName: objType.name,
+    tableName: irTable.tableName,
+    typeName: irTable.typeName,
     updateExpressions,
   });
 }
@@ -129,7 +130,7 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
 /**
  * Generates the updateItem function for a table
  */
-export function updateItemTemplate(objType: GraphQLObjectType) {
+export function updateItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   const keyInfo = extractKeyInfo(objType);
   const ttlInfo = extractTtlInfo(objType);
 
@@ -137,8 +138,8 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
     conditionField: keyInfo.conditionField,
     inputToPrimaryKey: keyInfo.inputToPrimaryKey,
     key: keyInfo.keyForReadAndUpdate,
-    tableName: `Table${objType.name}`,
+    tableName: irTable.tableName,
     ttlInfo,
-    typeName: objType.name,
+    typeName: irTable.typeName,
   });
 }

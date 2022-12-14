@@ -157,8 +157,8 @@ export type CreateUserSessionOutput = ResultType<UserSession>;
 export async function createUserSession(
   input: Readonly<CreateUserSessionInput>
 ): Promise<Readonly<CreateUserSessionOutput>> {
-  const tableName = process.env.TABLE_USER_SESSION;
-  assert(tableName, 'TABLE_USER_SESSION is not set');
+  const tableName = process.env.TABLE_USER_SESSIONS;
+  assert(tableName, 'TABLE_USER_SESSIONS is not set');
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -213,8 +213,8 @@ export type DeleteUserSessionOutput = ResultType<void>;
 export async function deleteUserSession(
   input: UserSessionPrimaryKey
 ): Promise<DeleteUserSessionOutput> {
-  const tableName = process.env.TABLE_USER_SESSION;
-  assert(tableName, 'TABLE_USER_SESSION is not set');
+  const tableName = process.env.TABLE_USER_SESSIONS;
+  assert(tableName, 'TABLE_USER_SESSIONS is not set');
 
   try {
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
@@ -258,8 +258,8 @@ export type ReadUserSessionOutput = ResultType<UserSession>;
 export async function readUserSession(
   input: UserSessionPrimaryKey
 ): Promise<Readonly<ReadUserSessionOutput>> {
-  const tableName = process.env.TABLE_USER_SESSION;
-  assert(tableName, 'TABLE_USER_SESSION is not set');
+  const tableName = process.env.TABLE_USER_SESSIONS;
+  assert(tableName, 'TABLE_USER_SESSIONS is not set');
 
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
     new GetCommand({
@@ -301,8 +301,8 @@ export type TouchUserSessionOutput = ResultType<void>;
 export async function touchUserSession(
   input: UserSessionPrimaryKey
 ): Promise<TouchUserSessionOutput> {
-  const tableName = process.env.TABLE_USER_SESSION;
-  assert(tableName, 'TABLE_USER_SESSION is not set');
+  const tableName = process.env.TABLE_USER_SESSIONS;
+  assert(tableName, 'TABLE_USER_SESSIONS is not set');
   try {
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
       await ddbDocClient.send(
@@ -357,8 +357,8 @@ export type UpdateUserSessionOutput = ResultType<UserSession>;
 export async function updateUserSession(
   input: Readonly<UpdateUserSessionInput>
 ): Promise<Readonly<UpdateUserSessionOutput>> {
-  const tableName = process.env.TABLE_USER_SESSION;
-  assert(tableName, 'TABLE_USER_SESSION is not set');
+  const tableName = process.env.TABLE_USER_SESSIONS;
+  assert(tableName, 'TABLE_USER_SESSIONS is not set');
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,

@@ -9,7 +9,7 @@ import type {CloudFormationFragment} from './types';
 export function defineTable({
   changeDataCaptureConfig,
   enablePointInTimeRecovery,
-  name: tableName,
+  tableName,
   primaryKey: {isComposite},
   secondaryIndexes,
   ttlConfig: ttlInfo,

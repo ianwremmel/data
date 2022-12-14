@@ -27,7 +27,7 @@ export function defineCdc(table: Table): CloudFormationFragment {
     },
     dependenciesModuleId,
     libImportPath,
-    name: tableName,
+    tableName,
   } = table;
 
   return combineFragments(
