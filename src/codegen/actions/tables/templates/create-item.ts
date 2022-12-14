@@ -1,23 +1,21 @@
-import type {GraphQLObjectType} from 'graphql';
-
 import {ensureTableTemplate} from './ensure-table';
 
 export interface CreateItemTplInput {
   readonly conditionField: string;
   readonly key: readonly string[];
-  readonly objType: GraphQLObjectType;
   readonly omit: readonly string[];
+  readonly tableName: string;
+  readonly typeName: string;
 }
 
 /** template */
 export function createItemTpl({
   conditionField,
   key,
-  objType,
+  tableName,
+  typeName,
   omit,
 }: CreateItemTplInput) {
-  const typeName = objType.name;
-
   const inputTypeName = `Create${typeName}Input`;
   const omitInputFields = ['createdAt', 'updatedAt', 'version', ...omit]
     .map((f) => `'${f}'`)
@@ -29,10 +27,8 @@ export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join('|')}>;
 export type ${outputTypeName} = ResultType<${typeName}>
 /**  */
 export async function create${typeName}(input: Readonly<Create${typeName}Input>): Promise<Readonly<${outputTypeName}>> {
-${ensureTableTemplate(objType)}
-  const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${
-    objType.name
-  }(input);
+${ensureTableTemplate(tableName)}
+  const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${typeName}(input);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand({
@@ -56,7 +52,7 @@ ${key.map((k) => `        ${k},`).join('\n')}
 
   return {
     capacity,
-    item: unmarshall${objType.name}(item),
+    item: unmarshall${typeName}(item),
     metrics,
   }
 }`;

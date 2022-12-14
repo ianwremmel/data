@@ -3,9 +3,15 @@ import {snakeCase} from 'lodash';
 
 /**
  * Generates the code for checking that the environment variables for this
- * tables's name has been set.
+ * table's name has been set.
  */
-export function ensureTableTemplate(objType: GraphQLObjectType): string {
+export function ensureTableTemplate(
+  objType: GraphQLObjectType | string
+): string {
+  if (typeof objType === 'string') {
+    return `  const tableName = process.env.${snakeCase(objType).toUpperCase()};
+  assert(tableName, '${snakeCase(objType).toUpperCase()} is not set');`;
+  }
   return `  const tableName = process.env.TABLE_${snakeCase(
     objType.name
   ).toUpperCase()};

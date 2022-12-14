@@ -23,8 +23,9 @@ export function createItemTemplate(objType: GraphQLObjectType) {
   return createItemTpl({
     conditionField: keyInfo.conditionField,
     key: keyInfo.keyForCreate,
-    objType,
     omit: ['id', ttlInfo?.fieldName ?? ''].filter(Boolean),
+    tableName: `Table${objType.name}`,
+    typeName: objType.name,
   });
 }
 
