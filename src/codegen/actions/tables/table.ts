@@ -136,7 +136,8 @@ export function updateItemTemplate(objType: GraphQLObjectType) {
     conditionField: keyInfo.conditionField,
     inputToPrimaryKey: keyInfo.inputToPrimaryKey,
     key: keyInfo.keyForReadAndUpdate,
-    objType,
+    tableName: `Table${objType.name}`,
     ttlInfo,
+    typeName: objType.name,
   });
 }
