@@ -44,44 +44,46 @@ export const handler = makeDynamoDBStreamDispatcher({
 `
   );
 
-  const logGroup = makeLogGroup({
-    functionName,
-  });
-  return combineFragments(logGroup, {
-    resources: {
-      [functionName]: {
-        Metadata: metadata,
-        Properties: {
-          CodeUri: codeUri,
-          Events: {
-            Stream: {
-              Properties: {
-                BatchSize: batchSize,
-                FunctionResponseTypes: ['ReportBatchItemFailures'],
-                MaximumRetryAttempts: maximumRetryAttempts,
-                StartingPosition: 'TRIM_HORIZON',
-                Stream: {'Fn::GetAtt': [tableName, 'StreamArn']},
+  return combineFragments(
+    makeLogGroup({
+      functionName,
+    }),
+    {
+      resources: {
+        [functionName]: {
+          Metadata: metadata,
+          Properties: {
+            CodeUri: codeUri,
+            Events: {
+              Stream: {
+                Properties: {
+                  BatchSize: batchSize,
+                  FunctionResponseTypes: ['ReportBatchItemFailures'],
+                  MaximumRetryAttempts: maximumRetryAttempts,
+                  StartingPosition: 'TRIM_HORIZON',
+                  Stream: {'Fn::GetAtt': [tableName, 'StreamArn']},
+                },
+                Type: 'DynamoDB',
               },
-              Type: 'DynamoDB',
             },
+            MemorySize: memorySize,
+            Policies: [
+              'AWSLambdaBasicExecutionRole',
+              'AWSLambda_ReadOnlyAccess',
+              'AWSXrayWriteOnlyAccess',
+              'CloudWatchLambdaInsightsExecutionRolePolicy',
+              {CloudWatchPutMetricPolicy: {}},
+              {
+                EventBridgePutEventsPolicy: {
+                  EventBusName: 'default',
+                },
+              },
+            ],
+            Timeout: timeout,
           },
-          MemorySize: memorySize,
-          Policies: [
-            'AWSLambdaBasicExecutionRole',
-            'AWSLambda_ReadOnlyAccess',
-            'AWSXrayWriteOnlyAccess',
-            'CloudWatchLambdaInsightsExecutionRolePolicy',
-            {CloudWatchPutMetricPolicy: {}},
-            {
-              EventBridgePutEventsPolicy: {
-                EventBusName: 'default',
-              },
-            },
-          ],
-          Timeout: timeout,
+          Type: 'AWS::Serverless::Function',
         },
-        Type: 'AWS::Serverless::Function',
       },
-    },
-  });
+    }
+  );
 }
