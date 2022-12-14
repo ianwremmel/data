@@ -1,12 +1,8 @@
 import assert from 'assert';
 
-import type {GraphQLField, GraphQLObjectType} from 'graphql';
+import type {GraphQLField} from 'graphql';
 
-import {
-  getTypeScriptTypeForField,
-  hasDirective,
-  isType,
-} from '../../../common/helpers';
+import {getTypeScriptTypeForField, isType} from '../../../common/helpers';
 import type {IndexFieldInfo, PrimaryIndex} from '../../../common/indexes';
 import {makeKeyTemplate} from '../../../common/keys';
 
@@ -15,7 +11,8 @@ import {ensureTableTemplate} from './ensure-table';
 export interface QueryTplInput {
   readonly consistent: boolean;
   readonly indexes: readonly IndexFieldInfo[];
-  readonly objType: GraphQLObjectType;
+  readonly tableName: string;
+  readonly typeName: string;
 }
 
 /** helper */
@@ -172,12 +169,18 @@ return 'sk'
 }
 
 /** template */
-export function queryTpl({consistent, indexes, objType}: QueryTplInput) {
+export function queryTpl({
+  consistent,
+  indexes,
+  tableName,
+  typeName,
+}: QueryTplInput) {
   const primaryIndex = indexes.find((i) => !('name' in i)) as PrimaryIndex;
   assert(primaryIndex, 'Expected primary index to exist');
-  const typeName = objType.name;
 
-  const hasIndexes = hasDirective('compositeIndex', objType);
+  const hasIndexes =
+    indexes.filter((index) => 'type' in index && index.type === 'gsi').length >
+    0;
 
   const inputTypeName = `Query${typeName}Input`;
   const outputTypeName = `Query${typeName}Output`;
@@ -237,7 +240,7 @@ function makeEavSkForQuery${typeName}(input: ${inputTypeName}): string {
 
 /** query${typeName} */
 export async function query${typeName}(input: Readonly<Query${typeName}Input>, {limit = undefined, operator = 'begins_with', reverse = false}: QueryOptions = {}): Promise<Readonly<${outputTypeName}>> {
-  ${ensureTableTemplate(objType)}
+  ${ensureTableTemplate(tableName)}
 
   const {ConsumedCapacity: capacity, Items: items = []} = await ddbDocClient.send(new QueryCommand({
     ConsistentRead: ${consistent ? `!('index' in input)` : 'false'},
@@ -265,7 +268,7 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>, {
     capacity,
     items: items.map((item) => {
       assert(item._et === '${typeName}', () => new DataIntegrityError('TODO'));
-      return unmarshall${objType.name}(item);
+      return unmarshall${typeName}(item);
     })
   };
 }

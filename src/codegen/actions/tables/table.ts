@@ -62,7 +62,8 @@ export function queryTemplate(objType: GraphQLObjectType) {
     indexes: [keyInfo.index, ...indexInfo.indexes].filter(
       Boolean
     ) as IndexFieldInfo[],
-    objType,
+    tableName: `Table${objType.name}`,
+    typeName: objType.name,
   });
 }
 
