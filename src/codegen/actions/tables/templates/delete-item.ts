@@ -1,12 +1,11 @@
-import type {GraphQLObjectType} from 'graphql';
-
 import {ensureTableTemplate} from './ensure-table';
 
 export interface DeleteItemTplInput {
   readonly conditionField: string;
   readonly ean: readonly string[];
   readonly key: readonly string[];
-  readonly objType: GraphQLObjectType;
+  readonly tableName: string;
+  readonly typeName: string;
 }
 
 /** template */
@@ -14,19 +13,18 @@ export function deleteItemTpl({
   conditionField,
   ean,
   key,
-  objType,
+  tableName,
+  typeName,
 }: DeleteItemTplInput) {
-  const typeName = objType.name;
-
   const outputTypeName = `Delete${typeName}Output`;
-  const primaryKeyType = `${objType.name}PrimaryKey`;
+  const primaryKeyType = `${typeName}PrimaryKey`;
 
   return `
 export type ${outputTypeName} = ResultType<void>;
 
 /**  */
 export async function delete${typeName}(input: ${primaryKeyType}): Promise<${outputTypeName}> {
-${ensureTableTemplate(objType)}
+${ensureTableTemplate(tableName)}
 
   try {
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new DeleteCommand({

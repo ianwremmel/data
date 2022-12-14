@@ -39,7 +39,8 @@ export function deleteItemTemplate(objType: GraphQLObjectType) {
     conditionField: keyInfo.conditionField,
     ean: keyInfo.ean,
     key: keyInfo.keyForReadAndUpdate,
-    objType,
+    tableName: `Table${objType.name}`,
+    typeName: objType.name,
   });
 }
 
