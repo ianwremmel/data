@@ -1,6 +1,5 @@
 import type {GraphQLObjectType} from 'graphql';
 
-import {extractTtlInfo} from '../../common/fields';
 import {hasDirective} from '../../common/helpers';
 import type {IndexFieldInfo} from '../../common/indexes';
 import {extractIndexInfo} from '../../common/indexes';
@@ -19,12 +18,11 @@ import {updateItemTpl} from './templates/update-item';
  */
 export function createItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   const keyInfo = extractKeyInfo(objType);
-  const ttlInfo = extractTtlInfo(objType);
 
   return createItemTpl({
     conditionField: keyInfo.conditionField,
     key: keyInfo.keyForCreate,
-    omit: ['id', ttlInfo?.fieldName ?? ''].filter(Boolean),
+    omit: ['id', irTable.ttlConfig?.fieldName ?? ''].filter(Boolean),
     tableName: irTable.tableName,
     typeName: irTable.typeName,
   });
@@ -87,7 +85,6 @@ export function readItemTemplate(objType: GraphQLObjectType, irTable: Table) {
  */
 export function touchItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   const keyInfo = extractKeyInfo(objType);
-  const ttlInfo = extractTtlInfo(objType);
 
   const ean: string[] = [];
   const eav: string[] = [];
@@ -103,9 +100,9 @@ export function touchItemTemplate(objType: GraphQLObjectType, irTable: Table) {
       ean.push(`'#version': '_v'`);
       eav.push(`':versionInc': 1`);
       updateExpressions.push(`#version = #version + :versionInc`);
-    } else if (fieldName === ttlInfo?.fieldName) {
+    } else if (fieldName === irTable.ttlConfig?.fieldName) {
       ean.push(`'#${fieldName}': 'ttl'`);
-      eav.push(`':ttlInc': ${ttlInfo.duration}`);
+      eav.push(`':ttlInc': ${irTable.ttlConfig.duration}`);
       updateExpressions.push(`#${fieldName} = #${fieldName} + :ttlInc`);
     }
   }
@@ -132,14 +129,13 @@ export function touchItemTemplate(objType: GraphQLObjectType, irTable: Table) {
  */
 export function updateItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   const keyInfo = extractKeyInfo(objType);
-  const ttlInfo = extractTtlInfo(objType);
 
   return updateItemTpl({
     conditionField: keyInfo.conditionField,
     inputToPrimaryKey: keyInfo.inputToPrimaryKey,
     key: keyInfo.keyForReadAndUpdate,
     tableName: irTable.tableName,
-    ttlInfo,
+    ttlInfo: irTable.ttlConfig,
     typeName: irTable.typeName,
   });
 }

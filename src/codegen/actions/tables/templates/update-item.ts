@@ -1,5 +1,4 @@
-import type {Nullable} from '../../../../types';
-import type {TtlInfo} from '../../../common/fields';
+import type {TTLConfig} from '../../../parser';
 
 import {ensureTableTemplate} from './ensure-table';
 
@@ -8,7 +7,7 @@ export interface UpdateItemTplInput {
   readonly key: readonly string[];
   readonly inputToPrimaryKey: readonly string[];
   readonly tableName: string;
-  readonly ttlInfo: Nullable<TtlInfo>;
+  readonly ttlInfo: TTLConfig | undefined;
   readonly typeName: string;
 }
 

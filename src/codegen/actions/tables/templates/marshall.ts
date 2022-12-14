@@ -2,22 +2,22 @@ import type {GraphQLObjectType} from 'graphql/index';
 import {isNonNullType} from 'graphql/index';
 import {snakeCase} from 'lodash';
 
-import {extractTtlInfo} from '../../../common/fields';
 import {isType, marshalField} from '../../../common/helpers';
 import {extractIndexInfo} from '../../../common/indexes';
 import {extractKeyInfo} from '../../../common/keys';
+import type {Table} from '../../../parser';
 
 import {getAliasForField} from './unmarshall';
 
 export interface MarshallTplInput {
+  readonly irTable: Table;
   readonly objType: GraphQLObjectType;
 }
 
 /** Generates the marshall function for a table */
-export function marshallTpl({objType}: MarshallTplInput): string {
+export function marshallTpl({irTable, objType}: MarshallTplInput): string {
   const indexInfo = extractIndexInfo(objType);
   const keyInfo = extractKeyInfo(objType);
-  const ttlInfo = extractTtlInfo(objType);
 
   const fields = Object.values(objType.getFields()).map((f) => {
     const fieldName = f.name;
@@ -76,8 +76,8 @@ ${indexInfo.ean.map((v) => `${v},`).join('\n')}
         if (fieldName === 'version') {
           return `':version': ('version' in input ? input.version : 0) + 1,`;
         }
-        if (fieldName === ttlInfo?.fieldName) {
-          return `':${fieldName}': now.getTime() + ${ttlInfo.duration},`;
+        if (fieldName === irTable.ttlConfig?.fieldName) {
+          return `':${fieldName}': now.getTime() + ${irTable.ttlConfig.duration},`;
         }
         if (fieldName === 'createdAt') {
           return `':${fieldName}': now.getTime(),`;
