@@ -2,7 +2,7 @@ import {ensureTableTemplate} from './ensure-table';
 
 export interface ReadItemTplInput {
   readonly consistent: boolean;
-  readonly key: readonly string[];
+  readonly key: Record<string, string>;
   readonly tableName: string;
   readonly typeName: string;
 }
@@ -27,7 +27,7 @@ ${ensureTableTemplate(tableName)}
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(new GetCommand({
     ConsistentRead: ${consistent},
       Key: {
-${key.map((k) => `        ${k},`).join('\n')}
+${Object.entries(key).map(([k, value]) => `${k}: \`${value}\``)}
       },
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,

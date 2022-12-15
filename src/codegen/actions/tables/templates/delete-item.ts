@@ -3,7 +3,7 @@ import {ensureTableTemplate} from './ensure-table';
 export interface DeleteItemTplInput {
   readonly conditionField: string;
   readonly ean: readonly string[];
-  readonly key: readonly string[];
+  readonly key: Record<string, string>;
   readonly tableName: string;
   readonly typeName: string;
 }
@@ -33,7 +33,7 @@ ${ensureTableTemplate(tableName)}
 ${ean.map((e) => `        ${e},`).join('\n')}
       },
       Key: {
-${key.map((k) => `        ${k},`).join('\n')}
+${Object.entries(key).map(([k, value]) => `${k}: \`${value}\``)}
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',

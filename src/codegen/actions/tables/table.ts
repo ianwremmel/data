@@ -3,8 +3,8 @@ import type {GraphQLObjectType} from 'graphql';
 import {hasDirective} from '../../common/helpers';
 import type {IndexFieldInfo} from '../../common/indexes';
 import {extractIndexInfo} from '../../common/indexes';
-import {extractKeyInfo} from '../../common/keys';
-import type {Table} from '../../parser';
+import {extractKeyInfo, makeKeyTemplate} from '../../common/keys';
+import type {PrimaryKeyConfig, Table} from '../../parser';
 
 import {createItemTpl} from './templates/create-item';
 import {deleteItemTpl} from './templates/delete-item';
@@ -21,7 +21,7 @@ export function createItemTemplate(objType: GraphQLObjectType, irTable: Table) {
 
   return createItemTpl({
     conditionField: keyInfo.conditionField,
-    key: keyInfo.keyForCreate,
+    key: makeKey(irTable.primaryKey),
     omit: ['id', irTable.ttlConfig?.fieldName ?? ''].filter(Boolean),
     tableName: irTable.tableName,
     typeName: irTable.typeName,
@@ -37,7 +37,7 @@ export function deleteItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   return deleteItemTpl({
     conditionField: keyInfo.conditionField,
     ean: keyInfo.ean,
-    key: keyInfo.keyForReadAndUpdate,
+    key: makeKey(irTable.primaryKey),
     tableName: irTable.tableName,
     typeName: irTable.typeName,
   });
@@ -70,11 +70,9 @@ export function queryTemplate(objType: GraphQLObjectType, irTable: Table) {
  * Generates the readItem function for a table
  */
 export function readItemTemplate(objType: GraphQLObjectType, irTable: Table) {
-  const keyInfo = extractKeyInfo(objType);
-
   return readItemTpl({
     consistent: irTable.consistent,
-    key: keyInfo.keyForReadAndUpdate,
+    key: makeKey(irTable.primaryKey),
     tableName: irTable.tableName,
     typeName: irTable.typeName,
   });
@@ -117,7 +115,7 @@ export function touchItemTemplate(objType: GraphQLObjectType, irTable: Table) {
     conditionField: keyInfo.conditionField,
     ean,
     eav,
-    key: keyInfo.keyForReadAndUpdate,
+    key: makeKey(irTable.primaryKey),
     tableName: irTable.tableName,
     typeName: irTable.typeName,
     updateExpressions,
@@ -133,9 +131,23 @@ export function updateItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   return updateItemTpl({
     conditionField: keyInfo.conditionField,
     inputToPrimaryKey: keyInfo.inputToPrimaryKey,
-    key: keyInfo.keyForReadAndUpdate,
+    key: makeKey(irTable.primaryKey),
     tableName: irTable.tableName,
     ttlInfo: irTable.ttlConfig,
     typeName: irTable.typeName,
   });
+}
+
+/** helper */
+function makeKey(key: PrimaryKeyConfig): Record<string, string> {
+  if (key.isComposite) {
+    return {
+      pk: makeKeyTemplate(key.partitionKeyPrefix, key.partitionKeyFields),
+      sk: makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields),
+    };
+  }
+
+  return {
+    pk: makeKeyTemplate(key.prefix, key.fields),
+  };
 }

@@ -4,7 +4,7 @@ export interface TouchItemTplInput {
   readonly conditionField: string;
   readonly ean: readonly string[];
   readonly eav: readonly string[];
-  readonly key: readonly string[];
+  readonly key: Record<string, string>;
   readonly tableName: string;
   readonly typeName: string;
   readonly updateExpressions: readonly string[];
@@ -42,7 +42,7 @@ ${ean.map((e) => `        ${e},`).join('\n')}
 ${eav.map((e) => `        ${e},`).join('\n')}
       },
       Key: {
-${key.map((k) => `        ${k},`).join('\n')}
+${Object.entries(key).map(([k, value]) => `${k}: \`${value}\``)}
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',

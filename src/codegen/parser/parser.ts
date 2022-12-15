@@ -8,6 +8,7 @@ import {snakeCase} from 'lodash';
 
 import {getAliasForField} from '../common/fields';
 import {
+  getArgStringArrayValue,
   getArgStringValue,
   getDirective,
   getOptionalArgBooleanValue,
@@ -59,6 +60,11 @@ export function parse<
     })
     .map((typeName) => {
       const type = assertObjectType(typesMap[typeName]);
+      const fields = extractFields(type);
+      const fieldMap: Record<string, Field> = Object.fromEntries(
+        fields.map((field) => [field.fieldName, field] as const)
+      );
+
       return {
         changeDataCaptureConfig: extractChangeDataCaptureConfig(
           schema,
@@ -71,9 +77,9 @@ export function parse<
           path.resolve(process.cwd(), path.dirname(outputFile)),
           path.resolve(process.cwd(), config.dependenciesModuleId)
         ),
-        fields: extractFields(type),
+        fields,
         libImportPath: '@ianwremmel/data',
-        primaryKey: extractPrimaryKey(type),
+        primaryKey: extractPrimaryKey(type, fieldMap),
         secondaryIndexes: extractSecondaryIndexes(type),
         tableName: extractTableName(type),
         ttlConfig: extractTTLConfig(type),
@@ -103,17 +109,34 @@ function extractFields(
 
 /** helper */
 function extractPrimaryKey(
-  type: GraphQLObjectType<unknown, unknown>
+  type: GraphQLObjectType<unknown, unknown>,
+  fields: Record<string, Field>
 ): PrimaryKeyConfig {
   if (hasDirective('compositeKey', type)) {
+    const directive = getDirective('compositeKey', type);
+
     return {
       isComposite: true,
+      partitionKeyFields: getArgStringArrayValue('pkFields', directive).map(
+        (fieldName) => fields[fieldName]
+      ),
+      partitionKeyPrefix: getOptionalArgStringValue('pkPrefix', directive),
+      sortKeyFields: getArgStringArrayValue('skFields', directive).map(
+        (fieldName) => fields[fieldName]
+      ),
+      sortKeyPrefix: getOptionalArgStringValue('skPrefix', directive),
     };
   }
 
   if (hasDirective('partitionKey', type)) {
+    const directive = getDirective('partitionKey', type);
+
     return {
+      fields: getArgStringArrayValue('pkFields', directive).map(
+        (fieldName) => fields[fieldName]
+      ),
       isComposite: false,
+      prefix: getOptionalArgStringValue('pkPrefix', directive),
     };
   }
 

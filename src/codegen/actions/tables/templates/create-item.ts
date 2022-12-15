@@ -2,7 +2,7 @@ import {ensureTableTemplate} from './ensure-table';
 
 export interface CreateItemTplInput {
   readonly conditionField: string;
-  readonly key: readonly string[];
+  readonly key: Record<string, string>;
   readonly omit: readonly string[];
   readonly tableName: string;
   readonly typeName: string;
@@ -36,7 +36,7 @@ ${ensureTableTemplate(tableName)}
       ExpressionAttributeNames,
       ExpressionAttributeValues,
       Key: {
-${key.map((k) => `        ${k},`).join('\n')}
+${Object.entries(key).map(([k, value]) => `${k}: \`${value}\``)}
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',

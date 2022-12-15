@@ -50,9 +50,21 @@ export interface LSI {
 
 export type SecondaryIndex = GSI | LSI;
 
-export interface PrimaryKeyConfig {
-  readonly isComposite: boolean;
+export interface PartitionKey {
+  isComposite: false;
+  prefix: string;
+  fields: readonly Field[];
 }
+
+export interface CompositeKey {
+  isComposite: true;
+  partitionKeyPrefix: string;
+  partitionKeyFields: Field[];
+  sortKeyPrefix: string;
+  sortKeyFields: Field[];
+}
+
+export type PrimaryKeyConfig = PartitionKey | CompositeKey;
 
 export interface TTLConfig {
   readonly fieldName: string;

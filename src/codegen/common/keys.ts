@@ -7,12 +7,13 @@ import type {
 } from 'graphql';
 import {isNonNullType, isScalarType} from 'graphql';
 
+import type {Field} from '../parser';
+
 import {
   getArgFieldTypeValues,
   getDirective,
   getOptionalArgStringValue,
   hasDirective,
-  isType,
   marshalField,
 } from './helpers';
 import type {PrimaryIndex} from './indexes';
@@ -22,17 +23,19 @@ export const DIVIDER = '#:#';
 /** Generates the template for producing the desired primary key or index column */
 export function makeKeyTemplate(
   prefix: string,
-  fields: readonly GraphQLField<unknown, unknown>[]
+  fields: readonly GraphQLField<unknown, unknown>[] | readonly Field[]
 ): string {
   return [
     prefix,
     ...fields.map((field) => {
-      if (field.name === 'createdAt' || field.name === 'updatedAt') {
+      const fieldName = 'fieldName' in field ? field.fieldName : field.name;
+      const isDateType = 'isDateType' in field ? field.isDateType : false;
+      if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
         // this template gets passed through so it's available in the output.
         // eslint-disable-next-line no-template-curly-in-string
         return '${now.getTime()}';
       }
-      return `\${${marshalField(field.name, isType('Date', field))}}`;
+      return `\${${marshalField(fieldName, isDateType)}}`;
     }),
   ].join('#');
 }
@@ -43,8 +46,6 @@ export interface KeyInfo {
   readonly index?: PrimaryIndex;
   readonly fields: Set<string>;
   readonly inputToPrimaryKey: readonly string[];
-  readonly keyForCreate: readonly string[];
-  readonly keyForReadAndUpdate: readonly string[];
   readonly omitForCreate: readonly string[];
   readonly primaryKeyType: readonly string[];
   readonly unmarshall: readonly string[];
@@ -61,9 +62,6 @@ function extractCompositeKeyInfo(
   const skFields = getArgFieldTypeValues('skFields', type, directive);
   const pkPrefix = getOptionalArgStringValue('pkPrefix', directive);
   const skPrefix = getOptionalArgStringValue('skPrefix', directive);
-
-  const pkTemplate = makeKeyTemplate(pkPrefix, pkFields);
-  const skTemplate = makeKeyTemplate(skPrefix, skFields);
 
   const fieldNames = [
     ...pkFields.map((f) => f.name),
@@ -88,8 +86,6 @@ function extractCompositeKeyInfo(
       skPrefix,
     },
     inputToPrimaryKey: fieldNames.map((f) => `${f}: input.${f}`),
-    keyForCreate: [`pk: \`${pkTemplate}\``, `sk: \`${skTemplate}\``],
-    keyForReadAndUpdate: [`pk: \`${pkTemplate}\``, `sk: \`${skTemplate}\``],
     omitForCreate: ['id'].filter(Boolean),
     primaryKeyType: fieldNames.map((fieldName) =>
       mapFieldToPrimaryKeyType(fields[fieldName])
@@ -110,8 +106,6 @@ function extractPartitionKeyInfo(
   const pkFields = getArgFieldTypeValues('pkFields', type, directive);
   const pkPrefix = getOptionalArgStringValue('pkPrefix', directive);
 
-  const pkTemplate = makeKeyTemplate(pkPrefix, pkFields);
-
   const fieldNames = pkFields.map((f) => f.name).sort();
 
   const fields = type.getFields();
@@ -130,8 +124,6 @@ function extractPartitionKeyInfo(
       pkPrefix,
     },
     inputToPrimaryKey: fieldNames.map((f) => `${f}: input.${f}`),
-    keyForCreate: [`pk: \`${pkTemplate}\``],
-    keyForReadAndUpdate: [`pk: \`${pkTemplate}\``],
     omitForCreate: ['id'],
     primaryKeyType: fieldNames.map((fieldName) =>
       mapFieldToPrimaryKeyType(fields[fieldName])

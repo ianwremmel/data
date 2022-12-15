@@ -4,7 +4,7 @@ import {ensureTableTemplate} from './ensure-table';
 
 export interface UpdateItemTplInput {
   readonly conditionField: string;
-  readonly key: readonly string[];
+  readonly key: Record<string, string>;
   readonly inputToPrimaryKey: readonly string[];
   readonly tableName: string;
   readonly ttlInfo: TTLConfig | undefined;
@@ -48,7 +48,7 @@ ${ensureTableTemplate(tableName)}
         ':previousVersion': input.version,
       },
       Key: {
-${key.map((k) => `        ${k},`).join('\n')}
+${Object.entries(key).map(([k, value]) => `${k}: \`${value}\``)}
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',

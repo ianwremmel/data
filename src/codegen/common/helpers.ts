@@ -45,6 +45,26 @@ export function getArgStringValue(
 }
 
 /**
+ * Given a field name that identifies a list argument, returns the typescript
+ * types identified by those strings.
+ */
+export function getArgStringArrayValue(
+  fieldName: string,
+  directive: ConstDirectiveNode
+): string[] {
+  const arg = getArg(fieldName, directive);
+  assert(arg.value.kind === 'ListValue', `Expected ${fieldName} to be a list`);
+  return arg.value.values.map((v) => {
+    assert(
+      v.kind === 'StringValue',
+      `Expected @${directive.name.value} directive argument "${fieldName}" to be a list of strings`
+    );
+
+    return v.value;
+  });
+}
+
+/**
  * Gets the boolean value of the specified argument from the given directive.
  * Returns undefined
  */
