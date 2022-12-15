@@ -1,43 +1,29 @@
 import assert from 'assert';
 
 import type {GraphQLObjectType} from 'graphql';
-import {isNonNullType} from 'graphql';
-import {snakeCase} from 'lodash';
 
-import {getAliasForField} from '../../../common/fields';
-import {isType, unmarshalField} from '../../../common/helpers';
+import {unmarshalField} from '../../../common/helpers';
 import {extractKeyInfo} from '../../../common/keys';
+import type {Table} from '../../../parser';
 
 export interface UnmarshallTplInput {
+  readonly irTable: Table;
   readonly objType: GraphQLObjectType;
 }
 
 /** Generates the unmarshall function for a table */
-export function unmarshallTpl({objType}: UnmarshallTplInput): string {
+export function unmarshallTpl({
+  irTable: {fields, typeName},
+  objType,
+}: UnmarshallTplInput): string {
   const keyInfo = extractKeyInfo(objType);
-
-  const fields = Object.values(objType.getFields()).map((f) => {
-    const fieldName = f.name;
-    const columnName = getAliasForField(f) ?? snakeCase(f.name);
-    const isDateType = isType('Date', f);
-    const isRequired = isNonNullType(f.type);
-    return {
-      columnName,
-      field: f,
-      fieldName,
-      isDateType,
-      isRequired,
-    };
-  });
 
   const requiredFields = fields.filter((f) => f.isRequired);
   const optionalFields = fields.filter((f) => !f.isRequired);
 
   return `
-/** Unmarshalls a DynamoDB record into a ${objType.name} object */
-export function unmarshall${objType.name}(item: Record<string, any>): ${
-    objType.name
-  } {
+/** Unmarshalls a DynamoDB record into a ${typeName} object */
+export function unmarshall${typeName}(item: Record<string, any>): ${typeName} {
 
 ${requiredFields
   .map(({columnName, fieldName}) => {
@@ -54,32 +40,33 @@ ${requiredFields
   })
   .join('\n')}
 
-  let result: ${objType.name} = {
-${requiredFields.map(({field}) => {
+  let result: ${typeName} = {
+${requiredFields.map((field) => {
   // This isn't ideal, but it'll work for now. I need a better way to deal
   // with simple primary keys and Nodes
-  if (field.name === 'id' && keyInfo.unmarshall.length) {
+  if (field.fieldName === 'id' && keyInfo.unmarshall.length) {
     assert(
       keyInfo.unmarshall.length === 1,
       'Expected exactly one key field to unmarshal'
     );
     return keyInfo.unmarshall[0];
   }
-  return unmarshalField(field, getAliasForField(field));
+  return unmarshalField(field);
 })}
   };
 
 ${optionalFields
-  .map(({columnName, field}) => {
-    return `
-  if ('${columnName}' in item) {
+  .map(
+    (field) =>
+      `
+  if ('${field.columnName}' in item) {
     result = {
       ...result,
-      ${unmarshalField(field, getAliasForField(field))}
+      ${unmarshalField(field)}
     }
   }
-  `;
-  })
+  `
+  )
   .join('\n')}
 
   return result;

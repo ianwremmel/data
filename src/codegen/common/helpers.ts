@@ -8,7 +8,8 @@ import type {
   ObjectTypeDefinitionNode,
 } from 'graphql';
 import {isListType, isNonNullType, isScalarType} from 'graphql';
-import {snakeCase} from 'lodash';
+
+import type {Field} from '../parser';
 
 /** Gets the specified argument from the given directive. */
 export function getArg(name: string, directive: ConstDirectiveNode) {
@@ -211,18 +212,15 @@ export function marshalField(fieldName: string, isDate: boolean): string {
 /**
  * Helper function for building a field unmarshaller
  */
-export function unmarshalField(
-  fieldType: GraphQLField<unknown, unknown>,
-  columnNameOverride?: string
-) {
-  const fieldName = fieldType.name;
-  const columnName = columnNameOverride ?? snakeCase(fieldType.name);
-
-  const isDateType = isType('Date', fieldType);
-
+export function unmarshalField({
+  columnName,
+  fieldName,
+  isDateType,
+  isRequired,
+}: Field) {
   let out = `item.${columnName}`;
   if (isDateType) {
-    if (isNonNullType(fieldType.type)) {
+    if (isRequired) {
       out = `new Date(${out})`;
     } else {
       out = `${out} ? new Date(${out}) : null`;

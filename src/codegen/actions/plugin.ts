@@ -83,7 +83,7 @@ ${tableTypes
       updateItemTemplate(objType, irTable),
       queryTemplate(objType, irTable),
       marshallTpl({irTable, objType}),
-      unmarshallTpl({objType}),
+      unmarshallTpl({irTable, objType}),
     ]
       .filter(Boolean)
       .join('\n\n');
