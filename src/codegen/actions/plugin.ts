@@ -10,7 +10,6 @@ import type {GraphQLObjectType} from 'graphql';
 import {assertObjectType, isObjectType} from 'graphql';
 
 import {hasInterface} from '../common/helpers';
-import {extractKeyInfo} from '../common/keys';
 import {extractTableName, parse} from '../parser';
 
 import type {ActionPluginConfig} from './config';
@@ -22,6 +21,7 @@ import {
   touchItemTemplate,
   updateItemTemplate,
 } from './tables/table';
+import {objectToString} from './tables/templates/mappers';
 import {marshallTpl} from './tables/templates/marshall';
 import {unmarshallTpl} from './tables/templates/unmarshall';
 
@@ -66,16 +66,37 @@ export interface MultiResultType<T> {
 
 ${tableTypes
   .map((objType) => {
-    const keyInfo = extractKeyInfo(objType);
-
     // This is a temporary measure to transition to the new parser without
     // changing every piece of code in a single commit.
     const irTable = ir.find((t) => t.tableName === extractTableName(objType));
     assert(irTable, `table not found in IR`);
     return [
-      `export interface ${objType.name}PrimaryKey {
-          ${keyInfo.primaryKeyType.join('\n')}
-        }`,
+      `export interface ${objType.name}PrimaryKey ${objectToString(
+        Object.fromEntries(
+          (irTable.primaryKey.isComposite
+            ? [
+                ...irTable.primaryKey.partitionKeyFields,
+                ...irTable.primaryKey.sortKeyFields,
+              ]
+            : irTable.primaryKey.fields
+          )
+            .map(({fieldName, isRequired, isScalarType, typeName}) => {
+              if (isRequired) {
+                if (isScalarType) {
+                  return [fieldName, `Scalars["${typeName}"]`];
+                }
+                return [fieldName, typeName];
+              }
+
+              if (isScalarType) {
+                return [`${fieldName}?`, `Maybe<Scalars["${typeName}"]>`];
+              }
+
+              return [`${fieldName}?`, `Maybe<${typeName}>`];
+            })
+            .sort()
+        )
+      )}`,
       createItemTemplate(objType, irTable),
       deleteItemTemplate(objType, irTable),
       readItemTemplate(objType, irTable),

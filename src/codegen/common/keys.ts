@@ -5,7 +5,6 @@ import type {
   GraphQLField,
   GraphQLObjectType,
 } from 'graphql';
-import {isNonNullType, isScalarType} from 'graphql';
 
 import type {Field} from '../parser';
 
@@ -40,7 +39,6 @@ export function makeKeyTemplate(
 
 export interface KeyInfo {
   readonly index?: PrimaryIndex;
-  readonly primaryKeyType: readonly string[];
 }
 
 /**
@@ -60,8 +58,6 @@ function extractCompositeKeyInfo(
     ...skFields.map((f) => f.name),
   ].sort();
 
-  const fields = type.getFields();
-
   assert(
     !fieldNames.includes('id'),
     'id is a reserved field and cannot be part of the partition key'
@@ -74,9 +70,6 @@ function extractCompositeKeyInfo(
       skFields,
       skPrefix,
     },
-    primaryKeyType: fieldNames.map((fieldName) =>
-      mapFieldToPrimaryKeyType(fields[fieldName])
-    ),
   };
 }
 
@@ -92,8 +85,6 @@ function extractPartitionKeyInfo(
 
   const fieldNames = pkFields.map((f) => f.name).sort();
 
-  const fields = type.getFields();
-
   assert(
     !fieldNames.includes('id'),
     'id is a reserved field and cannot be part of the partition key'
@@ -104,9 +95,6 @@ function extractPartitionKeyInfo(
       pkFields,
       pkPrefix,
     },
-    primaryKeyType: fieldNames.map((fieldName) =>
-      mapFieldToPrimaryKeyType(fields[fieldName])
-    ),
   };
 }
 
@@ -126,23 +114,4 @@ export function extractKeyInfo(type: GraphQLObjectType): KeyInfo {
   assert.fail(
     `Expected type ${type.name} to have a @partitionKey or @compositeKey directive`
   );
-}
-
-/** helper */
-function mapFieldToPrimaryKeyType(
-  field: GraphQLField<unknown, unknown>
-): string {
-  if (isNonNullType(field.type)) {
-    if (isScalarType(field.type.ofType)) {
-      return `${field.name}: Scalars['${field.type.ofType}'];`;
-    }
-
-    return `${field.name}: ${field.type.ofType};`;
-  }
-
-  if (isScalarType(field.type)) {
-    return `${field.name}?: Maybe<Scalars['${field.type}']>;`;
-  }
-
-  return `${field.name}?: Maybe<${field.type}>;`;
 }

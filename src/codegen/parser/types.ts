@@ -19,6 +19,8 @@ export interface Field {
   readonly fieldName: string;
   readonly isDateType: boolean;
   readonly isRequired: boolean;
+  readonly isScalarType: boolean;
+  readonly typeName: string;
 }
 
 export type ChangeDataCaptureEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';

@@ -3,7 +3,12 @@ import path from 'path';
 
 import type {Types} from '@graphql-codegen/plugin-helpers/typings/types';
 import type {GraphQLObjectType, GraphQLSchema} from 'graphql';
-import {assertObjectType, isNonNullType, isObjectType} from 'graphql';
+import {
+  assertObjectType,
+  isNonNullType,
+  isObjectType,
+  isScalarType,
+} from 'graphql';
 import {snakeCase} from 'lodash';
 
 import {getAliasForField} from '../common/fields';
@@ -101,6 +106,12 @@ function extractFields(
       fieldName,
       isDateType: isType('Date', field),
       isRequired: isNonNullType(field.type),
+      isScalarType: isNonNullType(field.type)
+        ? isScalarType(field.type.ofType)
+        : isScalarType(field.type),
+      typeName: isNonNullType(field.type)
+        ? String(field.type.ofType)
+        : field.type.name,
     };
   });
 }
