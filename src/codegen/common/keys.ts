@@ -18,8 +18,6 @@ import {
 } from './helpers';
 import type {PrimaryIndex} from './indexes';
 
-export const DIVIDER = '#:#';
-
 /** Generates the template for producing the desired primary key or index column */
 export function makeKeyTemplate(
   prefix: string,
@@ -43,7 +41,6 @@ export function makeKeyTemplate(
 export interface KeyInfo {
   readonly index?: PrimaryIndex;
   readonly primaryKeyType: readonly string[];
-  readonly unmarshall: readonly string[];
 }
 
 /**
@@ -80,9 +77,6 @@ function extractCompositeKeyInfo(
     primaryKeyType: fieldNames.map((fieldName) =>
       mapFieldToPrimaryKeyType(fields[fieldName])
     ),
-    unmarshall: [
-      `id: Base64.encode(\`${type.name}:\${item.pk}${DIVIDER}\${item.sk}\`)`,
-    ].filter(Boolean),
   };
 }
 
@@ -113,7 +107,6 @@ function extractPartitionKeyInfo(
     primaryKeyType: fieldNames.map((fieldName) =>
       mapFieldToPrimaryKeyType(fields[fieldName])
     ),
-    unmarshall: [`id: Base64.encode(\`${type.name}:\${item.pk}\`)`],
   };
 }
 

@@ -1,23 +1,16 @@
-import assert from 'assert';
-
-import type {GraphQLObjectType} from 'graphql';
-
 import {unmarshalField} from '../../../common/helpers';
-import {extractKeyInfo} from '../../../common/keys';
 import type {Table} from '../../../parser';
+
+export const DIVIDER = '#:#';
 
 export interface UnmarshallTplInput {
   readonly irTable: Table;
-  readonly objType: GraphQLObjectType;
 }
 
 /** Generates the unmarshall function for a table */
 export function unmarshallTpl({
-  irTable: {fields, typeName},
-  objType,
+  irTable: {fields, primaryKey, typeName},
 }: UnmarshallTplInput): string {
-  const keyInfo = extractKeyInfo(objType);
-
   const requiredFields = fields.filter((f) => f.isRequired);
   const optionalFields = fields.filter((f) => !f.isRequired);
 
@@ -44,12 +37,11 @@ ${requiredFields
 ${requiredFields.map((field) => {
   // This isn't ideal, but it'll work for now. I need a better way to deal
   // with simple primary keys and Nodes
-  if (field.fieldName === 'id' && keyInfo.unmarshall.length) {
-    assert(
-      keyInfo.unmarshall.length === 1,
-      'Expected exactly one key field to unmarshal'
-    );
-    return keyInfo.unmarshall[0];
+  if (field.fieldName === 'id') {
+    if (primaryKey.isComposite) {
+      return `id: Base64.encode(\`${typeName}:\${item.pk}${DIVIDER}\${item.sk}\`)`;
+    }
+    return `id: Base64.encode(\`${typeName}:\${item.pk}\`)`;
   }
   return unmarshalField(field);
 })}
