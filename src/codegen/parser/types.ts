@@ -24,7 +24,6 @@ export interface Field {
 export type ChangeDataCaptureEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
 export interface ChangeDataCaptureConfig {
-  readonly actionsModuleId: string;
   readonly event: ChangeDataCaptureEvent;
   readonly dispatcherFunctionName: string;
   readonly dispatcherFileName: string;

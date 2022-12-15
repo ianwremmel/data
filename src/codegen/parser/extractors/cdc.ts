@@ -11,7 +11,7 @@ import type {ChangeDataCaptureConfig} from '../types';
 
 /** Extracts CDC config for a type */
 export function extractChangeDataCaptureConfig<
-  T extends {actionsModuleId: string; dependenciesModuleId: string}
+  T extends {dependenciesModuleId: string}
 >(
   schema: GraphQLSchema,
   type: GraphQLObjectType<unknown, unknown>,
@@ -49,7 +49,6 @@ export function extractChangeDataCaptureConfig<
 
   const dispatcherFileName = `dispatcher-${kebabCase(sourceTableName)}`;
   return {
-    actionsModuleId: path.relative(outputFile, config.actionsModuleId),
     dispatcherFileName,
     dispatcherFunctionName: `${sourceTableName}CDCDispatcher`,
     dispatcherOutputPath: path.join(

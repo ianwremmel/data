@@ -41,9 +41,7 @@ export interface Info {
  * Reads a set of GraphQL Schema files and produces an Intermediate
  * Representation.
  */
-export function parse<
-  T extends {actionsModuleId: string; dependenciesModuleId: string}
->(
+export function parse<T extends {dependenciesModuleId: string}>(
   schema: GraphQLSchema,
   documents: Types.DocumentFile[],
   config: T,

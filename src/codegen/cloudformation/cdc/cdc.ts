@@ -1,4 +1,7 @@
+import path from 'path';
+
 import type {Table} from '../../parser';
+import type {CloudformationPluginConfig} from '../config';
 import {combineFragments} from '../fragments/combine-fragments';
 import {makeTableDispatcher} from '../fragments/table-dispatcher';
 import type {CloudFormationFragment} from '../types';
@@ -6,14 +9,16 @@ import type {CloudFormationFragment} from '../types';
 import {makeHandler} from './lambdas';
 
 /** Generates CDC config for a type */
-export function defineCdc(table: Table): CloudFormationFragment {
+export function defineCdc(
+  table: Table,
+  config: CloudformationPluginConfig
+): CloudFormationFragment {
   if (!table.changeDataCaptureConfig) {
     return {};
   }
 
   const {
     changeDataCaptureConfig: {
-      actionsModuleId,
       dispatcherOutputPath,
       dispatcherFileName,
       dispatcherFunctionName,
@@ -29,6 +34,10 @@ export function defineCdc(table: Table): CloudFormationFragment {
     libImportPath,
     tableName,
   } = table;
+
+  const actionsModuleId = config.actionsModuleId.startsWith('.')
+    ? path.relative(handlerOutputPath, config.actionsModuleId)
+    : config.actionsModuleId;
 
   return combineFragments(
     makeTableDispatcher({

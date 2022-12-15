@@ -48,7 +48,7 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
 ) => {
   const allResources = combineFragments(
     ...parse(schema, documents, config, info).map((table) =>
-      combineFragments(defineCdc(table), defineTable(table))
+      combineFragments(defineCdc(table, config), defineTable(table))
     )
   );
 
