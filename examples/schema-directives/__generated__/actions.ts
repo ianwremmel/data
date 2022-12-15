@@ -475,7 +475,6 @@ export function marshallUserSession(
     eav[':optionalField'] = input.optionalField;
     updateExpression.push('#optionalField = :optionalField');
   }
-
   updateExpression.sort();
 
   return {

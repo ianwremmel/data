@@ -3,8 +3,10 @@ import path from 'path';
 
 import type {Types} from '@graphql-codegen/plugin-helpers/typings/types';
 import type {GraphQLObjectType, GraphQLSchema} from 'graphql';
-import {assertObjectType, isObjectType} from 'graphql';
+import {assertObjectType, isNonNullType, isObjectType} from 'graphql';
+import {snakeCase} from 'lodash';
 
+import {getAliasForField} from '../common/fields';
 import {
   getArgStringValue,
   getDirective,
@@ -13,10 +15,17 @@ import {
   getOptionalDirective,
   hasDirective,
   hasInterface,
+  isType,
 } from '../common/helpers';
 
 import {extractChangeDataCaptureConfig} from './extractors/cdc';
-import type {PrimaryKeyConfig, SecondaryIndex, Table, TTLConfig} from './types';
+import type {
+  Field,
+  PrimaryKeyConfig,
+  SecondaryIndex,
+  Table,
+  TTLConfig,
+} from './types';
 
 export interface Info {
   [key: string]: unknown;
@@ -62,6 +71,7 @@ export function parse<
           path.resolve(process.cwd(), path.dirname(outputFile)),
           path.resolve(process.cwd(), config.dependenciesModuleId)
         ),
+        fields: extractFields(type),
         libImportPath: '@ianwremmel/data',
         primaryKey: extractPrimaryKey(type),
         secondaryIndexes: extractSecondaryIndexes(type),
@@ -71,6 +81,24 @@ export function parse<
         ...extractTableInfo(type),
       };
     });
+}
+
+/** helper */
+function extractFields(
+  type: GraphQLObjectType<unknown, unknown>
+): readonly Field[] {
+  const fields = type.getFields();
+  return Object.keys(fields).map((fieldName) => {
+    const field = fields[fieldName];
+    return {
+      columnName: getAliasForField(field) ?? snakeCase(fieldName),
+      ean: `:${fieldName}`,
+      eav: `#${fieldName}`,
+      fieldName,
+      isDateType: isType('Date', field),
+      isRequired: isNonNullType(field.type),
+    };
+  });
 }
 
 /** helper */

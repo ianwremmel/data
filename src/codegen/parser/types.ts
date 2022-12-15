@@ -3,12 +3,22 @@ export interface Table {
   readonly consistent: boolean;
   readonly dependenciesModuleId: string;
   readonly enablePointInTimeRecovery: boolean;
+  readonly fields: readonly Field[];
   readonly libImportPath: string;
   readonly tableName: string;
   readonly typeName: string;
   readonly primaryKey: PrimaryKeyConfig;
   readonly secondaryIndexes: readonly SecondaryIndex[];
   readonly ttlConfig?: TTLConfig;
+}
+
+export interface Field {
+  readonly columnName: string;
+  readonly ean: string;
+  readonly eav: string;
+  readonly fieldName: string;
+  readonly isDateType: boolean;
+  readonly isRequired: boolean;
 }
 
 export type ChangeDataCaptureEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';

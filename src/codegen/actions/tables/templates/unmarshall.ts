@@ -1,31 +1,15 @@
 import assert from 'assert';
 
-import type {GraphQLField, GraphQLObjectType} from 'graphql';
+import type {GraphQLObjectType} from 'graphql';
 import {isNonNullType} from 'graphql';
 import {snakeCase} from 'lodash';
 
-import {hasDirective, isType, unmarshalField} from '../../../common/helpers';
+import {getAliasForField} from '../../../common/fields';
+import {isType, unmarshalField} from '../../../common/helpers';
 import {extractKeyInfo} from '../../../common/keys';
 
 export interface UnmarshallTplInput {
   readonly objType: GraphQLObjectType;
-}
-
-/** helper */
-export function getAliasForField(field: GraphQLField<unknown, unknown>) {
-  if (hasDirective('ttl', field)) {
-    return 'ttl';
-  }
-  switch (field.name) {
-    case 'version':
-      return '_v';
-    case 'createdAt':
-      return '_ct';
-    case 'updatedAt':
-      return '_md';
-    default:
-      return undefined;
-  }
 }
 
 /** Generates the unmarshall function for a table */

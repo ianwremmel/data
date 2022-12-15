@@ -204,12 +204,8 @@ export function isType(
 /**
  * Marshals the specified field value for use with ddb.
  */
-export function marshalField(field: GraphQLField<unknown, unknown>): string {
-  const fieldName = field.name;
-
-  return isType('Date', field)
-    ? `input.${fieldName}.getTime()`
-    : `input.${fieldName}`;
+export function marshalField(fieldName: string, isDate: boolean): string {
+  return isDate ? `input.${fieldName}.getTime()` : `input.${fieldName}`;
 }
 
 /**

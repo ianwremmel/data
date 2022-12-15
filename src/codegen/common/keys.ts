@@ -12,6 +12,7 @@ import {
   getDirective,
   getOptionalArgStringValue,
   hasDirective,
+  isType,
   marshalField,
 } from './helpers';
 import type {PrimaryIndex} from './indexes';
@@ -31,7 +32,7 @@ export function makeKeyTemplate(
         // eslint-disable-next-line no-template-curly-in-string
         return '${now.getTime()}';
       }
-      return `\${${marshalField(field)}}`;
+      return `\${${marshalField(field.name, isType('Date', field))}}`;
     }),
   ].join('#');
 }

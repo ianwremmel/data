@@ -885,7 +885,6 @@ export function marshallCaseInstance(
     eav[':label'] = input.label;
     updateExpression.push('#label = :label');
   }
-
   updateExpression.sort();
 
   return {
@@ -1610,7 +1609,6 @@ export function marshallCaseSummary(
     eav[':label'] = input.label;
     updateExpression.push('#label = :label');
   }
-
   updateExpression.sort();
 
   return {
@@ -2290,7 +2288,6 @@ export function marshallFileTiming(
     eav[':label'] = input.label;
     updateExpression.push('#label = :label');
   }
-
   updateExpression.sort();
 
   return {

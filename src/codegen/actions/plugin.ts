@@ -82,7 +82,7 @@ ${tableTypes
       touchItemTemplate(objType, irTable),
       updateItemTemplate(objType, irTable),
       queryTemplate(objType, irTable),
-      marshallTpl({objType}),
+      marshallTpl({irTable, objType}),
       unmarshallTpl({objType}),
     ]
       .filter(Boolean)

@@ -640,7 +640,6 @@ export function marshallAccount(
     eav[':planName'] = input.planName;
     updateExpression.push('#planName = :planName');
   }
-
   updateExpression.sort();
 
   return {
@@ -1235,7 +1234,6 @@ export function marshallSubscription(
     eav[':planName'] = input.planName;
     updateExpression.push('#planName = :planName');
   }
-
   updateExpression.sort();
 
   return {
