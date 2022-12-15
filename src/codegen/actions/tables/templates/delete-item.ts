@@ -1,4 +1,5 @@
 import {ensureTableTemplate} from './ensure-table';
+import {objectToString} from './mappers';
 
 export interface DeleteItemTplInput {
   readonly key: Record<string, string>;
@@ -24,9 +25,7 @@ ${ensureTableTemplate(tableName)}
       ExpressionAttributeNames: {
         "#pk": "pk",
       },
-      Key: {
-${Object.entries(key).map(([k, value]) => `${k}: \`${value}\``)}
-      },
+      Key: ${objectToString(key)},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'NONE',

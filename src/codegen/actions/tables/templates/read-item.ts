@@ -1,4 +1,5 @@
 import {ensureTableTemplate} from './ensure-table';
+import {objectToString} from './mappers';
 
 export interface ReadItemTplInput {
   readonly consistent: boolean;
@@ -26,9 +27,7 @@ ${ensureTableTemplate(tableName)}
 
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(new GetCommand({
     ConsistentRead: ${consistent},
-      Key: {
-${Object.entries(key).map(([k, value]) => `${k}: \`${value}\``)}
-      },
+    Key: ${objectToString(key)},
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
   }));

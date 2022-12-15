@@ -1,6 +1,7 @@
 import type {TTLConfig} from '../../../parser';
 
 import {ensureTableTemplate} from './ensure-table';
+import {objectToString} from './mappers';
 
 export interface UpdateItemTplInput {
   readonly key: Record<string, string>;
@@ -45,9 +46,7 @@ ${ensureTableTemplate(tableName)}
         ...ExpressionAttributeValues,
         ':previousVersion': input.version,
       },
-      Key: {
-${Object.entries(key).map(([k, value]) => `${k}: \`${value}\``)}
-      },
+      Key: ${objectToString(key)},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',

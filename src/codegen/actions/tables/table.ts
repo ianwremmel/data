@@ -133,12 +133,15 @@ export function updateItemTemplate(objType: GraphQLObjectType, irTable: Table) {
 function makeKey(key: PrimaryKeyConfig): Record<string, string> {
   if (key.isComposite) {
     return {
-      pk: makeKeyTemplate(key.partitionKeyPrefix, key.partitionKeyFields),
-      sk: makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields),
+      pk: `\`${makeKeyTemplate(
+        key.partitionKeyPrefix,
+        key.partitionKeyFields
+      )}\``,
+      sk: `\`${makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields)}\``,
     };
   }
 
   return {
-    pk: makeKeyTemplate(key.prefix, key.fields),
+    pk: `\`${makeKeyTemplate(key.prefix, key.fields)}\``,
   };
 }

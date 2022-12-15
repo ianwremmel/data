@@ -193,10 +193,7 @@ export async function createAccount(
       ConditionExpression: 'attribute_not_exists(#pk)',
       ExpressionAttributeNames,
       ExpressionAttributeValues,
-      Key: {
-        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-        sk: `SUMMARY`,
-      },
+      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
@@ -284,10 +281,7 @@ export async function readAccount(
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
     new GetCommand({
       ConsistentRead: false,
-      Key: {
-        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-        sk: `SUMMARY`,
-      },
+      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
       ReturnConsumedCapacity: 'INDEXES',
       TableName: tableName,
     })
@@ -397,10 +391,7 @@ export async function updateAccount(
           ...ExpressionAttributeValues,
           ':previousVersion': input.version,
         },
-        Key: {
-          pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-          sk: `SUMMARY`,
-        },
+        Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
         ReturnConsumedCapacity: 'INDEXES',
         ReturnItemCollectionMetrics: 'SIZE',
         ReturnValues: 'ALL_NEW',

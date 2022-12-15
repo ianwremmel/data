@@ -1,4 +1,5 @@
 import {ensureTableTemplate} from './ensure-table';
+import {objectToString} from './mappers';
 
 export interface TouchItemTplInput {
   readonly ean: readonly string[];
@@ -39,9 +40,7 @@ ${ean.map((e) => `        ${e},`).join('\n')}
       ExpressionAttributeValues: {
 ${eav.map((e) => `        ${e},`).join('\n')}
       },
-      Key: {
-${Object.entries(key).map(([k, value]) => `${k}: \`${value}\``)}
-      },
+      Key: ${objectToString(key)},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',

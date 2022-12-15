@@ -1,4 +1,5 @@
 import {ensureTableTemplate} from './ensure-table';
+import {objectToString} from './mappers';
 
 export interface CreateItemTplInput {
   readonly key: Record<string, string>;
@@ -33,9 +34,7 @@ ${ensureTableTemplate(tableName)}
       ConditionExpression: 'attribute_not_exists(#pk)',
       ExpressionAttributeNames,
       ExpressionAttributeValues,
-      Key: {
-${Object.entries(key).map(([k, value]) => `${k}: \`${value}\``)}
-      },
+      Key: ${objectToString(key)},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
