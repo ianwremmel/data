@@ -3,7 +3,6 @@ import type {TTLConfig} from '../../../parser';
 import {ensureTableTemplate} from './ensure-table';
 
 export interface UpdateItemTplInput {
-  readonly conditionField: string;
   readonly key: Record<string, string>;
   readonly inputToPrimaryKey: readonly string[];
   readonly tableName: string;
@@ -13,7 +12,6 @@ export interface UpdateItemTplInput {
 
 /** template */
 export function updateItemTpl({
-  conditionField,
   inputToPrimaryKey,
   key,
   tableName,
@@ -41,7 +39,7 @@ ${ensureTableTemplate(tableName)}
   const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${typeName}(input);
   try {
     const {Attributes: item, ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand({
-      ConditionExpression: '#version = :previousVersion AND #entity = :entity AND attribute_exists(#${conditionField})',
+      ConditionExpression: '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
       ExpressionAttributeNames,
       ExpressionAttributeValues: {
         ...ExpressionAttributeValues,

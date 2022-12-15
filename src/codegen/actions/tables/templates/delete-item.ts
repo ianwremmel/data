@@ -1,7 +1,6 @@
 import {ensureTableTemplate} from './ensure-table';
 
 export interface DeleteItemTplInput {
-  readonly conditionField: string;
   readonly ean: readonly string[];
   readonly key: Record<string, string>;
   readonly tableName: string;
@@ -10,7 +9,6 @@ export interface DeleteItemTplInput {
 
 /** template */
 export function deleteItemTpl({
-  conditionField,
   ean,
   key,
   tableName,
@@ -28,7 +26,7 @@ ${ensureTableTemplate(tableName)}
 
   try {
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new DeleteCommand({
-      ConditionExpression: 'attribute_exists(#${conditionField})',
+      ConditionExpression: 'attribute_exists(#pk)',
       ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
       },

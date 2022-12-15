@@ -1,7 +1,6 @@
 import {ensureTableTemplate} from './ensure-table';
 
 export interface CreateItemTplInput {
-  readonly conditionField: string;
   readonly key: Record<string, string>;
   readonly omit: readonly string[];
   readonly tableName: string;
@@ -10,7 +9,6 @@ export interface CreateItemTplInput {
 
 /** template */
 export function createItemTpl({
-  conditionField,
   key,
   tableName,
   typeName,
@@ -32,7 +30,7 @@ ${ensureTableTemplate(tableName)}
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand({
-      ConditionExpression: 'attribute_not_exists(#${conditionField})',
+      ConditionExpression: 'attribute_not_exists(#pk)',
       ExpressionAttributeNames,
       ExpressionAttributeValues,
       Key: {

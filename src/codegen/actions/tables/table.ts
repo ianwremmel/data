@@ -17,10 +17,7 @@ import {updateItemTpl} from './templates/update-item';
  * Generates the createItem function for a table
  */
 export function createItemTemplate(objType: GraphQLObjectType, irTable: Table) {
-  const keyInfo = extractKeyInfo(objType);
-
   return createItemTpl({
-    conditionField: keyInfo.conditionField,
     key: makeKey(irTable.primaryKey),
     omit: ['id', irTable.ttlConfig?.fieldName ?? ''].filter(Boolean),
     tableName: irTable.tableName,
@@ -35,7 +32,6 @@ export function deleteItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   const keyInfo = extractKeyInfo(objType);
 
   return deleteItemTpl({
-    conditionField: keyInfo.conditionField,
     ean: keyInfo.ean,
     key: makeKey(irTable.primaryKey),
     tableName: irTable.tableName,
@@ -112,7 +108,6 @@ export function touchItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   updateExpressions.sort();
 
   return touchItemTpl({
-    conditionField: keyInfo.conditionField,
     ean,
     eav,
     key: makeKey(irTable.primaryKey),
@@ -129,7 +124,6 @@ export function updateItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   const keyInfo = extractKeyInfo(objType);
 
   return updateItemTpl({
-    conditionField: keyInfo.conditionField,
     inputToPrimaryKey: keyInfo.inputToPrimaryKey,
     key: makeKey(irTable.primaryKey),
     tableName: irTable.tableName,
