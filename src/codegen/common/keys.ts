@@ -44,7 +44,6 @@ export interface KeyInfo {
   readonly index?: PrimaryIndex;
   readonly fields: Set<string>;
   readonly inputToPrimaryKey: readonly string[];
-  readonly omitForCreate: readonly string[];
   readonly primaryKeyType: readonly string[];
   readonly unmarshall: readonly string[];
 }
@@ -82,7 +81,6 @@ function extractCompositeKeyInfo(
       skPrefix,
     },
     inputToPrimaryKey: fieldNames.map((f) => `${f}: input.${f}`),
-    omitForCreate: ['id'].filter(Boolean),
     primaryKeyType: fieldNames.map((fieldName) =>
       mapFieldToPrimaryKeyType(fields[fieldName])
     ),
@@ -118,7 +116,6 @@ function extractPartitionKeyInfo(
       pkPrefix,
     },
     inputToPrimaryKey: fieldNames.map((f) => `${f}: input.${f}`),
-    omitForCreate: ['id'],
     primaryKeyType: fieldNames.map((fieldName) =>
       mapFieldToPrimaryKeyType(fields[fieldName])
     ),
