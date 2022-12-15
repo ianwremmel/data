@@ -108,7 +108,7 @@ function extractFields(
 /** helper */
 function extractPrimaryKey(
   type: GraphQLObjectType<unknown, unknown>,
-  fields: Record<string, Field>
+  fieldMap: Record<string, Field>
 ): PrimaryKeyConfig {
   if (hasDirective('compositeKey', type)) {
     const directive = getDirective('compositeKey', type);
@@ -116,11 +116,11 @@ function extractPrimaryKey(
     return {
       isComposite: true,
       partitionKeyFields: getArgStringArrayValue('pkFields', directive).map(
-        (fieldName) => fields[fieldName]
+        (fieldName) => fieldMap[fieldName]
       ),
       partitionKeyPrefix: getOptionalArgStringValue('pkPrefix', directive),
       sortKeyFields: getArgStringArrayValue('skFields', directive).map(
-        (fieldName) => fields[fieldName]
+        (fieldName) => fieldMap[fieldName]
       ),
       sortKeyPrefix: getOptionalArgStringValue('skPrefix', directive),
     };
@@ -131,7 +131,7 @@ function extractPrimaryKey(
 
     return {
       fields: getArgStringArrayValue('pkFields', directive).map(
-        (fieldName) => fields[fieldName]
+        (fieldName) => fieldMap[fieldName]
       ),
       isComposite: false,
       prefix: getOptionalArgStringValue('pkPrefix', directive),

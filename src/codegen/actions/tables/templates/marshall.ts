@@ -2,7 +2,6 @@ import type {GraphQLObjectType} from 'graphql';
 
 import {marshalField} from '../../../common/helpers';
 import {extractIndexInfo} from '../../../common/indexes';
-import {extractKeyInfo} from '../../../common/keys';
 import type {Table} from '../../../parser';
 
 export interface MarshallTplInput {
@@ -16,11 +15,10 @@ export function marshallTpl({
   objType,
 }: MarshallTplInput): string {
   const indexInfo = extractIndexInfo(objType);
-  const keyInfo = extractKeyInfo(objType);
 
   const requiredFields = fields
     .filter((f) => f.isRequired)
-    .filter(({fieldName}) => !keyInfo.fields.has(fieldName));
+    .filter(({fieldName}) => fieldName !== 'id');
   const optionalFields = fields.filter((f) => !f.isRequired);
 
   return `

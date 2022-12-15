@@ -75,8 +75,6 @@ export function readItemTemplate(objType: GraphQLObjectType, irTable: Table) {
  * Generates the updateItem function for a table
  */
 export function touchItemTemplate(objType: GraphQLObjectType, irTable: Table) {
-  const keyInfo = extractKeyInfo(objType);
-
   const ean: string[] = [];
   const eav: string[] = [];
   const updateExpressions: string[] = [];
@@ -84,9 +82,8 @@ export function touchItemTemplate(objType: GraphQLObjectType, irTable: Table) {
   const fieldNames = Object.keys(objType.getFields()).sort();
 
   for (const fieldName of fieldNames) {
-    if (keyInfo.fields.has(fieldName)) {
-      // intentionally empty. if key fields need to do anything, they'll be
-      // handled after the loop
+    if (fieldName === 'id') {
+      continue;
     } else if (fieldName === 'version') {
       ean.push(`'#version': '_v'`);
       eav.push(`':versionInc': 1`);

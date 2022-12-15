@@ -42,7 +42,6 @@ export function makeKeyTemplate(
 
 export interface KeyInfo {
   readonly index?: PrimaryIndex;
-  readonly fields: Set<string>;
   readonly inputToPrimaryKey: readonly string[];
   readonly primaryKeyType: readonly string[];
   readonly unmarshall: readonly string[];
@@ -73,7 +72,6 @@ function extractCompositeKeyInfo(
   );
 
   return {
-    fields: new Set(['pk', 'sk', 'id'].filter(Boolean)),
     index: {
       pkFields,
       pkPrefix,
@@ -110,7 +108,6 @@ function extractPartitionKeyInfo(
   );
 
   return {
-    fields: new Set(['pk', 'id'].filter(Boolean)),
     index: {
       pkFields,
       pkPrefix,

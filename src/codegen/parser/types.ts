@@ -50,9 +50,9 @@ export interface LSI {
 export type SecondaryIndex = GSI | LSI;
 
 export interface PartitionKey {
+  fields: readonly Field[];
   isComposite: false;
   prefix: string;
-  fields: readonly Field[];
 }
 
 export interface CompositeKey {
