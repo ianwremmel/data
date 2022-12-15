@@ -42,7 +42,6 @@ export function makeKeyTemplate(
 
 export interface KeyInfo {
   readonly index?: PrimaryIndex;
-  readonly inputToPrimaryKey: readonly string[];
   readonly primaryKeyType: readonly string[];
   readonly unmarshall: readonly string[];
 }
@@ -78,7 +77,6 @@ function extractCompositeKeyInfo(
       skFields,
       skPrefix,
     },
-    inputToPrimaryKey: fieldNames.map((f) => `${f}: input.${f}`),
     primaryKeyType: fieldNames.map((fieldName) =>
       mapFieldToPrimaryKeyType(fields[fieldName])
     ),
@@ -112,7 +110,6 @@ function extractPartitionKeyInfo(
       pkFields,
       pkPrefix,
     },
-    inputToPrimaryKey: fieldNames.map((f) => `${f}: input.${f}`),
     primaryKeyType: fieldNames.map((fieldName) =>
       mapFieldToPrimaryKeyType(fields[fieldName])
     ),

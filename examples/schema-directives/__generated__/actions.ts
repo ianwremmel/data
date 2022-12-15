@@ -405,9 +405,7 @@ export async function updateUserSession(
       try {
         await readUserSession(input);
       } catch {
-        throw new NotFoundError('UserSession', {
-          sessionId: input.sessionId,
-        });
+        throw new NotFoundError('UserSession', {sessionId: input.sessionId});
       }
       throw new OptimisticLockingError('UserSession', {
         sessionId: input.sessionId,

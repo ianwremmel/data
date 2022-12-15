@@ -5,7 +5,7 @@ import {objectToString} from './mappers';
 
 export interface UpdateItemTplInput {
   readonly key: Record<string, string>;
-  readonly inputToPrimaryKey: readonly string[];
+  readonly marshallPrimaryKey: string;
   readonly tableName: string;
   readonly ttlInfo: TTLConfig | undefined;
   readonly typeName: string;
@@ -13,7 +13,7 @@ export interface UpdateItemTplInput {
 
 /** template */
 export function updateItemTpl({
-  inputToPrimaryKey,
+  marshallPrimaryKey,
   key,
   tableName,
   ttlInfo,
@@ -57,11 +57,7 @@ ${ensureTableTemplate(tableName)}
     assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
     assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-    assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected \${JSON.stringify({${inputToPrimaryKey
-    .map((item) => `        ${item},`)
-    .join(
-      '\n'
-    )}})} to update a ${typeName} but updated \${item._et} instead\`));
+    assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected \${JSON.stringify(${marshallPrimaryKey})} to update a ${typeName} but updated \${item._et} instead\`));
 
     return {
       capacity,
@@ -75,13 +71,9 @@ ${ensureTableTemplate(tableName)}
         await read${typeName}(input);
       }
       catch {
-        throw new NotFoundError('${typeName}', {
-${inputToPrimaryKey.map((item) => `        ${item},`).join('\n')}
-        });
+        throw new NotFoundError('${typeName}', ${marshallPrimaryKey});
       }
-      throw new OptimisticLockingError('${typeName}', {
-${inputToPrimaryKey.map((item) => `      ${item},`).join('\n')}
-      });
+      throw new OptimisticLockingError('${typeName}', ${marshallPrimaryKey});
     }
     throw err;
   }

@@ -8,6 +8,7 @@ import type {PrimaryKeyConfig, Table} from '../../parser';
 
 import {createItemTpl} from './templates/create-item';
 import {deleteItemTpl} from './templates/delete-item';
+import {objectToString} from './templates/mappers';
 import {queryTpl} from './templates/query';
 import {readItemTpl} from './templates/read-item';
 import {touchItemTpl} from './templates/touch-item';
@@ -115,11 +116,22 @@ export function touchItemTemplate(objType: GraphQLObjectType, irTable: Table) {
  * Generates the updateItem function for a table
  */
 export function updateItemTemplate(objType: GraphQLObjectType, irTable: Table) {
-  const keyInfo = extractKeyInfo(objType);
-
   return updateItemTpl({
-    inputToPrimaryKey: keyInfo.inputToPrimaryKey,
     key: makeKey(irTable.primaryKey),
+    marshallPrimaryKey: objectToString(
+      Object.fromEntries(
+        (irTable.primaryKey.isComposite
+          ? [
+              ...irTable.primaryKey.partitionKeyFields,
+              ...irTable.primaryKey.sortKeyFields,
+            ]
+          : irTable.primaryKey.fields
+        )
+          .map(({fieldName}) => fieldName)
+          .sort()
+          .map((fieldName) => [fieldName, `input.${fieldName}`])
+      )
+    ),
     tableName: irTable.tableName,
     ttlInfo: irTable.ttlConfig,
     typeName: irTable.typeName,
