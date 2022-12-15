@@ -41,7 +41,6 @@ export function makeKeyTemplate(
 }
 
 export interface KeyInfo {
-  readonly ean: readonly string[];
   readonly index?: PrimaryIndex;
   readonly fields: Set<string>;
   readonly inputToPrimaryKey: readonly string[];
@@ -75,7 +74,6 @@ function extractCompositeKeyInfo(
   );
 
   return {
-    ean: [`'#pk': 'pk'`],
     fields: new Set(['pk', 'sk', 'id'].filter(Boolean)),
     index: {
       pkFields,
@@ -114,7 +112,6 @@ function extractPartitionKeyInfo(
   );
 
   return {
-    ean: [`'#pk': 'pk'`],
     fields: new Set(['pk', 'id'].filter(Boolean)),
     index: {
       pkFields,

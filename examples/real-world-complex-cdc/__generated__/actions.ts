@@ -829,6 +829,7 @@ export function marshallCaseInstance(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#branchName': 'branch_name',
     '#conclusion': 'conclusion',
     '#createdAt': '_ct',
@@ -839,7 +840,6 @@ export function marshallCaseInstance(
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#pk': 'pk',
     '#gsi1pk': 'gsi1pk',
     '#gsi1sk': 'gsi1sk',
     '#gsi2pk': 'gsi2pk',
@@ -1569,6 +1569,7 @@ export function marshallCaseSummary(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#branchName': 'branch_name',
     '#createdAt': '_ct',
     '#duration': 'duration',
@@ -1578,7 +1579,6 @@ export function marshallCaseSummary(
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#pk': 'pk',
     '#gsi1pk': 'gsi1pk',
     '#gsi1sk': 'gsi1sk',
     '#gsi2pk': 'gsi2pk',
@@ -2254,6 +2254,7 @@ export function marshallFileTiming(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#branchName': 'branch_name',
     '#createdAt': '_ct',
     '#duration': 'duration',
@@ -2262,7 +2263,6 @@ export function marshallFileTiming(
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#pk': 'pk',
     '#gsi2pk': 'gsi2pk',
     '#gsi2sk': 'gsi2sk',
     '#lsi1sk': 'lsi1sk',

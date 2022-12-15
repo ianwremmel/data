@@ -1,19 +1,13 @@
 import {ensureTableTemplate} from './ensure-table';
 
 export interface DeleteItemTplInput {
-  readonly ean: readonly string[];
   readonly key: Record<string, string>;
   readonly tableName: string;
   readonly typeName: string;
 }
 
 /** template */
-export function deleteItemTpl({
-  ean,
-  key,
-  tableName,
-  typeName,
-}: DeleteItemTplInput) {
+export function deleteItemTpl({key, tableName, typeName}: DeleteItemTplInput) {
   const outputTypeName = `Delete${typeName}Output`;
   const primaryKeyType = `${typeName}PrimaryKey`;
 
@@ -28,7 +22,7 @@ ${ensureTableTemplate(tableName)}
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new DeleteCommand({
       ConditionExpression: 'attribute_exists(#pk)',
       ExpressionAttributeNames: {
-${ean.map((e) => `        ${e},`).join('\n')}
+        "#pk": "pk",
       },
       Key: {
 ${Object.entries(key).map(([k, value]) => `${k}: \`${value}\``)}

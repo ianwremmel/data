@@ -4,6 +4,7 @@ import {marshalField} from '../../../common/helpers';
 import {extractIndexInfo} from '../../../common/indexes';
 import {extractKeyInfo} from '../../../common/keys';
 import type {Table} from '../../../parser';
+
 export interface MarshallTplInput {
   readonly irTable: Table;
   readonly objType: GraphQLObjectType;
@@ -43,10 +44,10 @@ export function marshall${typeName}(input: Record<string, any>): Marshall${typeN
 
   const ean: Record<string, string> = {
     "#entity": "_et",
+    "#pk": "pk",
 ${requiredFields
   .map(({columnName, fieldName}) => `'#${fieldName}': '${columnName}',`)
   .join('\n')}
-${keyInfo.ean.map((v) => `${v},`).join('\n')}
 ${indexInfo.ean.map((v) => `${v},`).join('\n')}
   };
 

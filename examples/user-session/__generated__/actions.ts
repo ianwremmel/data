@@ -445,13 +445,13 @@ export function marshallUserSession(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#createdAt': '_ct',
     '#expires': 'ttl',
     '#session': 'session',
     '#sessionId': 'session_id',
     '#updatedAt': '_md',
     '#version': '_v',
-    '#pk': 'pk',
   };
 
   const eav: Record<string, unknown> = {

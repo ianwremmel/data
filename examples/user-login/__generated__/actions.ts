@@ -600,13 +600,13 @@ export function marshallUserLogin(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#createdAt': '_ct',
     '#externalId': 'external_id',
     '#login': 'login',
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#pk': 'pk',
     '#gsi1pk': 'gsi1pk',
     '#gsi1sk': 'gsi1sk',
   };

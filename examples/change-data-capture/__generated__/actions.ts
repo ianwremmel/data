@@ -602,13 +602,13 @@ export function marshallAccount(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#createdAt': '_ct',
     '#effectiveDate': 'effective_date',
     '#externalId': 'external_id',
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#pk': 'pk',
     '#lsi1sk': 'lsi1sk',
   };
 
@@ -1198,13 +1198,13 @@ export function marshallSubscription(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#createdAt': '_ct',
     '#effectiveDate': 'effective_date',
     '#externalId': 'external_id',
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#pk': 'pk',
   };
 
   const eav: Record<string, unknown> = {

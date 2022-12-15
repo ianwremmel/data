@@ -29,10 +29,7 @@ export function createItemTemplate(objType: GraphQLObjectType, irTable: Table) {
  * Generates the deleteItem function for a table
  */
 export function deleteItemTemplate(objType: GraphQLObjectType, irTable: Table) {
-  const keyInfo = extractKeyInfo(objType);
-
   return deleteItemTpl({
-    ean: keyInfo.ean,
     key: makeKey(irTable.primaryKey),
     tableName: irTable.tableName,
     typeName: irTable.typeName,
@@ -101,7 +98,7 @@ export function touchItemTemplate(objType: GraphQLObjectType, irTable: Table) {
     }
   }
 
-  ean.push(...keyInfo.ean);
+  ean.push("'#pk': 'pk'");
 
   ean.sort();
   eav.sort();
