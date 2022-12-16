@@ -1,5 +1,3 @@
-import {getTypeScriptTypeForField} from '../../../common/helpers';
-import {makeKeyTemplate} from '../../../common/keys';
 import type {
   Field,
   GSI,
@@ -9,7 +7,11 @@ import type {
 } from '../../../parser';
 
 import {ensureTableTemplate} from './ensure-table';
-import {objectToString} from './mappers';
+import {
+  getTypeScriptTypeForField,
+  makeKeyTemplate,
+  objectToString,
+} from './helpers';
 
 export interface QueryTplInput {
   readonly consistent: boolean;

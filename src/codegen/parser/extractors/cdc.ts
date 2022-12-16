@@ -5,7 +5,7 @@ import {assertObjectType} from 'graphql';
 import type {GraphQLObjectType, GraphQLSchema} from 'graphql';
 import {kebabCase} from 'lodash';
 
-import {getArgStringValue, getOptionalDirective} from '../../common/helpers';
+import {getArgStringValue, getOptionalDirective} from '../helpers';
 import {extractTableName} from '../parser';
 import type {ChangeDataCaptureConfig} from '../types';
 

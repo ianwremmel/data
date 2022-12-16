@@ -1,5 +1,5 @@
 import {ensureTableTemplate} from './ensure-table';
-import {objectToString} from './mappers';
+import {objectToString} from './helpers';
 
 export interface TouchItemTplInput {
   readonly ean: readonly string[];

@@ -7,7 +7,6 @@ import type {
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
 
-import {getTypeScriptTypeForField} from '../common/helpers';
 import {parse} from '../parser';
 
 import type {ActionPluginConfig} from './config';
@@ -19,7 +18,10 @@ import {
   touchItemTemplate,
   updateItemTemplate,
 } from './tables/table';
-import {objectToString} from './tables/templates/mappers';
+import {
+  getTypeScriptTypeForField,
+  objectToString,
+} from './tables/templates/helpers';
 import {marshallTpl} from './tables/templates/marshall';
 import {unmarshallTpl} from './tables/templates/unmarshall';
 

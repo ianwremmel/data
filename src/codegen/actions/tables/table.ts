@@ -1,9 +1,8 @@
-import {makeKeyTemplate} from '../../common/keys';
 import type {PrimaryKeyConfig, Table} from '../../parser';
 
 import {createItemTpl} from './templates/create-item';
 import {deleteItemTpl} from './templates/delete-item';
-import {objectToString} from './templates/mappers';
+import {makeKeyTemplate, objectToString} from './templates/helpers';
 import {queryTpl} from './templates/query';
 import {readItemTpl} from './templates/read-item';
 import {touchItemTpl} from './templates/touch-item';

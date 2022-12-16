@@ -2,16 +2,16 @@ import assert from 'assert';
 import path from 'path';
 
 import type {Types} from '@graphql-codegen/plugin-helpers/typings/types';
-import type {GraphQLObjectType, GraphQLSchema} from 'graphql';
 import {
   assertObjectType,
   isNonNullType,
   isObjectType,
   isScalarType,
 } from 'graphql';
+import type {GraphQLObjectType, GraphQLSchema, GraphQLField} from 'graphql';
 import {snakeCase} from 'lodash';
 
-import {getAliasForField} from '../common/fields';
+import {extractChangeDataCaptureConfig} from './extractors/cdc';
 import {
   getArgStringArrayValue,
   getArgStringValue,
@@ -22,9 +22,7 @@ import {
   hasDirective,
   hasInterface,
   isType,
-} from '../common/helpers';
-
-import {extractChangeDataCaptureConfig} from './extractors/cdc';
+} from './helpers';
 import type {
   Field,
   PrimaryKeyConfig,
@@ -270,5 +268,22 @@ function extractTTLConfig(
       throw new Error(
         `Invalid ttl duration: ${duration}. Unit must be one of s, m, h, d`
       );
+  }
+}
+
+/** helper */
+export function getAliasForField(field: GraphQLField<unknown, unknown>) {
+  if (hasDirective('ttl', field)) {
+    return 'ttl';
+  }
+  switch (field.name) {
+    case 'version':
+      return '_v';
+    case 'createdAt':
+      return '_ct';
+    case 'updatedAt':
+      return '_md';
+    default:
+      return undefined;
   }
 }

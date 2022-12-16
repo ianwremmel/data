@@ -7,9 +7,7 @@ import type {
   GraphQLObjectType,
   ObjectTypeDefinitionNode,
 } from 'graphql';
-import {isListType, isNonNullType, isScalarType} from 'graphql';
-
-import type {Field} from '../parser';
+import {isNonNullType, isScalarType} from 'graphql';
 
 /** Gets the specified argument from the given directive. */
 export function getArg(name: string, directive: ConstDirectiveNode) {
@@ -104,34 +102,6 @@ export function getOptionalArgStringValue(
   return prefixArg.value.value;
 }
 
-/**
- * Given a field name that identifies a list argument, returns the typescript
- * types identified by those strings.
- */
-export function getArgFieldTypeValues(
-  fieldName: string,
-  type: GraphQLObjectType,
-  directive: ConstDirectiveNode
-) {
-  const arg = getArg(fieldName, directive);
-  assert(arg.value.kind === 'ListValue', `Expected ${fieldName} to be a list`);
-  return arg.value.values.map((v) => {
-    assert(
-      v.kind === 'StringValue',
-      `Expected @${directive.name.value} directive argument "${fieldName}" to be a list of strings`
-    );
-
-    const field = type.getFields()[v.value];
-
-    assert(
-      field,
-      `Expected @${directive.name.value} argument "${fieldName}" entry ${v.value} to identify a field on ${type.name}`
-    );
-
-    return field;
-  });
-}
-
 /** Gets the specified directive from the given field. */
 export function getDirective(
   name: string,
@@ -159,27 +129,6 @@ export function getOptionalDirective(
     nodeOrType = nodeOrType.astNode;
   }
   return nodeOrType.directives?.find((d) => d.name.value === name);
-}
-
-/** Gets the TypeScript type for that corresponds to the field. */
-export function getTypeScriptTypeForField({
-  fieldName,
-  isRequired,
-  isScalarType: isScalar,
-  typeName,
-}: Field): [string, string] {
-  if (isRequired) {
-    if (isScalar) {
-      return [fieldName, `Scalars["${typeName}"]`];
-    }
-    return [fieldName, typeName];
-  }
-
-  if (isScalar) {
-    return [`${fieldName}?`, `Maybe<Scalars["${typeName}"]>`];
-  }
-
-  return [`${fieldName}?`, `Maybe<${typeName}>`];
 }
 
 /** Indicates if objType contains the specified directive */
@@ -215,32 +164,4 @@ export function isType(
   }
 
   return isScalarType(type) && type.name === typeName;
-}
-
-/**
- * Marshals the specified field value for use with ddb.
- */
-export function marshalField(fieldName: string, isDate: boolean): string {
-  return isDate ? `input.${fieldName}.getTime()` : `input.${fieldName}`;
-}
-
-/**
- * Helper function for building a field unmarshaller
- */
-export function unmarshalField({
-  columnName,
-  fieldName,
-  isDateType,
-  isRequired,
-}: Field) {
-  let out = `item.${columnName}`;
-  if (isDateType) {
-    if (isRequired) {
-      out = `new Date(${out})`;
-    } else {
-      out = `${out} ? new Date(${out}) : null`;
-    }
-  }
-
-  return `${fieldName}: ${out}`;
 }

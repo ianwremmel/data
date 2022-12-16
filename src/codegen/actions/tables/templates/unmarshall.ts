@@ -1,5 +1,6 @@
-import {unmarshalField} from '../../../common/helpers';
 import type {Table} from '../../../parser';
+
+import {unmarshalField} from './helpers';
 
 export const DIVIDER = '#:#';
 

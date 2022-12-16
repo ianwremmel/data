@@ -1,6 +1,6 @@
-import {marshalField} from '../../../common/helpers';
-import {makeKeyTemplate} from '../../../common/keys';
 import type {Table} from '../../../parser';
+
+import {makeKeyTemplate, marshalField} from './helpers';
 
 export interface MarshallTplInput {
   readonly table: Table;

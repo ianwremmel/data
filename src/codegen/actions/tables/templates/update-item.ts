@@ -1,7 +1,7 @@
 import type {TTLConfig} from '../../../parser';
 
 import {ensureTableTemplate} from './ensure-table';
-import {objectToString} from './mappers';
+import {objectToString} from './helpers';
 
 export interface UpdateItemTplInput {
   readonly key: Record<string, string>;
