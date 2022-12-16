@@ -431,15 +431,8 @@ export async function updateUserLogin(
 }
 
 export type QueryUserLoginInput =
-  | {
-      externalId: Scalars['String'];
-      vendor: Vendor;
-    }
-  | {
-      externalId: Scalars['String'];
-      login: Scalars['String'];
-      vendor: Vendor;
-    }
+  | {externalId: Scalars['String']; vendor: Vendor}
+  | {externalId: Scalars['String']; login: Scalars['String']; vendor: Vendor}
   | {index: 'gsi1'; login: Scalars['String']; vendor: Vendor}
   | {
       index: 'gsi1';
@@ -600,13 +593,13 @@ export function marshallUserLogin(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#createdAt': '_ct',
     '#externalId': 'external_id',
     '#login': 'login',
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#pk': 'pk',
     '#gsi1pk': 'gsi1pk',
     '#gsi1sk': 'gsi1sk',
   };

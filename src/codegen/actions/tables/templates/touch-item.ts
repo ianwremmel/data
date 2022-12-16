@@ -1,29 +1,26 @@
-import type {GraphQLObjectType} from 'graphql';
-
 import {ensureTableTemplate} from './ensure-table';
+import {objectToString} from './helpers';
 
 export interface TouchItemTplInput {
-  readonly conditionField: string;
   readonly ean: readonly string[];
   readonly eav: readonly string[];
-  readonly key: readonly string[];
-  readonly objType: GraphQLObjectType;
+  readonly key: Record<string, string>;
+  readonly tableName: string;
+  readonly typeName: string;
   readonly updateExpressions: readonly string[];
 }
 
 /** template */
 export function touchItemTpl({
-  conditionField,
   ean,
   eav,
   key,
-  objType,
+  tableName,
+  typeName,
   updateExpressions,
 }: TouchItemTplInput) {
-  const typeName = objType.name;
-
   const outputTypeName = `Touch${typeName}Output`;
-  const primaryKeyType = `${objType.name}PrimaryKey`;
+  const primaryKeyType = `${typeName}PrimaryKey`;
 
   // Note that if we want this to return the updated item, we'll 1. want to run
   // in a transaction (if possible) and 2. use  a consistent read (even
@@ -33,19 +30,17 @@ export type ${outputTypeName} = ResultType<void>;
 
 /**  */
 export async function touch${typeName}(input: ${primaryKeyType}): Promise<${outputTypeName}> {
-${ensureTableTemplate(objType)}
+${ensureTableTemplate(tableName)}
   try {
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand({
-      ConditionExpression: 'attribute_exists(#${conditionField})',
+      ConditionExpression: 'attribute_exists(#pk)',
       ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
       },
       ExpressionAttributeValues: {
 ${eav.map((e) => `        ${e},`).join('\n')}
       },
-      Key: {
-${key.map((k) => `        ${k},`).join('\n')}
-      },
+      Key: ${objectToString(key)},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',

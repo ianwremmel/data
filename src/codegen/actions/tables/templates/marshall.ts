@@ -1,83 +1,71 @@
-import type {GraphQLObjectType} from 'graphql/index';
-import {isNonNullType} from 'graphql/index';
-import {snakeCase} from 'lodash';
+import type {Table} from '../../../parser';
 
-import {extractTtlInfo} from '../../../common/fields';
-import {isType, marshalField} from '../../../common/helpers';
-import {extractIndexInfo} from '../../../common/indexes';
-import {extractKeyInfo} from '../../../common/keys';
-
-import {getAliasForField} from './unmarshall';
+import {makeKeyTemplate, marshalField} from './helpers';
 
 export interface MarshallTplInput {
-  readonly objType: GraphQLObjectType;
+  readonly table: Table;
 }
 
 /** Generates the marshall function for a table */
-export function marshallTpl({objType}: MarshallTplInput): string {
-  const indexInfo = extractIndexInfo(objType);
-  const keyInfo = extractKeyInfo(objType);
-  const ttlInfo = extractTtlInfo(objType);
-
-  const fields = Object.values(objType.getFields()).map((f) => {
-    const fieldName = f.name;
-    const columnName = getAliasForField(f) ?? snakeCase(f.name);
-    const isDateType = isType('Date', f);
-    const isRequired = isNonNullType(f.type);
-    return {
-      columnName,
-      field: f,
-      fieldName,
-      isDateType,
-      isRequired,
-    };
-  });
-
-  const requiredFields = fields.filter((f) => f.isRequired);
+export function marshallTpl({
+  table: {fields, secondaryIndexes, ttlConfig, typeName},
+}: MarshallTplInput): string {
+  const requiredFields = fields
+    .filter((f) => f.isRequired)
+    .filter(({fieldName}) => fieldName !== 'id');
   const optionalFields = fields.filter((f) => !f.isRequired);
 
   return `
-export interface Marshall${objType.name}Output {
+export interface Marshall${typeName}Output {
   ExpressionAttributeNames: Record<string, string>;
   ExpressionAttributeValues: Record<string, NativeAttributeValue>;
   UpdateExpression: string;
-};
+}
 
-/** Marshalls a DynamoDB record into a ${objType.name} object */
-export function marshall${objType.name}(input: Record<string, any>): Marshall${
-    objType.name
-  }Output {
+/** Marshalls a DynamoDB record into a ${typeName} object */
+export function marshall${typeName}(input: Record<string, any>): Marshall${typeName}Output {
   const now = new Date();
 
   const updateExpression: string[] = [
-  '#entity = :entity',
+  "#entity = :entity",
   ${requiredFields
-    .filter(({fieldName}) => !keyInfo.fields.has(fieldName))
-    .map(({columnName, fieldName}) => `'#${fieldName} = :${fieldName}',`)
+    .map(({fieldName}) => `'#${fieldName} = :${fieldName}',`)
     .join('\n')}
-  ${indexInfo.updateExpressions.map((e) => `'${e}',`).join('\n')}
+  ${secondaryIndexes
+    .map(({name, type}) =>
+      type === 'gsi'
+        ? [`'#${name}pk = :${name}pk',`, `'#${name}sk = :${name}sk',`]
+        : [`'#${name}sk = :${name}sk',`]
+    )
+    .flat()
+    .join('\n')}
   ];
 
   const ean: Record<string, string> = {
-    '#entity': '_et',
+    "#entity": "_et",
+    "#pk": "pk",
 ${requiredFields
-  .filter(({fieldName}) => !keyInfo.fields.has(fieldName))
   .map(({columnName, fieldName}) => `'#${fieldName}': '${columnName}',`)
   .join('\n')}
-${keyInfo.ean.map((v) => `${v},`).join('\n')}
-${indexInfo.ean.map((v) => `${v},`).join('\n')}
+${secondaryIndexes
+  .map(({name, type}) =>
+    type === 'gsi'
+      ? [`'#${name}pk': '${name}pk',`, `'#${name}sk': '${name}sk',`]
+      : [`'#${name}sk': '${name}sk',`]
+  )
+  .flat()
+  .join('\n')}
   };
 
   const eav: Record<string, unknown> = {
-    ':entity': '${objType.name}',
+    ":entity": "${typeName}",
     ${requiredFields
-      .filter(({fieldName}) => !keyInfo.fields.has(fieldName))
-      .map(({fieldName, field}) => {
+      .map(({fieldName, isDateType}) => {
         if (fieldName === 'version') {
           return `':version': ('version' in input ? input.version : 0) + 1,`;
         }
-        if (fieldName === ttlInfo?.fieldName) {
-          return `':${fieldName}': now.getTime() + ${ttlInfo.duration},`;
+        if (fieldName === ttlConfig?.fieldName) {
+          return `':${fieldName}': now.getTime() + ${ttlConfig.duration},`;
         }
         if (fieldName === 'createdAt') {
           return `':${fieldName}': now.getTime(),`;
@@ -86,30 +74,53 @@ ${indexInfo.ean.map((v) => `${v},`).join('\n')}
           return `':${fieldName}': now.getTime(),`;
         }
 
-        return `':${fieldName}': ${marshalField(field)},`;
+        return `':${fieldName}': ${marshalField(fieldName, isDateType)},`;
       })
       .join('\n')}
-${indexInfo.eav.map((v) => `${v},`).join('\n')}
-  }
+${secondaryIndexes
+  .map((index) =>
+    index.type === 'gsi'
+      ? [
+          `':${index.name}pk': \`${makeKeyTemplate(
+            index.partitionKeyPrefix,
+            index.partitionKeyFields
+          )}\`,`,
+          index.isComposite
+            ? `':${index.name}sk': \`${makeKeyTemplate(
+                index.sortKeyPrefix,
+                index.sortKeyFields
+              )}\`,`
+            : undefined,
+        ]
+      : [
+          `':${index.name}sk': \`${makeKeyTemplate(
+            index.sortKeyPrefix,
+            index.sortKeyFields
+          )}\`,`,
+        ]
+  )
+  .flat()
+  .join('\n')}
+  };
 
   ${optionalFields
     .map(
-      ({columnName, fieldName, field}) => `
+      ({columnName, fieldName, isDateType}) => `
   if ('${fieldName}' in input && typeof input.${fieldName} !== 'undefined') {
     ean['#${fieldName}'] = '${columnName}';
-    eav[':${fieldName}'] = ${marshalField(field)};
+    eav[':${fieldName}'] = ${marshalField(fieldName, isDateType)};
     updateExpression.push('#${fieldName} = :${fieldName}');
   }
   `
     )
-    .join('\n')}
+    .join('\n')};
 
   updateExpression.sort();
 
   return {
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
-    UpdateExpression: 'SET ' + updateExpression.join(', ')
+    UpdateExpression: "SET " + updateExpression.join(", ")
   };
 }
 

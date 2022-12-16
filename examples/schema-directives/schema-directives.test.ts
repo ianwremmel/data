@@ -1,12 +1,9 @@
 import {faker} from '@faker-js/faker';
-import {NotFoundError, OptimisticLockingError} from '@ianwremmel/data';
-import Base64 from 'base64url';
 
 import {
   createUserSession,
   deleteUserSession,
   readUserSession,
-  touchUserSession,
   updateUserSession,
 } from './__generated__/actions';
 

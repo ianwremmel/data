@@ -26,14 +26,14 @@ const _ddb = new DynamoDBClient({
   endpoint: process.env.AWS_ENDPOINT,
 });
 export const ddb: DynamoDBClient = isRunningInLambda
-  ? captureAWSv3Client(_ddb as any)
+  ? captureAWSv3Client(_ddb)
   : _ddb;
 
 const _eventBridge = new EventBridgeClient({
   endpoint: process.env.AWS_ENDPOINT,
 });
 export const eventBridge: EventBridgeClient = isRunningInLambda
-  ? captureAWSv3Client(_eventBridge as any)
+  ? captureAWSv3Client(_eventBridge)
   : _eventBridge;
 
 const marshallOptions = {

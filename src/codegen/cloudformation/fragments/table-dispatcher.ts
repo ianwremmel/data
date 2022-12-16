@@ -1,7 +1,5 @@
 import path from 'path';
 
-import {kebabCase} from 'lodash';
-
 import type {CloudFormationFragment} from '../types';
 
 import {combineFragments} from './combine-fragments';
@@ -17,18 +15,23 @@ export interface TableDispatcherInput
 export function makeTableDispatcher({
   batchSize = 10,
   dependenciesModuleId,
-  outDir,
+  codeUri,
+  functionName,
+  outputPath,
   libImportPath,
   maximumRetryAttempts = 3,
   memorySize = 384,
   tableName,
   timeout = 60,
 }: TableDispatcherInput): CloudFormationFragment {
-  const functionName = `${tableName}CDCDispatcher`;
-  const filename = `dispatcher-${kebabCase(tableName)}`;
+  // Account for the fact that the parser only knows the module id, not produced
+  // directory layout
+  dependenciesModuleId = dependenciesModuleId.startsWith('.')
+    ? path.join('..', dependenciesModuleId)
+    : dependenciesModuleId;
 
   writeLambda(
-    path.join(path.dirname(outDir), filename),
+    outputPath,
     `// This file is generated. Do not edit by hand.
 
 import {makeDynamoDBStreamDispatcher} from '${libImportPath}';
@@ -41,42 +44,46 @@ export const handler = makeDynamoDBStreamDispatcher({
 `
   );
 
-  const logGroup = makeLogGroup({functionName});
-  return combineFragments(logGroup, {
-    resources: {
-      [functionName]: {
-        Metadata: metadata,
-        Properties: {
-          CodeUri: filename,
-          Events: {
-            Stream: {
-              Properties: {
-                BatchSize: batchSize,
-                FunctionResponseTypes: ['ReportBatchItemFailures'],
-                MaximumRetryAttempts: maximumRetryAttempts,
-                StartingPosition: 'TRIM_HORIZON',
-                Stream: {'Fn::GetAtt': [tableName, 'StreamArn']},
+  return combineFragments(
+    makeLogGroup({
+      functionName,
+    }),
+    {
+      resources: {
+        [functionName]: {
+          Metadata: metadata,
+          Properties: {
+            CodeUri: codeUri,
+            Events: {
+              Stream: {
+                Properties: {
+                  BatchSize: batchSize,
+                  FunctionResponseTypes: ['ReportBatchItemFailures'],
+                  MaximumRetryAttempts: maximumRetryAttempts,
+                  StartingPosition: 'TRIM_HORIZON',
+                  Stream: {'Fn::GetAtt': [tableName, 'StreamArn']},
+                },
+                Type: 'DynamoDB',
               },
-              Type: 'DynamoDB',
             },
+            MemorySize: memorySize,
+            Policies: [
+              'AWSLambdaBasicExecutionRole',
+              'AWSLambda_ReadOnlyAccess',
+              'AWSXrayWriteOnlyAccess',
+              'CloudWatchLambdaInsightsExecutionRolePolicy',
+              {CloudWatchPutMetricPolicy: {}},
+              {
+                EventBridgePutEventsPolicy: {
+                  EventBusName: 'default',
+                },
+              },
+            ],
+            Timeout: timeout,
           },
-          MemorySize: memorySize,
-          Policies: [
-            'AWSLambdaBasicExecutionRole',
-            'AWSLambda_ReadOnlyAccess',
-            'AWSXrayWriteOnlyAccess',
-            'CloudWatchLambdaInsightsExecutionRolePolicy',
-            {CloudWatchPutMetricPolicy: {}},
-            {
-              EventBridgePutEventsPolicy: {
-                EventBusName: 'default',
-              },
-            },
-          ],
-          Timeout: timeout,
+          Type: 'AWS::Serverless::Function',
         },
-        Type: 'AWS::Serverless::Function',
       },
-    },
-  });
+    }
+  );
 }

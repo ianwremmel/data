@@ -193,10 +193,7 @@ export async function createAccount(
       ConditionExpression: 'attribute_not_exists(#pk)',
       ExpressionAttributeNames,
       ExpressionAttributeValues,
-      Key: {
-        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-        sk: `SUMMARY`,
-      },
+      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
@@ -284,10 +281,7 @@ export async function readAccount(
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
     new GetCommand({
       ConsistentRead: false,
-      Key: {
-        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-        sk: `SUMMARY`,
-      },
+      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
       ReturnConsumedCapacity: 'INDEXES',
       TableName: tableName,
     })
@@ -397,10 +391,7 @@ export async function updateAccount(
           ...ExpressionAttributeValues,
           ':previousVersion': input.version,
         },
-        Key: {
-          pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-          sk: `SUMMARY`,
-        },
+        Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
         ReturnConsumedCapacity: 'INDEXES',
         ReturnItemCollectionMetrics: 'SIZE',
         ReturnValues: 'ALL_NEW',
@@ -451,10 +442,7 @@ export async function updateAccount(
 }
 
 export type QueryAccountInput =
-  | {
-      externalId: Scalars['String'];
-      vendor: Vendor;
-    }
+  | {externalId: Scalars['String']; vendor: Vendor}
   | {index: 'lsi1'; externalId: Scalars['String']; vendor: Vendor}
   | {
       index: 'lsi1';
@@ -524,7 +512,7 @@ export async function queryAccount(
           ':pk': makePartitionKeyForQueryAccount(input),
           ':sk': makeSortKeyForQueryAccount(input),
         },
-        IndexName: undefined,
+        IndexName: 'index' in input ? input.index : undefined,
         KeyConditionExpression: `#pk = :pk AND ${
           operator === 'begins_with'
             ? 'begins_with(#sk, :sk)'
@@ -602,13 +590,13 @@ export function marshallAccount(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#createdAt': '_ct',
     '#effectiveDate': 'effective_date',
     '#externalId': 'external_id',
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#pk': 'pk',
     '#lsi1sk': 'lsi1sk',
   };
 
@@ -640,7 +628,6 @@ export function marshallAccount(
     eav[':planName'] = input.planName;
     updateExpression.push('#planName = :planName');
   }
-
   updateExpression.sort();
 
   return {
@@ -1051,10 +1038,7 @@ export async function updateSubscription(
 }
 
 export type QuerySubscriptionInput =
-  | {
-      externalId: Scalars['String'];
-      vendor: Vendor;
-    }
+  | {externalId: Scalars['String']; vendor: Vendor}
   | {
       effectiveDate: Scalars['Date'];
       externalId: Scalars['String'];
@@ -1199,13 +1183,13 @@ export function marshallSubscription(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#createdAt': '_ct',
     '#effectiveDate': 'effective_date',
     '#externalId': 'external_id',
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#pk': 'pk',
   };
 
   const eav: Record<string, unknown> = {
@@ -1235,7 +1219,6 @@ export function marshallSubscription(
     eav[':planName'] = input.planName;
     updateExpression.push('#planName = :planName');
   }
-
   updateExpression.sort();
 
   return {

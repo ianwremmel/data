@@ -499,14 +499,14 @@ export async function updateCaseInstance(
 export type QueryCaseInstanceInput =
   | {
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       vendor: Vendor;
     }
   | {
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       sha: Scalars['String'];
@@ -514,7 +514,7 @@ export type QueryCaseInstanceInput =
     }
   | {
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       retry: Scalars['Int'];
@@ -524,7 +524,7 @@ export type QueryCaseInstanceInput =
   | {
       index: 'gsi1';
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       repoId: Scalars['String'];
       sha: Scalars['String'];
       vendor: Vendor;
@@ -532,7 +532,7 @@ export type QueryCaseInstanceInput =
   | {
       index: 'gsi1';
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       sha: Scalars['String'];
@@ -541,7 +541,7 @@ export type QueryCaseInstanceInput =
   | {
       index: 'gsi1';
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       retry: Scalars['Int'];
@@ -557,14 +557,14 @@ export type QueryCaseInstanceInput =
   | {
       index: 'gsi2';
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       repoId: Scalars['String'];
       vendor: Vendor;
     }
   | {
       index: 'gsi2';
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       repoId: Scalars['String'];
       sha: Scalars['String'];
       vendor: Vendor;
@@ -572,7 +572,7 @@ export type QueryCaseInstanceInput =
   | {
       index: 'lsi1';
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       vendor: Vendor;
@@ -581,7 +581,7 @@ export type QueryCaseInstanceInput =
       index: 'lsi1';
       branchName: Scalars['String'];
       createdAt: Scalars['Date'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       vendor: Vendor;
@@ -589,7 +589,7 @@ export type QueryCaseInstanceInput =
   | {
       index: 'lsi2';
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       vendor: Vendor;
@@ -598,7 +598,7 @@ export type QueryCaseInstanceInput =
       index: 'lsi2';
       branchName: Scalars['String'];
       conclusion: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       vendor: Vendor;
@@ -608,7 +608,7 @@ export type QueryCaseInstanceInput =
       branchName: Scalars['String'];
       conclusion: Scalars['String'];
       createdAt: Scalars['Date'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       vendor: Vendor;
@@ -829,6 +829,7 @@ export function marshallCaseInstance(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#branchName': 'branch_name',
     '#conclusion': 'conclusion',
     '#createdAt': '_ct',
@@ -839,7 +840,6 @@ export function marshallCaseInstance(
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#pk': 'pk',
     '#gsi1pk': 'gsi1pk',
     '#gsi1sk': 'gsi1sk',
     '#gsi2pk': 'gsi2pk',
@@ -885,7 +885,6 @@ export function marshallCaseInstance(
     eav[':label'] = input.label;
     updateExpression.push('#label = :label');
   }
-
   updateExpression.sort();
 
   return {
@@ -1352,7 +1351,7 @@ export async function updateCaseSummary(
 export type QueryCaseSummaryInput =
   | {
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       vendor: Vendor;
@@ -1360,7 +1359,7 @@ export type QueryCaseSummaryInput =
   | {
       index: 'gsi1';
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       repoId: Scalars['String'];
       vendor: Vendor;
     }
@@ -1373,14 +1372,14 @@ export type QueryCaseSummaryInput =
   | {
       index: 'gsi2';
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       repoId: Scalars['String'];
       vendor: Vendor;
     }
   | {
       index: 'lsi1';
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       vendor: Vendor;
@@ -1388,7 +1387,7 @@ export type QueryCaseSummaryInput =
   | {
       index: 'lsi1';
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
       repoId: Scalars['String'];
       stability: Scalars['Float'];
@@ -1570,6 +1569,7 @@ export function marshallCaseSummary(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#branchName': 'branch_name',
     '#createdAt': '_ct',
     '#duration': 'duration',
@@ -1579,7 +1579,6 @@ export function marshallCaseSummary(
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#pk': 'pk',
     '#gsi1pk': 'gsi1pk',
     '#gsi1sk': 'gsi1sk',
     '#gsi2pk': 'gsi2pk',
@@ -1610,7 +1609,6 @@ export function marshallCaseSummary(
     eav[':label'] = input.label;
     updateExpression.push('#label = :label');
   }
-
   updateExpression.sort();
 
   return {
@@ -2050,14 +2048,14 @@ export async function updateFileTiming(
 export type QueryFileTimingInput =
   | {
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       repoId: Scalars['String'];
       vendor: Vendor;
     }
   | {
       branchName: Scalars['String'];
       filename: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       repoId: Scalars['String'];
       vendor: Vendor;
     }
@@ -2070,7 +2068,7 @@ export type QueryFileTimingInput =
   | {
       index: 'lsi1';
       branchName: Scalars['String'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       repoId: Scalars['String'];
       vendor: Vendor;
     }
@@ -2078,7 +2076,7 @@ export type QueryFileTimingInput =
       index: 'lsi1';
       branchName: Scalars['String'];
       duration: Scalars['Float'];
-      label: Scalars['String'] | undefined;
+      label?: Maybe<Scalars['String']>;
       repoId: Scalars['String'];
       vendor: Vendor;
     };
@@ -2256,6 +2254,7 @@ export function marshallFileTiming(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#branchName': 'branch_name',
     '#createdAt': '_ct',
     '#duration': 'duration',
@@ -2264,7 +2263,6 @@ export function marshallFileTiming(
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#pk': 'pk',
     '#gsi2pk': 'gsi2pk',
     '#gsi2sk': 'gsi2sk',
     '#lsi1sk': 'lsi1sk',
@@ -2290,7 +2288,6 @@ export function marshallFileTiming(
     eav[':label'] = input.label;
     updateExpression.push('#label = :label');
   }
-
   updateExpression.sort();
 
   return {

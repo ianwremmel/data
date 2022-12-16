@@ -1,9 +1,9 @@
-const fs = require("fs");
+const fs = require('fs');
 
-const { sync: glob } = require("glob");
+const {sync: glob} = require('glob');
 
-const examples = glob("*/", { cwd: "examples" }).map((pathName) =>
-  pathName.replace(/\/$/, "")
+const examples = glob('*/', {cwd: 'examples'}).map((pathName) =>
+  pathName.replace(/\/$/, '')
 );
 
 /** @type {Record<string, import("graphql-config").IGraphQLProject>} */
@@ -18,19 +18,18 @@ function getSourceTemplate(example) {
   try {
     fs.statSync(`examples/${example}/template.json`);
     return `examples/${example}/template.json`;
-  } catch {
-  }
+  } catch {}
 
   try {
     fs.statSync(`examples/${example}/template.yml`);
     return `examples/${example}/template.yml`;
-  } catch {
-  }
+  } catch {}
 
   return undefined;
 }
 
-const importBasePath = process.env.CI ? "@ianwremmel/data" : "./src";
+// use 'src' in development for simpler stack traces
+const importBasePath = process.env.CI ? '@ianwremmel/data' : './src';
 
 /** @type {import("graphql-config").IGraphQLConfig } */
 const config = {
@@ -43,37 +42,37 @@ const config = {
               config: {
                 enumsAsTypes: true,
                 scalars: {
-                  Date: "Date",
-                  JSONObject: "Record<string, unknown>"
+                  Date: 'Date',
+                  JSONObject: 'Record<string, unknown>',
                 },
                 strictScalars: true,
-                dependenciesModuleId: "./examples/dependencies"
+                dependenciesModuleId: './examples/dependencies',
               },
-              plugins: ["typescript", `${importBasePath}/codegen/actions`]
+              plugins: ['typescript', `${importBasePath}/codegen/actions`],
             },
             [`examples/${example}/__generated__/template.yml`]: {
               config: {
                 actionsModuleId: `./examples/${example}/__generated__/actions`,
-                dependenciesModuleId: "./examples/dependencies",
+                dependenciesModuleId: './examples/dependencies',
                 outputConfig: {
-                  format: "yaml"
+                  format: 'yaml',
                 },
-                sourceTemplate: getSourceTemplate(example)
+                sourceTemplate: getSourceTemplate(example),
               },
-              plugins: [`${importBasePath}/codegen/cloudformation`]
-            }
-          }
-        }
+              plugins: [`${importBasePath}/codegen/cloudformation`],
+            },
+          },
+        },
       },
       schema: [
-        "examples/common.graphqls",
+        'examples/common.graphqls',
         `examples/${example}/schema/**/*.graphqls`,
         // This line shouldn't be here, but addToSchema doesn't seem to work.
-        "src/codegen/schema.graphqls"
-      ]
+        'src/codegen/schema.graphqls',
+      ],
     };
     return acc;
-  }, init)
+  }, init),
 };
 
 module.exports = config;

@@ -1,32 +1,33 @@
-import type {GraphQLObjectType} from 'graphql';
-
 import {ensureTableTemplate} from './ensure-table';
+import {objectToString} from './helpers';
 
 export interface ReadItemTplInput {
   readonly consistent: boolean;
-  readonly key: readonly string[];
-  readonly objType: GraphQLObjectType;
+  readonly key: Record<string, string>;
+  readonly tableName: string;
+  readonly typeName: string;
 }
 
 /** template */
-export function readItemTpl({consistent, key, objType}: ReadItemTplInput) {
-  const typeName = objType.name;
-
+export function readItemTpl({
+  consistent,
+  key,
+  tableName,
+  typeName,
+}: ReadItemTplInput) {
   const outputTypeName = `Read${typeName}Output`;
-  const primaryKeyType = `${objType.name}PrimaryKey`;
+  const primaryKeyType = `${typeName}PrimaryKey`;
 
   return `
 export type ${outputTypeName} = ResultType<${typeName}>;
 
 /**  */
 export async function read${typeName}(input: ${primaryKeyType}): Promise<Readonly<${outputTypeName}>> {
-${ensureTableTemplate(objType)}
+${ensureTableTemplate(tableName)}
 
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(new GetCommand({
     ConsistentRead: ${consistent},
-      Key: {
-${key.map((k) => `        ${k},`).join('\n')}
-      },
+    Key: ${objectToString(key)},
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
   }));
@@ -38,7 +39,7 @@ ${key.map((k) => `        ${k},`).join('\n')}
 
   return {
     capacity,
-    item: unmarshall${objType.name}(item),
+    item: unmarshall${typeName}(item),
     metrics: undefined,
   }
 }`;

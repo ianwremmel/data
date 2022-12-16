@@ -6,11 +6,8 @@ import type {
   AddToSchemaResult,
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
-import type {GraphQLObjectType} from 'graphql';
-import {assertObjectType, isObjectType} from 'graphql';
 
-import {hasInterface} from '../common/helpers';
-import {extractKeyInfo} from '../common/keys';
+import {parse} from '../parser';
 
 import type {ActionPluginConfig} from './config';
 import {
@@ -21,6 +18,10 @@ import {
   touchItemTemplate,
   updateItemTemplate,
 } from './tables/table';
+import {
+  getTypeScriptTypeForField,
+  objectToString,
+} from './tables/templates/helpers';
 import {marshallTpl} from './tables/templates/marshall';
 import {unmarshallTpl} from './tables/templates/unmarshall';
 
@@ -37,19 +38,6 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   info
 ) => {
   try {
-    const typesMap = schema.getTypeMap();
-
-    const tableTypes = Object.keys(typesMap)
-      .filter((typeName) => {
-        const type = typesMap[typeName];
-        return isObjectType(type) && hasInterface('Model', type);
-      })
-      .map((typeName) => {
-        const objType = typesMap[typeName];
-        assertObjectType(objType);
-        return objType as GraphQLObjectType;
-      });
-
     const content = `export interface ResultType<T> {
   capacity: ConsumedCapacity;
   item: T;
@@ -61,22 +49,30 @@ export interface MultiResultType<T> {
   items: T[];
 }
 
-${tableTypes
-  .map((objType) => {
-    const keyInfo = extractKeyInfo(objType);
-
+${parse(schema, documents, config, info)
+  .map((table) => {
     return [
-      `export interface ${objType.name}PrimaryKey {
-          ${keyInfo.primaryKeyType.join('\n')}
-        }`,
-      createItemTemplate(objType),
-      deleteItemTemplate(objType),
-      readItemTemplate(objType),
-      touchItemTemplate(objType),
-      updateItemTemplate(objType),
-      queryTemplate(objType),
-      marshallTpl({objType}),
-      unmarshallTpl({objType}),
+      `export interface ${table.typeName}PrimaryKey ${objectToString(
+        Object.fromEntries(
+          (table.primaryKey.isComposite
+            ? [
+                ...table.primaryKey.partitionKeyFields,
+                ...table.primaryKey.sortKeyFields,
+              ]
+            : table.primaryKey.partitionKeyFields
+          )
+            .map(getTypeScriptTypeForField)
+            .sort()
+        )
+      )}`,
+      createItemTemplate(table),
+      deleteItemTemplate(table),
+      readItemTemplate(table),
+      touchItemTemplate(table),
+      updateItemTemplate(table),
+      queryTemplate(table),
+      marshallTpl({table}),
+      unmarshallTpl({table}),
     ]
       .filter(Boolean)
       .join('\n\n');

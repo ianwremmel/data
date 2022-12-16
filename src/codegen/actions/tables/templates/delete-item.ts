@@ -1,42 +1,31 @@
-import type {GraphQLObjectType} from 'graphql';
-
 import {ensureTableTemplate} from './ensure-table';
+import {objectToString} from './helpers';
 
 export interface DeleteItemTplInput {
-  readonly conditionField: string;
-  readonly ean: readonly string[];
-  readonly key: readonly string[];
-  readonly objType: GraphQLObjectType;
+  readonly key: Record<string, string>;
+  readonly tableName: string;
+  readonly typeName: string;
 }
 
 /** template */
-export function deleteItemTpl({
-  conditionField,
-  ean,
-  key,
-  objType,
-}: DeleteItemTplInput) {
-  const typeName = objType.name;
-
+export function deleteItemTpl({key, tableName, typeName}: DeleteItemTplInput) {
   const outputTypeName = `Delete${typeName}Output`;
-  const primaryKeyType = `${objType.name}PrimaryKey`;
+  const primaryKeyType = `${typeName}PrimaryKey`;
 
   return `
 export type ${outputTypeName} = ResultType<void>;
 
 /**  */
 export async function delete${typeName}(input: ${primaryKeyType}): Promise<${outputTypeName}> {
-${ensureTableTemplate(objType)}
+${ensureTableTemplate(tableName)}
 
   try {
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new DeleteCommand({
-      ConditionExpression: 'attribute_exists(#${conditionField})',
+      ConditionExpression: 'attribute_exists(#pk)',
       ExpressionAttributeNames: {
-${ean.map((e) => `        ${e},`).join('\n')}
+        "#pk": "pk",
       },
-      Key: {
-${key.map((k) => `        ${k},`).join('\n')}
-      },
+      Key: ${objectToString(key)},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'NONE',

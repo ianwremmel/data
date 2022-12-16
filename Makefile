@@ -43,27 +43,26 @@ TMP_DIR                  := .tmp
 SENTINEL_DIR             := $(TMP_DIR)/sentinel
 
 EXAMPLE_DIRS             := $(shell find examples -mindepth 1 -maxdepth 1 -type d)
-
-EXAMPLE_OUTPUT_FILES     := action.ts template.yml
-
+EXAMPLE_OUTPUT_FILES     := actions.ts template.yml
 EXAMPLE_OUTPUT           := $(foreach X,$(EXAMPLE_DIRS),$(foreach Y,$(addprefix /__generated__/,$(EXAMPLE_OUTPUT_FILES)),$X$Y))
 
-GENERATED_DIRS          := $(addsuffix /__generated__,$(EXAMPLE_DIRS))
+GENERATED_DIRS           := $(addsuffix /__generated__,$(EXAMPLE_DIRS))
 
-RUNTIME_SRC_TS      := $(shell find ./src -name '*.ts')
-RUNTIME_DIST_CJS_JS := $(subst .ts,.js,$(subst src,dist/cjs,$(RUNTIME_SRC_TS)))
-RUNTIME_DIST_EMS_JS := $(subst .ts,.js,$(subst src,dist/esm,$(RUNTIME_SRC_TS)))
-RUNTIME_TYPES       := $(subst .ts,.d.ts,$(subst src,dist/types,$(filter-out $(filter %.test.ts,$(RUNTIME_SRC_TS)),$(RUNTIME_SRC_TS))))
+CODEGEN_SRC              := $(shell find src/codegen -name *.ts)
+RUNTIME_SRC              := $(filter-out $(filter %.test.ts,$(RUNTIME_SRC)),$(shell find ./src/runtime -name '*.ts'))
+RUNTIME_DIST_CJS_JS      := $(subst .ts,.js,$(subst src,dist/cjs,$(RUNTIME_SRC)))
+RUNTIME_DIST_ESM_JS      := $(subst .ts,.js,$(subst src,dist/esm,$(RUNTIME_SRC)))
+RUNTIME_TYPES            := $(subst .ts,.d.ts,$(subst src,dist/types,$(RUNTIME_SRC)))
 
 ################################################################################
 ## Public Targets
 ################################################################################
 
-build: README.md dist/codegen/actions.js dist/codegen/cloudformation.js $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_EMS_JS) $(RUNTIME_TYPES) $(EXAMPLE_OUTPUT) | $(SENTINEL_DIR) $(TMP_DIR)
+build: README.md dist/codegen/actions.js dist/codegen/cloudformation.js $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_ESM_JS) $(RUNTIME_TYPES) $(EXAMPLE_OUTPUT) | $(SENTINEL_DIR) $(TMP_DIR)
 .PHONY: build
 
 clean:
-	rm -rf dist $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_EMS_JS) $(EXAMPLE_OUTPUT) $(TMP_DIR) $(SENTINEL_DIR) $(GENERATED_DIRS)
+	rm -rf dist $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_ESM_JS) $(EXAMPLE_OUTPUT) $(TMP_DIR) $(SENTINEL_DIR) $(GENERATED_DIRS)
 .PHONY: clean
 
 ################################################################################
@@ -88,7 +87,10 @@ $(TMP_DIR):
 
 define GEN_EXAMPLE
 
-$(EXAMPLE_DIR)/__generated__/$(EXAMPLE_OUTPUT_FILES) &: $(RUNTIME_DIST_EMS_JS)
+$(EXAMPLE_DIR)/__generated__/actions.ts: dist/codegen/actions.js
+$(EXAMPLE_DIR)/__generated__/template.yml: dist/codegen/cloudformation.js
+
+$(addprefix $(EXAMPLE_DIR)/__generated__/,$(EXAMPLE_OUTPUT_FILES)) &: $(RUNTIME_DIST_ESM_JS)
 	npx graphql-codegen --debug --verbose --project $(subst examples/,,$(EXAMPLE_DIR))
 	npm run eslint -- --fix $(EXAMPLE_DIR)/__generated__
 
@@ -99,24 +101,24 @@ $(foreach EXAMPLE_DIR,$(EXAMPLE_DIRS),$(eval $(GEN_EXAMPLE)))
 ## Rules
 ###############################################################################
 
-$(RUNTIME_DIST_CJS_JS) &: $(RUNTIME_SRC_TS)
+$(RUNTIME_DIST_CJS_JS) &: $(RUNTIME_SRC)
 	$(NPX) esbuild $(?) --format=cjs --outbase=src --outdir=dist/cjs --platform=node
 
-$(RUNTIME_DIST_EMS_JS) &: $(RUNTIME_SRC_TS)
+$(RUNTIME_DIST_ESM_JS) &: $(RUNTIME_SRC)
 	$(NPX) esbuild $(?) --format=esm --outbase=src --outdir=dist/esm --platform=node
 
-dist/codegen/actions.js: src/codegen/actions/index.ts dist/schema.graphqls $(shell find src/codegen -name *.ts)
+dist/codegen/actions.js: src/codegen/actions/index.ts dist/schema.graphqls $(CODEGEN_SRC)
 	$(NPX) esbuild $(<) --bundle --external:graphql --format=cjs --outfile=$@ --platform=node
 
-dist/codegen/cloudformation.js: src/codegen/cloudformation/index.ts dist/schema.graphqls $(shell find src/codegen -name *.ts)
+dist/codegen/cloudformation.js: src/codegen/cloudformation/index.ts dist/schema.graphqls $(CODEGEN_SRC)
 	$(NPX) esbuild $(<) --bundle --external:graphql --format=cjs --outfile=$@ --platform=node
 
 dist/schema.graphqls: src/codegen/schema.graphqls
 	mkdir -p dist
 	cp $(<) $(@)
 
-$(RUNTIME_TYPES) &:
-	$(NPX) tsc --emitDeclarationOnly --declaration --project tsconfig.build.json --outDir dist/types
+$(RUNTIME_TYPES) &: $(RUNTIME_SRC)
+	$(NPX) tsc --emitDeclarationOnly --declaration --project tsconfig.build.json --outDir dist/types/runtime
 
 ###############################################################################
 ## Targets

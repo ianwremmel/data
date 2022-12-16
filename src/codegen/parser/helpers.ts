@@ -7,8 +7,7 @@ import type {
   GraphQLObjectType,
   ObjectTypeDefinitionNode,
 } from 'graphql';
-import {isListType, isNonNullType, isScalarType} from 'graphql';
-import {snakeCase} from 'lodash';
+import {isNonNullType, isScalarType} from 'graphql';
 
 /** Gets the specified argument from the given directive. */
 export function getArg(name: string, directive: ConstDirectiveNode) {
@@ -41,6 +40,26 @@ export function getArgStringValue(
   );
 
   return prefixArg.value.value;
+}
+
+/**
+ * Given a field name that identifies a list argument, returns the typescript
+ * types identified by those strings.
+ */
+export function getArgStringArrayValue(
+  fieldName: string,
+  directive: ConstDirectiveNode
+): string[] {
+  const arg = getArg(fieldName, directive);
+  assert(arg.value.kind === 'ListValue', `Expected ${fieldName} to be a list`);
+  return arg.value.values.map((v) => {
+    assert(
+      v.kind === 'StringValue',
+      `Expected @${directive.name.value} directive argument "${fieldName}" to be a list of strings`
+    );
+
+    return v.value;
+  });
 }
 
 /**
@@ -83,34 +102,6 @@ export function getOptionalArgStringValue(
   return prefixArg.value.value;
 }
 
-/**
- * Given a field name that identifies a list argument, returns the typescript
- * types identified by those strings.
- */
-export function getArgFieldTypeValues(
-  fieldName: string,
-  type: GraphQLObjectType,
-  directive: ConstDirectiveNode
-) {
-  const arg = getArg(fieldName, directive);
-  assert(arg.value.kind === 'ListValue', `Expected ${fieldName} to be a list`);
-  return arg.value.values.map((v) => {
-    assert(
-      v.kind === 'StringValue',
-      `Expected @${directive.name.value} directive argument "${fieldName}" to be a list of strings`
-    );
-
-    const field = type.getFields()[v.value];
-
-    assert(
-      field,
-      `Expected @${directive.name.value} argument "${fieldName}" entry ${v.value} to identify a field on ${type.name}`
-    );
-
-    return field;
-  });
-}
-
 /** Gets the specified directive from the given field. */
 export function getDirective(
   name: string,
@@ -138,32 +129,6 @@ export function getOptionalDirective(
     nodeOrType = nodeOrType.astNode;
   }
   return nodeOrType.directives?.find((d) => d.name.value === name);
-}
-
-/** Gets the TypeScript type for that corresponds to the field. */
-export function getTypeScriptTypeForField(
-  field: GraphQLField<unknown, unknown>
-): string {
-  let fieldType = field.type;
-  let isNonNull = false;
-  if (isNonNullType(fieldType)) {
-    isNonNull = true;
-    fieldType = fieldType.ofType;
-  }
-
-  if (isScalarType(fieldType)) {
-    if (isNonNull) {
-      return `Scalars['${fieldType.name}']`;
-    }
-    return `Scalars['${fieldType.name}'] | undefined`;
-  }
-
-  assert(!isListType(fieldType), 'List types are not supported');
-
-  if (isNonNull) {
-    return fieldType.name;
-  }
-  return `${fieldType.name} | undefined`;
 }
 
 /** Indicates if objType contains the specified directive */
@@ -199,39 +164,4 @@ export function isType(
   }
 
   return isScalarType(type) && type.name === typeName;
-}
-
-/**
- * Marshals the specified field value for use with ddb.
- */
-export function marshalField(field: GraphQLField<unknown, unknown>): string {
-  const fieldName = field.name;
-
-  return isType('Date', field)
-    ? `input.${fieldName}.getTime()`
-    : `input.${fieldName}`;
-}
-
-/**
- * Helper function for building a field unmarshaller
- */
-export function unmarshalField(
-  fieldType: GraphQLField<unknown, unknown>,
-  columnNameOverride?: string
-) {
-  const fieldName = fieldType.name;
-  const columnName = columnNameOverride ?? snakeCase(fieldType.name);
-
-  const isDateType = isType('Date', fieldType);
-
-  let out = `item.${columnName}`;
-  if (isDateType) {
-    if (isNonNullType(fieldType.type)) {
-      out = `new Date(${out})`;
-    } else {
-      out = `${out} ? new Date(${out}) : null`;
-    }
-  }
-
-  return `${fieldName}: ${out}`;
 }

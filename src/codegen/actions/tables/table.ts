@@ -1,13 +1,8 @@
-import type {GraphQLObjectType} from 'graphql';
-
-import {extractTtlInfo} from '../../common/fields';
-import {hasDirective} from '../../common/helpers';
-import type {IndexFieldInfo} from '../../common/indexes';
-import {extractIndexInfo} from '../../common/indexes';
-import {extractKeyInfo} from '../../common/keys';
+import type {PrimaryKeyConfig, Table} from '../../parser';
 
 import {createItemTpl} from './templates/create-item';
 import {deleteItemTpl} from './templates/delete-item';
+import {makeKeyTemplate, objectToString} from './templates/helpers';
 import {queryTpl} from './templates/query';
 import {readItemTpl} from './templates/read-item';
 import {touchItemTpl} from './templates/touch-item';
@@ -16,109 +11,89 @@ import {updateItemTpl} from './templates/update-item';
 /**
  * Generates the createItem function for a table
  */
-export function createItemTemplate(objType: GraphQLObjectType) {
-  const keyInfo = extractKeyInfo(objType);
-  const ttlInfo = extractTtlInfo(objType);
-
+export function createItemTemplate(irTable: Table) {
   return createItemTpl({
-    conditionField: keyInfo.conditionField,
-    key: keyInfo.keyForCreate,
-    objType,
-    omit: ['id', ttlInfo?.fieldName ?? ''].filter(Boolean),
+    key: makeKey(irTable.primaryKey),
+    omit: ['id', irTable.ttlConfig?.fieldName ?? ''].filter(Boolean),
+    tableName: irTable.tableName,
+    typeName: irTable.typeName,
   });
 }
 
 /**
  * Generates the deleteItem function for a table
  */
-export function deleteItemTemplate(objType: GraphQLObjectType) {
-  const keyInfo = extractKeyInfo(objType);
-
+export function deleteItemTemplate(irTable: Table) {
   return deleteItemTpl({
-    conditionField: keyInfo.conditionField,
-    ean: keyInfo.ean,
-    key: keyInfo.keyForReadAndUpdate,
-    objType,
+    key: makeKey(irTable.primaryKey),
+    tableName: irTable.tableName,
+    typeName: irTable.typeName,
   });
 }
 
 /**
  * Generates the query function for a table
  */
-export function queryTemplate(objType: GraphQLObjectType) {
-  const indexInfo = extractIndexInfo(objType);
-  const keyInfo = extractKeyInfo(objType);
-
-  if (!hasDirective('compositeKey', objType)) {
+export function queryTemplate(irTable: Table) {
+  if (!irTable.primaryKey.isComposite) {
     return '';
   }
 
-  const consistent = hasDirective('consistent', objType);
-
   return queryTpl({
-    consistent,
-    indexes: [keyInfo.index, ...indexInfo.indexes].filter(
-      Boolean
-    ) as IndexFieldInfo[],
-    objType,
+    consistent: irTable.consistent,
+    primaryKey: irTable.primaryKey,
+    secondaryIndexes: irTable.secondaryIndexes,
+    tableName: irTable.tableName,
+    typeName: irTable.typeName,
   });
 }
 
 /**
  * Generates the readItem function for a table
  */
-export function readItemTemplate(objType: GraphQLObjectType) {
-  const keyInfo = extractKeyInfo(objType);
-
-  const consistent = hasDirective('consistent', objType);
-
+export function readItemTemplate(irTable: Table) {
   return readItemTpl({
-    consistent,
-    key: keyInfo.keyForReadAndUpdate,
-    objType,
+    consistent: irTable.consistent,
+    key: makeKey(irTable.primaryKey),
+    tableName: irTable.tableName,
+    typeName: irTable.typeName,
   });
 }
 
 /**
  * Generates the updateItem function for a table
  */
-export function touchItemTemplate(objType: GraphQLObjectType) {
-  const keyInfo = extractKeyInfo(objType);
-  const ttlInfo = extractTtlInfo(objType);
-
+export function touchItemTemplate(irTable: Table) {
   const ean: string[] = [];
   const eav: string[] = [];
   const updateExpressions: string[] = [];
 
-  const fieldNames = Object.keys(objType.getFields()).sort();
-
-  for (const fieldName of fieldNames) {
-    if (keyInfo.fields.has(fieldName)) {
-      // intentionally empty. if key fields need to do anything, they'll be
-      // handled after the loop
+  for (const {fieldName} of irTable.fields) {
+    if (fieldName === 'id') {
+      continue;
     } else if (fieldName === 'version') {
       ean.push(`'#version': '_v'`);
       eav.push(`':versionInc': 1`);
       updateExpressions.push(`#version = #version + :versionInc`);
-    } else if (fieldName === ttlInfo?.fieldName) {
+    } else if (fieldName === irTable.ttlConfig?.fieldName) {
       ean.push(`'#${fieldName}': 'ttl'`);
-      eav.push(`':ttlInc': ${ttlInfo.duration}`);
+      eav.push(`':ttlInc': ${irTable.ttlConfig.duration}`);
       updateExpressions.push(`#${fieldName} = #${fieldName} + :ttlInc`);
     }
   }
 
-  ean.push(...keyInfo.ean);
+  ean.push("'#pk': 'pk'");
 
   ean.sort();
   eav.sort();
   updateExpressions.sort();
 
   return touchItemTpl({
-    conditionField: keyInfo.conditionField,
     ean,
     eav,
-    key: keyInfo.keyForReadAndUpdate,
-    objType,
+    key: makeKey(irTable.primaryKey),
+    tableName: irTable.tableName,
+    typeName: irTable.typeName,
     updateExpressions,
   });
 }
@@ -126,15 +101,45 @@ export function touchItemTemplate(objType: GraphQLObjectType) {
 /**
  * Generates the updateItem function for a table
  */
-export function updateItemTemplate(objType: GraphQLObjectType) {
-  const keyInfo = extractKeyInfo(objType);
-  const ttlInfo = extractTtlInfo(objType);
-
+export function updateItemTemplate(irTable: Table) {
   return updateItemTpl({
-    conditionField: keyInfo.conditionField,
-    inputToPrimaryKey: keyInfo.inputToPrimaryKey,
-    key: keyInfo.keyForReadAndUpdate,
-    objType,
-    ttlInfo,
+    key: makeKey(irTable.primaryKey),
+    marshallPrimaryKey: objectToString(
+      Object.fromEntries(
+        (irTable.primaryKey.isComposite
+          ? [
+              ...irTable.primaryKey.partitionKeyFields,
+              ...irTable.primaryKey.sortKeyFields,
+            ]
+          : irTable.primaryKey.partitionKeyFields
+        )
+          .map(({fieldName}) => fieldName)
+          .sort()
+          .map((fieldName) => [fieldName, `input.${fieldName}`])
+      )
+    ),
+    tableName: irTable.tableName,
+    ttlInfo: irTable.ttlConfig,
+    typeName: irTable.typeName,
   });
+}
+
+/** helper */
+function makeKey(key: PrimaryKeyConfig): Record<string, string> {
+  if (key.isComposite) {
+    return {
+      pk: `\`${makeKeyTemplate(
+        key.partitionKeyPrefix,
+        key.partitionKeyFields
+      )}\``,
+      sk: `\`${makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields)}\``,
+    };
+  }
+
+  return {
+    pk: `\`${makeKeyTemplate(
+      key.partitionKeyPrefix,
+      key.partitionKeyFields
+    )}\``,
+  };
 }

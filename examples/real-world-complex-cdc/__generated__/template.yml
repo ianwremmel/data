@@ -21,7 +21,7 @@ Globals:
     Tracing: Active
 Outputs:
   TableCaseInstance:
-    Description: The name of the DynamoDB table for CaseInstance
+    Description: The name of the DynamoDB table for TableCaseInstance
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableCaseInstance
@@ -30,7 +30,7 @@ Outputs:
     Value:
       Ref: TableCaseInstance
   TableCaseSummary:
-    Description: The name of the DynamoDB table for CaseSummary
+    Description: The name of the DynamoDB table for TableCaseSummary
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableCaseSummary
@@ -39,7 +39,7 @@ Outputs:
     Value:
       Ref: TableCaseSummary
   TableFileTiming:
-    Description: The name of the DynamoDB table for FileTiming
+    Description: The name of the DynamoDB table for TableFileTiming
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableFileTiming

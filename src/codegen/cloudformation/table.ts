@@ -1,37 +1,22 @@
-import type {GraphQLObjectType} from 'graphql';
-import {assertObjectType} from 'graphql';
 import {snakeCase} from 'lodash';
 
-import {extractTtlInfo} from '../common/fields';
-import {
-  getOptionalArgBooleanValue,
-  getOptionalDirective,
-  hasDirective,
-} from '../common/helpers';
-import {extractIndexInfo} from '../common/indexes';
-import {extractTableName} from '../common/objects';
+import type {Table} from '../parser';
 
 import type {CloudFormationFragment} from './types';
 
 /* eslint-disable complexity */
 /** cloudformation generator */
-export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
-  const tableName = extractTableName(type);
-  const tableDirective = getOptionalDirective('table', type);
-  const enablePointInTimeRecovery = tableDirective
-    ? getOptionalArgBooleanValue(
-        'enablePointInTimeRecovery',
-        tableDirective
-      ) !== false
-    : true;
+export function defineTable({
+  changeDataCaptureConfig,
+  enablePointInTimeRecovery,
+  tableName,
+  primaryKey: {isComposite},
+  secondaryIndexes,
+  ttlConfig: ttlInfo,
+}: Table): CloudFormationFragment {
+  const hasCdc = !!changeDataCaptureConfig;
 
-  assertObjectType(type);
-  const isCompositeKey = hasDirective(`compositeKey`, type);
-  const indexInfo = extractIndexInfo(type);
-  const ttlInfo = extractTtlInfo(type);
-  const hasCdc = hasDirective('cdc', type);
-
-  const attributeDefinitions = isCompositeKey
+  const attributeDefinitions = isComposite
     ? [
         {
           AttributeName: 'pk',
@@ -44,7 +29,7 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
       ]
     : [{AttributeName: 'pk', AttributeType: 'S'}];
 
-  const keySchema = isCompositeKey
+  const keySchema = isComposite
     ? [
         {
           AttributeName: 'pk',
@@ -64,30 +49,25 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
 
   const globalSecondaryIndexes = [];
   const localSecondaryIndexes = [];
-  for (const index of indexInfo.indexes) {
-    if ('name' in index) {
-      if ('pkFields' in index) {
-        attributeDefinitions.push(
-          {
-            AttributeName: `${index.name}pk`,
-            AttributeType: 'S',
-          },
-          {
-            AttributeName: `${index.name}sk`,
-            AttributeType: 'S',
-          }
-        );
-      } else {
-        attributeDefinitions.push({
-          AttributeName: index.name,
-          AttributeType: 'S',
-        });
-      }
 
-      if ('pkFields' in index) {
-        globalSecondaryIndexes.push({
-          IndexName: index.name,
-          KeySchema: [
+  for (const index of secondaryIndexes) {
+    if (index.type === 'gsi') {
+      attributeDefinitions.push(
+        ...(index.isComposite
+          ? [
+              {
+                AttributeName: `${index.name}pk`,
+                AttributeType: 'S',
+              },
+              {
+                AttributeName: `${index.name}sk`,
+                AttributeType: 'S',
+              },
+            ]
+          : [{AttributeName: `${index.name}pk`, AttributeType: 'S'}])
+      );
+      const gsiKeySchema = index.isComposite
+        ? [
             {
               AttributeName: `${index.name}pk`,
               KeyType: 'HASH',
@@ -96,29 +76,42 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
               AttributeName: `${index.name}sk`,
               KeyType: 'RANGE',
             },
-          ],
-          Projection: {
-            ProjectionType: 'ALL',
-          },
-        });
-      } else if ('skFields' in index) {
-        localSecondaryIndexes.push({
-          IndexName: index.name,
-          KeySchema: [
+          ]
+        : [
             {
-              AttributeName: 'pk',
+              AttributeName: `${index.name}pk`,
               KeyType: 'HASH',
             },
-            {
-              AttributeName: index.name,
-              KeyType: 'RANGE',
-            },
-          ],
-          Projection: {
-            ProjectionType: 'ALL',
-          },
-        });
-      }
+          ];
+      globalSecondaryIndexes.push({
+        IndexName: index.name,
+        KeySchema: gsiKeySchema,
+        Projection: {
+          ProjectionType: 'ALL',
+        },
+      });
+    } else if (index.type === 'lsi') {
+      attributeDefinitions.push({
+        AttributeName: `${index.name}`,
+        AttributeType: 'S',
+      });
+      const lsiKeySchema = [
+        {
+          AttributeName: 'pk',
+          KeyType: 'HASH',
+        },
+        {
+          AttributeName: index.name,
+          KeyType: 'RANGE',
+        },
+      ];
+      localSecondaryIndexes.push({
+        IndexName: index.name,
+        KeySchema: lsiKeySchema,
+        Projection: {
+          ProjectionType: 'ALL',
+        },
+      });
     }
   }
 
@@ -181,7 +174,7 @@ export function defineTable(type: GraphQLObjectType): CloudFormationFragment {
     env: {[`${snakeCase(tableName).toUpperCase()}`]: {Ref: tableName}},
     output: {
       [tableName]: {
-        Description: `The name of the DynamoDB table for ${type.name}`,
+        Description: `The name of the DynamoDB table for ${tableName}`,
         Export: {
           Name: {'Fn::Sub': `\${AWS::StackName}-${tableName}`},
           Value: {Ref: tableName},

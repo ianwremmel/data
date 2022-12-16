@@ -169,9 +169,7 @@ export async function createUserSession(
       ConditionExpression: 'attribute_not_exists(#pk)',
       ExpressionAttributeNames,
       ExpressionAttributeValues,
-      Key: {
-        pk: `USER_SESSION#${input.sessionId}`,
-      },
+      Key: {pk: `USER_SESSION#${input.sessionId}`},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
@@ -218,9 +216,7 @@ export async function deleteUserSession(
           ExpressionAttributeNames: {
             '#pk': 'pk',
           },
-          Key: {
-            pk: `USER_SESSION#${input.sessionId}`,
-          },
+          Key: {pk: `USER_SESSION#${input.sessionId}`},
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
           ReturnValues: 'NONE',
@@ -258,9 +254,7 @@ export async function readUserSession(
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
     new GetCommand({
       ConsistentRead: true,
-      Key: {
-        pk: `USER_SESSION#${input.sessionId}`,
-      },
+      Key: {pk: `USER_SESSION#${input.sessionId}`},
       ReturnConsumedCapacity: 'INDEXES',
       TableName: tableName,
     })
@@ -311,9 +305,7 @@ export async function touchUserSession(
             ':ttlInc': 86400000,
             ':versionInc': 1,
           },
-          Key: {
-            pk: `USER_SESSION#${input.sessionId}`,
-          },
+          Key: {pk: `USER_SESSION#${input.sessionId}`},
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
           ReturnValues: 'ALL_NEW',
@@ -372,9 +364,7 @@ export async function updateUserSession(
           ...ExpressionAttributeValues,
           ':previousVersion': input.version,
         },
-        Key: {
-          pk: `USER_SESSION#${input.sessionId}`,
-        },
+        Key: {pk: `USER_SESSION#${input.sessionId}`},
         ReturnConsumedCapacity: 'INDEXES',
         ReturnItemCollectionMetrics: 'SIZE',
         ReturnValues: 'ALL_NEW',
@@ -409,9 +399,7 @@ export async function updateUserSession(
       try {
         await readUserSession(input);
       } catch {
-        throw new NotFoundError('UserSession', {
-          sessionId: input.sessionId,
-        });
+        throw new NotFoundError('UserSession', {sessionId: input.sessionId});
       }
       throw new OptimisticLockingError('UserSession', {
         sessionId: input.sessionId,
@@ -445,13 +433,13 @@ export function marshallUserSession(
 
   const ean: Record<string, string> = {
     '#entity': '_et',
+    '#pk': 'pk',
     '#createdAt': '_ct',
     '#expires': 'ttl',
     '#session': 'session',
     '#sessionId': 'session_id',
     '#updatedAt': '_md',
     '#version': '_v',
-    '#pk': 'pk',
   };
 
   const eav: Record<string, unknown> = {
