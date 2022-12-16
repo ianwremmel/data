@@ -20,7 +20,7 @@ export function makeModelChangeHandler(
 ): EventBridgeHandler<
   Exclude<DynamoDBRecord['eventName'], undefined> | string,
   DynamoDBRecord,
-  any
+  unknown
 > {
   const {captureAsyncFunction} = dependencies;
   return async (event, context) =>
