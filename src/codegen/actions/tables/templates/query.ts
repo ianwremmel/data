@@ -1,5 +1,3 @@
-import assert from 'assert';
-
 import {getTypeScriptTypeForField} from '../../../common/helpers';
 import {makeKeyTemplate} from '../../../common/keys';
 import type {
@@ -30,10 +28,6 @@ export function queryTpl({
   typeName,
 }: QueryTplInput): string {
   const hasIndexes = secondaryIndexes.length > 0;
-
-  const partitionKeyFields = primaryKey.isComposite
-    ? primaryKey.partitionKeyFields
-    : primaryKey.fields;
 
   const sortKeyFields = primaryKey.isComposite ? primaryKey.sortKeyFields : [];
 
@@ -117,7 +111,7 @@ export async function query${typeName}ByNodeId(id: Scalars['ID']): Promise<Reado
   const primaryKeyValues = Base64.decode(id).split(':').slice(1).join(':').split('#');
 
   const primaryKey: Query${typeName}Input = {
-    ${partitionKeyFields
+    ${primaryKey.partitionKeyFields
       .map(
         (field, index) =>
           `${field.fieldName}: ${fieldStringToFieldType(
@@ -136,7 +130,7 @@ export async function query${typeName}ByNodeId(id: Scalars['ID']): Promise<Reado
     // that primaryKey is the no-sort-fields-specified version of the type.
     primaryKey.${field.fieldName} = ${fieldStringToFieldType(
         field,
-        `primaryKeyValues[${partitionKeyFields.length + index + 3}]`
+        `primaryKeyValues[${primaryKey.partitionKeyFields.length + index + 3}]`
       )};
   }
   `
@@ -181,20 +175,16 @@ function makeTypeSignature(
           }
 
           return Object.fromEntries(
-            index.fields.map(getTypeScriptTypeForField).sort()
+            index.partitionKeyFields.map(getTypeScriptTypeForField).sort()
           );
         }
 
-        const primaryKeyFields = primaryKey.isComposite
-          ? primaryKey.partitionKeyFields
-          : primaryKey.fields;
-
-        return [undefined, ...index.fields].map((_, i) =>
+        return [undefined, ...index.sortKeyFields].map((_, i) =>
           Object.fromEntries([
             ...name,
             ...[
-              ...primaryKeyFields.map(getTypeScriptTypeForField),
-              ...index.fields.slice(0, i).map(getTypeScriptTypeForField),
+              ...primaryKey.partitionKeyFields.map(getTypeScriptTypeForField),
+              ...index.sortKeyFields.slice(0, i).map(getTypeScriptTypeForField),
             ].sort(),
           ])
         );
@@ -235,18 +225,20 @@ function indexToSortKey(index: PrimaryKeyConfig | SecondaryIndex): string {
   if (!index.isComposite) {
     return '';
   }
-  const sortKeyFields =
-    index.type === 'lsi' ? index.fields : index.sortKeyFields;
-  const sortKeyPrefix =
-    index.type === 'lsi' ? index.prefix : index.sortKeyPrefix;
 
   if ('name' in index) {
     return `
 if (input.index === '${index.name}') {
-  return ${makePartialKeyTemplate(sortKeyPrefix ?? '', sortKeyFields)};
+  return ${makePartialKeyTemplate(
+    index.sortKeyPrefix ?? '',
+    index.sortKeyFields
+  )};
 }`;
   }
-  return `return ${makePartialKeyTemplate(sortKeyPrefix ?? '', sortKeyFields)}`;
+  return `return ${makePartialKeyTemplate(
+    index.sortKeyPrefix ?? '',
+    index.sortKeyFields
+  )}`;
 }
 
 /** template */
@@ -258,21 +250,13 @@ function makePartitionKeyForQuery(
     .map((index) => {
       const partitionKeyFields =
         index.type === 'lsi'
-          ? primaryKey.isComposite
-            ? primaryKey.partitionKeyFields
-            : primaryKey.fields
-          : index.isComposite
-          ? index.partitionKeyFields
-          : index.fields;
+          ? primaryKey.partitionKeyFields
+          : index.partitionKeyFields;
 
       const partitionKeyPrefix =
         index.type === 'lsi'
-          ? primaryKey.isComposite
-            ? primaryKey.partitionKeyPrefix
-            : primaryKey.prefix
-          : index.isComposite
-          ? index.partitionKeyPrefix
-          : index.prefix;
+          ? primaryKey.partitionKeyPrefix
+          : index.partitionKeyPrefix;
 
       if (index.type === 'primary') {
         return `if (!('index' in input)) {

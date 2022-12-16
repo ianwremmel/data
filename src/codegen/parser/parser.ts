@@ -142,11 +142,11 @@ function extractPrimaryKey(
     const directive = getDirective('partitionKey', type);
 
     return {
-      fields: getArgStringArrayValue('pkFields', directive).map(
+      isComposite: false,
+      partitionKeyFields: getArgStringArrayValue('pkFields', directive).map(
         (fieldName) => fieldMap[fieldName]
       ),
-      isComposite: false,
-      prefix: getOptionalArgStringValue('pkPrefix', directive),
+      partitionKeyPrefix: getOptionalArgStringValue('pkPrefix', directive),
       type: 'primary',
     };
   }
@@ -192,12 +192,12 @@ function extractSecondaryIndexes(
         assert.equal(directive.name.value, 'secondaryIndex', ``);
 
         return {
-          fields: getArgStringArrayValue('fields', directive).map(
-            (fieldName) => fieldMap[fieldName]
-          ),
           isComposite: true,
           name: getArgStringValue('name', directive),
-          prefix: getOptionalArgStringValue('prefix', directive),
+          sortKeyFields: getArgStringArrayValue('fields', directive).map(
+            (fieldName) => fieldMap[fieldName]
+          ),
+          sortKeyPrefix: getOptionalArgStringValue('prefix', directive),
           type: 'lsi',
         };
       }) ?? []

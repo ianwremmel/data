@@ -45,18 +45,18 @@ export type GSI = {
 
 export interface LSI {
   readonly isComposite: true;
-  readonly fields: readonly Field[];
   readonly name: string;
   readonly type: 'lsi';
-  readonly prefix: string;
+  readonly sortKeyFields: readonly Field[];
+  readonly sortKeyPrefix: string;
 }
 
 export type SecondaryIndex = GSI | LSI;
 
 export interface PartitionKey {
-  readonly fields: readonly Field[];
   readonly isComposite: false;
-  readonly prefix: string;
+  readonly partitionKeyFields: readonly Field[];
+  readonly partitionKeyPrefix: string;
 }
 
 export interface CompositeKey {

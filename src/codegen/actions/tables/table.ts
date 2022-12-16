@@ -119,7 +119,7 @@ export function updateItemTemplate(objType: GraphQLObjectType, irTable: Table) {
               ...irTable.primaryKey.partitionKeyFields,
               ...irTable.primaryKey.sortKeyFields,
             ]
-          : irTable.primaryKey.fields
+          : irTable.primaryKey.partitionKeyFields
         )
           .map(({fieldName}) => fieldName)
           .sort()
@@ -145,6 +145,9 @@ function makeKey(key: PrimaryKeyConfig): Record<string, string> {
   }
 
   return {
-    pk: `\`${makeKeyTemplate(key.prefix, key.fields)}\``,
+    pk: `\`${makeKeyTemplate(
+      key.partitionKeyPrefix,
+      key.partitionKeyFields
+    )}\``,
   };
 }

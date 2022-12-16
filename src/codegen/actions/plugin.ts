@@ -78,7 +78,7 @@ ${tableTypes
                 ...irTable.primaryKey.partitionKeyFields,
                 ...irTable.primaryKey.sortKeyFields,
               ]
-            : irTable.primaryKey.fields
+            : irTable.primaryKey.partitionKeyFields
           )
             .map(getTypeScriptTypeForField)
             .sort()
