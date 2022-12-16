@@ -162,29 +162,24 @@ export function getOptionalDirective(
 }
 
 /** Gets the TypeScript type for that corresponds to the field. */
-export function getTypeScriptTypeForField(
-  field: GraphQLField<unknown, unknown>
-): string {
-  let fieldType = field.type;
-  let isNonNull = false;
-  if (isNonNullType(fieldType)) {
-    isNonNull = true;
-    fieldType = fieldType.ofType;
-  }
-
-  if (isScalarType(fieldType)) {
-    if (isNonNull) {
-      return `Scalars['${fieldType.name}']`;
+export function getTypeScriptTypeForField({
+  fieldName,
+  isRequired,
+  isScalarType: isScalar,
+  typeName,
+}: Field): [string, string] {
+  if (isRequired) {
+    if (isScalar) {
+      return [fieldName, `Scalars["${typeName}"]`];
     }
-    return `Scalars['${fieldType.name}'] | undefined`;
+    return [fieldName, typeName];
   }
 
-  assert(!isListType(fieldType), 'List types are not supported');
-
-  if (isNonNull) {
-    return fieldType.name;
+  if (isScalar) {
+    return [`${fieldName}?`, `Maybe<Scalars["${typeName}"]>`];
   }
-  return `${fieldType.name} | undefined`;
+
+  return [`${fieldName}?`, `Maybe<${typeName}>`];
 }
 
 /** Indicates if objType contains the specified directive */

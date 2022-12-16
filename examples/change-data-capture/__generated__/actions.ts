@@ -442,10 +442,7 @@ export async function updateAccount(
 }
 
 export type QueryAccountInput =
-  | {
-      externalId: Scalars['String'];
-      vendor: Vendor;
-    }
+  | {externalId: Scalars['String']; vendor: Vendor}
   | {index: 'lsi1'; externalId: Scalars['String']; vendor: Vendor}
   | {
       index: 'lsi1';
@@ -515,7 +512,7 @@ export async function queryAccount(
           ':pk': makePartitionKeyForQueryAccount(input),
           ':sk': makeSortKeyForQueryAccount(input),
         },
-        IndexName: undefined,
+        IndexName: 'index' in input ? input.index : undefined,
         KeyConditionExpression: `#pk = :pk AND ${
           operator === 'begins_with'
             ? 'begins_with(#sk, :sk)'
@@ -1041,10 +1038,7 @@ export async function updateSubscription(
 }
 
 export type QuerySubscriptionInput =
-  | {
-      externalId: Scalars['String'];
-      vendor: Vendor;
-    }
+  | {externalId: Scalars['String']; vendor: Vendor}
   | {
       effectiveDate: Scalars['Date'];
       externalId: Scalars['String'];

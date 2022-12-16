@@ -38,34 +38,39 @@ export interface ChangeDataCaptureConfig {
   readonly targetTable: string;
 }
 
-export interface GSI {
-  readonly isComposite: boolean;
+export type GSI = {
   readonly name: string;
   readonly type: 'gsi';
-}
+} & (PartitionKey | CompositeKey);
 
 export interface LSI {
+  readonly isComposite: true;
+  readonly fields: readonly Field[];
   readonly name: string;
   readonly type: 'lsi';
+  readonly prefix: string;
 }
 
 export type SecondaryIndex = GSI | LSI;
 
 export interface PartitionKey {
-  fields: readonly Field[];
-  isComposite: false;
-  prefix: string;
+  readonly fields: readonly Field[];
+  readonly isComposite: false;
+  readonly prefix: string;
 }
 
 export interface CompositeKey {
-  isComposite: true;
-  partitionKeyPrefix: string;
-  partitionKeyFields: Field[];
-  sortKeyPrefix: string;
-  sortKeyFields: Field[];
+  readonly isComposite: true;
+  readonly partitionKeyPrefix: string;
+  readonly partitionKeyFields: Field[];
+  readonly sortKeyPrefix: string;
+  readonly sortKeyFields: Field[];
 }
 
-export type PrimaryKeyConfig = PartitionKey | CompositeKey;
+export type PrimaryKeyConfig = {type: 'primary'} & (
+  | PartitionKey
+  | CompositeKey
+);
 
 export interface TTLConfig {
   readonly fieldName: string;

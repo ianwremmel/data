@@ -9,7 +9,7 @@ import type {
 import type {GraphQLObjectType} from 'graphql';
 import {assertObjectType, isObjectType} from 'graphql';
 
-import {hasInterface} from '../common/helpers';
+import {getTypeScriptTypeForField, hasInterface} from '../common/helpers';
 import {extractTableName, parse} from '../parser';
 
 import type {ActionPluginConfig} from './config';
@@ -80,20 +80,7 @@ ${tableTypes
               ]
             : irTable.primaryKey.fields
           )
-            .map(({fieldName, isRequired, isScalarType, typeName}) => {
-              if (isRequired) {
-                if (isScalarType) {
-                  return [fieldName, `Scalars["${typeName}"]`];
-                }
-                return [fieldName, typeName];
-              }
-
-              if (isScalarType) {
-                return [`${fieldName}?`, `Maybe<Scalars["${typeName}"]>`];
-              }
-
-              return [`${fieldName}?`, `Maybe<${typeName}>`];
-            })
+            .map(getTypeScriptTypeForField)
             .sort()
         )
       )}`,

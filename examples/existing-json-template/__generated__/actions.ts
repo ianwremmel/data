@@ -431,15 +431,8 @@ export async function updateUserLogin(
 }
 
 export type QueryUserLoginInput =
-  | {
-      externalId: Scalars['String'];
-      vendor: Vendor;
-    }
-  | {
-      externalId: Scalars['String'];
-      login: Scalars['String'];
-      vendor: Vendor;
-    }
+  | {externalId: Scalars['String']; vendor: Vendor}
+  | {externalId: Scalars['String']; login: Scalars['String']; vendor: Vendor}
   | {index: 'gsi1'; login: Scalars['String']; vendor: Vendor}
   | {
       index: 'gsi1';

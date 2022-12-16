@@ -83,7 +83,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
         fields,
         libImportPath: '@ianwremmel/data',
         primaryKey: extractPrimaryKey(type, fieldMap),
-        secondaryIndexes: extractSecondaryIndexes(type),
+        secondaryIndexes: extractSecondaryIndexes(type, fieldMap),
         tableName: extractTableName(type),
         ttlConfig: extractTTLConfig(type),
         typeName: type.name,
@@ -134,6 +134,7 @@ function extractPrimaryKey(
         (fieldName) => fieldMap[fieldName]
       ),
       sortKeyPrefix: getOptionalArgStringValue('skPrefix', directive),
+      type: 'primary',
     };
   }
 
@@ -146,6 +147,7 @@ function extractPrimaryKey(
       ),
       isComposite: false,
       prefix: getOptionalArgStringValue('pkPrefix', directive),
+      type: 'primary',
     };
   }
 
@@ -156,7 +158,8 @@ function extractPrimaryKey(
 
 /** helper */
 function extractSecondaryIndexes(
-  type: GraphQLObjectType<unknown, unknown>
+  type: GraphQLObjectType<unknown, unknown>,
+  fieldMap: Record<string, Field>
 ): SecondaryIndex[] {
   return (
     type.astNode?.directives
@@ -165,11 +168,39 @@ function extractSecondaryIndexes(
           directive.name.value === 'compositeIndex' ||
           directive.name.value === 'secondaryIndex'
       )
-      .map((directive) => ({
-        isComposite: directive.name.value === 'compositeIndex',
-        name: getArgStringValue('name', directive),
-        type: directive.name.value === 'compositeIndex' ? 'gsi' : 'lsi',
-      })) ?? []
+      .map((directive) => {
+        if (directive.name.value === 'compositeIndex') {
+          return {
+            isComposite: true,
+            name: getArgStringValue('name', directive),
+            partitionKeyFields: getArgStringArrayValue(
+              'pkFields',
+              directive
+            ).map((fieldName) => fieldMap[fieldName]),
+            partitionKeyPrefix: getOptionalArgStringValue(
+              'pkPrefix',
+              directive
+            ),
+            sortKeyFields: getArgStringArrayValue('skFields', directive).map(
+              (fieldName) => fieldMap[fieldName]
+            ),
+            sortKeyPrefix: getOptionalArgStringValue('skPrefix', directive),
+            type: 'gsi',
+          };
+        }
+
+        assert.equal(directive.name.value, 'secondaryIndex', ``);
+
+        return {
+          fields: getArgStringArrayValue('fields', directive).map(
+            (fieldName) => fieldMap[fieldName]
+          ),
+          isComposite: true,
+          name: getArgStringValue('name', directive),
+          prefix: getOptionalArgStringValue('prefix', directive),
+          type: 'lsi',
+        };
+      }) ?? []
   );
 }
 

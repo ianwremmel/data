@@ -1,9 +1,7 @@
 import type {GraphQLObjectType} from 'graphql';
 
 import {hasDirective} from '../../common/helpers';
-import type {IndexFieldInfo} from '../../common/indexes';
-import {extractIndexInfo} from '../../common/indexes';
-import {extractKeyInfo, makeKeyTemplate} from '../../common/keys';
+import {makeKeyTemplate} from '../../common/keys';
 import type {PrimaryKeyConfig, Table} from '../../parser';
 
 import {createItemTpl} from './templates/create-item';
@@ -41,9 +39,6 @@ export function deleteItemTemplate(objType: GraphQLObjectType, irTable: Table) {
  * Generates the query function for a table
  */
 export function queryTemplate(objType: GraphQLObjectType, irTable: Table) {
-  const indexInfo = extractIndexInfo(objType);
-  const keyInfo = extractKeyInfo(objType);
-
   if (!hasDirective('compositeKey', objType)) {
     return '';
   }
@@ -52,9 +47,8 @@ export function queryTemplate(objType: GraphQLObjectType, irTable: Table) {
 
   return queryTpl({
     consistent,
-    indexes: [keyInfo.index, ...indexInfo.indexes].filter(
-      Boolean
-    ) as IndexFieldInfo[],
+    primaryKey: irTable.primaryKey,
+    secondaryIndexes: irTable.secondaryIndexes,
     tableName: irTable.tableName,
     typeName: irTable.typeName,
   });
