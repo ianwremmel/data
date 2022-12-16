@@ -27,13 +27,7 @@ export type ChangeDataCaptureEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
 export interface ChangeDataCaptureConfig {
   readonly event: ChangeDataCaptureEvent;
-  readonly dispatcherFunctionName: string;
-  readonly dispatcherFileName: string;
-  readonly dispatcherOutputPath: string;
-  readonly handlerFileName: string;
-  readonly handlerFunctionName: string;
   readonly handlerModuleId: string;
-  readonly handlerOutputPath: string;
   readonly sourceModelName: string;
   readonly targetTable: string;
 }

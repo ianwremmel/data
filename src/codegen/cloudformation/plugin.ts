@@ -1,3 +1,4 @@
+import assert from 'assert';
 import fs, {readFileSync} from 'fs';
 import path from 'path';
 
@@ -46,9 +47,15 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
   config,
   info
 ) => {
+  const outputFile = info?.outputFile;
+  assert(outputFile, 'outputFile is required');
+
   const allResources = combineFragments(
     ...parse(schema, documents, config, info).map((table) =>
-      combineFragments(defineCdc(table, config), defineTable(table))
+      combineFragments(
+        defineCdc(table, config, {outputFile}),
+        defineTable(table)
+      )
     )
   );
 

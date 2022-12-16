@@ -67,12 +67,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
       );
 
       return {
-        changeDataCaptureConfig: extractChangeDataCaptureConfig(
-          schema,
-          type,
-          config,
-          outputFile
-        ),
+        changeDataCaptureConfig: extractChangeDataCaptureConfig(schema, type),
         consistent: hasDirective('consistent', type),
         dependenciesModuleId: path.relative(
           path.resolve(process.cwd(), path.dirname(outputFile)),
