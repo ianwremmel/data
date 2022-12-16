@@ -1,6 +1,3 @@
-import type {GraphQLObjectType} from 'graphql';
-
-import {hasDirective} from '../../common/helpers';
 import {makeKeyTemplate} from '../../common/keys';
 import type {PrimaryKeyConfig, Table} from '../../parser';
 
@@ -15,7 +12,7 @@ import {updateItemTpl} from './templates/update-item';
 /**
  * Generates the createItem function for a table
  */
-export function createItemTemplate(objType: GraphQLObjectType, irTable: Table) {
+export function createItemTemplate(irTable: Table) {
   return createItemTpl({
     key: makeKey(irTable.primaryKey),
     omit: ['id', irTable.ttlConfig?.fieldName ?? ''].filter(Boolean),
@@ -27,7 +24,7 @@ export function createItemTemplate(objType: GraphQLObjectType, irTable: Table) {
 /**
  * Generates the deleteItem function for a table
  */
-export function deleteItemTemplate(objType: GraphQLObjectType, irTable: Table) {
+export function deleteItemTemplate(irTable: Table) {
   return deleteItemTpl({
     key: makeKey(irTable.primaryKey),
     tableName: irTable.tableName,
@@ -38,15 +35,13 @@ export function deleteItemTemplate(objType: GraphQLObjectType, irTable: Table) {
 /**
  * Generates the query function for a table
  */
-export function queryTemplate(objType: GraphQLObjectType, irTable: Table) {
-  if (!hasDirective('compositeKey', objType)) {
+export function queryTemplate(irTable: Table) {
+  if (!irTable.primaryKey.isComposite) {
     return '';
   }
 
-  const consistent = hasDirective('consistent', objType);
-
   return queryTpl({
-    consistent,
+    consistent: irTable.consistent,
     primaryKey: irTable.primaryKey,
     secondaryIndexes: irTable.secondaryIndexes,
     tableName: irTable.tableName,
@@ -57,7 +52,7 @@ export function queryTemplate(objType: GraphQLObjectType, irTable: Table) {
 /**
  * Generates the readItem function for a table
  */
-export function readItemTemplate(objType: GraphQLObjectType, irTable: Table) {
+export function readItemTemplate(irTable: Table) {
   return readItemTpl({
     consistent: irTable.consistent,
     key: makeKey(irTable.primaryKey),
@@ -69,14 +64,12 @@ export function readItemTemplate(objType: GraphQLObjectType, irTable: Table) {
 /**
  * Generates the updateItem function for a table
  */
-export function touchItemTemplate(objType: GraphQLObjectType, irTable: Table) {
+export function touchItemTemplate(irTable: Table) {
   const ean: string[] = [];
   const eav: string[] = [];
   const updateExpressions: string[] = [];
 
-  const fieldNames = Object.keys(objType.getFields()).sort();
-
-  for (const fieldName of fieldNames) {
+  for (const {fieldName} of irTable.fields) {
     if (fieldName === 'id') {
       continue;
     } else if (fieldName === 'version') {
@@ -109,7 +102,7 @@ export function touchItemTemplate(objType: GraphQLObjectType, irTable: Table) {
 /**
  * Generates the updateItem function for a table
  */
-export function updateItemTemplate(objType: GraphQLObjectType, irTable: Table) {
+export function updateItemTemplate(irTable: Table) {
   return updateItemTpl({
     key: makeKey(irTable.primaryKey),
     marshallPrimaryKey: objectToString(

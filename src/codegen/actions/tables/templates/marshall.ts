@@ -1,18 +1,14 @@
-import type {GraphQLObjectType} from 'graphql';
-
 import {marshalField} from '../../../common/helpers';
 import {makeKeyTemplate} from '../../../common/keys';
 import type {Table} from '../../../parser';
 
 export interface MarshallTplInput {
-  readonly irTable: Table;
-  readonly objType: GraphQLObjectType;
+  readonly table: Table;
 }
 
 /** Generates the marshall function for a table */
 export function marshallTpl({
-  irTable: {fields, secondaryIndexes, ttlConfig, typeName},
-  objType,
+  table: {fields, secondaryIndexes, ttlConfig, typeName},
 }: MarshallTplInput): string {
   const requiredFields = fields
     .filter((f) => f.isRequired)

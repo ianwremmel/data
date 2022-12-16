@@ -4,12 +4,12 @@ import type {Table} from '../../../parser';
 export const DIVIDER = '#:#';
 
 export interface UnmarshallTplInput {
-  readonly irTable: Table;
+  readonly table: Table;
 }
 
 /** Generates the unmarshall function for a table */
 export function unmarshallTpl({
-  irTable: {fields, primaryKey, typeName},
+  table: {fields, primaryKey, typeName},
 }: UnmarshallTplInput): string {
   const requiredFields = fields.filter((f) => f.isRequired);
   const optionalFields = fields.filter((f) => !f.isRequired);

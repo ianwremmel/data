@@ -6,11 +6,9 @@ import type {
   AddToSchemaResult,
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
-import type {GraphQLObjectType} from 'graphql';
-import {assertObjectType, isObjectType} from 'graphql';
 
-import {getTypeScriptTypeForField, hasInterface} from '../common/helpers';
-import {extractTableName, parse} from '../parser';
+import {getTypeScriptTypeForField} from '../common/helpers';
+import {parse} from '../parser';
 
 import type {ActionPluginConfig} from './config';
 import {
@@ -38,21 +36,6 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   info
 ) => {
   try {
-    const typesMap = schema.getTypeMap();
-
-    const ir = parse(schema, documents, config, info);
-
-    const tableTypes = Object.keys(typesMap)
-      .filter((typeName) => {
-        const type = typesMap[typeName];
-        return isObjectType(type) && hasInterface('Model', type);
-      })
-      .map((typeName) => {
-        const objType = typesMap[typeName];
-        assertObjectType(objType);
-        return objType as GraphQLObjectType;
-      });
-
     const content = `export interface ResultType<T> {
   capacity: ConsumedCapacity;
   item: T;
@@ -64,34 +47,30 @@ export interface MultiResultType<T> {
   items: T[];
 }
 
-${tableTypes
-  .map((objType) => {
-    // This is a temporary measure to transition to the new parser without
-    // changing every piece of code in a single commit.
-    const irTable = ir.find((t) => t.tableName === extractTableName(objType));
-    assert(irTable, `table not found in IR`);
+${parse(schema, documents, config, info)
+  .map((table) => {
     return [
-      `export interface ${objType.name}PrimaryKey ${objectToString(
+      `export interface ${table.typeName}PrimaryKey ${objectToString(
         Object.fromEntries(
-          (irTable.primaryKey.isComposite
+          (table.primaryKey.isComposite
             ? [
-                ...irTable.primaryKey.partitionKeyFields,
-                ...irTable.primaryKey.sortKeyFields,
+                ...table.primaryKey.partitionKeyFields,
+                ...table.primaryKey.sortKeyFields,
               ]
-            : irTable.primaryKey.partitionKeyFields
+            : table.primaryKey.partitionKeyFields
           )
             .map(getTypeScriptTypeForField)
             .sort()
         )
       )}`,
-      createItemTemplate(objType, irTable),
-      deleteItemTemplate(objType, irTable),
-      readItemTemplate(objType, irTable),
-      touchItemTemplate(objType, irTable),
-      updateItemTemplate(objType, irTable),
-      queryTemplate(objType, irTable),
-      marshallTpl({irTable, objType}),
-      unmarshallTpl({irTable}),
+      createItemTemplate(table),
+      deleteItemTemplate(table),
+      readItemTemplate(table),
+      touchItemTemplate(table),
+      updateItemTemplate(table),
+      queryTemplate(table),
+      marshallTpl({table}),
+      unmarshallTpl({table}),
     ]
       .filter(Boolean)
       .join('\n\n');
