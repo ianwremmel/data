@@ -1,7 +1,7 @@
 import type {GraphQLObjectType} from 'graphql';
 
 import {marshalField} from '../../../common/helpers';
-import {extractIndexInfo} from '../../../common/indexes';
+import {makeKeyTemplate} from '../../../common/keys';
 import type {Table} from '../../../parser';
 
 export interface MarshallTplInput {
@@ -11,11 +11,9 @@ export interface MarshallTplInput {
 
 /** Generates the marshall function for a table */
 export function marshallTpl({
-  irTable: {fields, ttlConfig, typeName},
+  irTable: {fields, secondaryIndexes, ttlConfig, typeName},
   objType,
 }: MarshallTplInput): string {
-  const indexInfo = extractIndexInfo(objType);
-
   const requiredFields = fields
     .filter((f) => f.isRequired)
     .filter(({fieldName}) => fieldName !== 'id');
@@ -37,7 +35,14 @@ export function marshall${typeName}(input: Record<string, any>): Marshall${typeN
   ${requiredFields
     .map(({fieldName}) => `'#${fieldName} = :${fieldName}',`)
     .join('\n')}
-  ${indexInfo.updateExpressions.map((e) => `'${e}',`).join('\n')}
+  ${secondaryIndexes
+    .map(({name, type}) =>
+      type === 'gsi'
+        ? [`'#${name}pk = :${name}pk',`, `'#${name}sk = :${name}sk',`]
+        : [`'#${name}sk = :${name}sk',`]
+    )
+    .flat()
+    .join('\n')}
   ];
 
   const ean: Record<string, string> = {
@@ -46,7 +51,14 @@ export function marshall${typeName}(input: Record<string, any>): Marshall${typeN
 ${requiredFields
   .map(({columnName, fieldName}) => `'#${fieldName}': '${columnName}',`)
   .join('\n')}
-${indexInfo.ean.map((v) => `${v},`).join('\n')}
+${secondaryIndexes
+  .map(({name, type}) =>
+    type === 'gsi'
+      ? [`'#${name}pk': '${name}pk',`, `'#${name}sk': '${name}sk',`]
+      : [`'#${name}sk': '${name}sk',`]
+  )
+  .flat()
+  .join('\n')}
   };
 
   const eav: Record<string, unknown> = {
@@ -69,7 +81,30 @@ ${indexInfo.ean.map((v) => `${v},`).join('\n')}
         return `':${fieldName}': ${marshalField(fieldName, isDateType)},`;
       })
       .join('\n')}
-${indexInfo.eav.map((v) => `${v},`).join('\n')}
+${secondaryIndexes
+  .map((index) =>
+    index.type === 'gsi'
+      ? [
+          `':${index.name}pk': \`${makeKeyTemplate(
+            index.partitionKeyPrefix,
+            index.partitionKeyFields
+          )}\`,`,
+          index.isComposite
+            ? `':${index.name}sk': \`${makeKeyTemplate(
+                index.sortKeyPrefix,
+                index.sortKeyFields
+              )}\`,`
+            : undefined,
+        ]
+      : [
+          `':${index.name}sk': \`${makeKeyTemplate(
+            index.sortKeyPrefix,
+            index.sortKeyFields
+          )}\`,`,
+        ]
+  )
+  .flat()
+  .join('\n')}
   };
 
   ${optionalFields
