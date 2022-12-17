@@ -151,7 +151,7 @@ export interface UserSessionPrimaryKey {
 export type CreateUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
->;
+> & {expires?: Date};
 export type CreateUserSessionOutput = ResultType<UserSession>;
 /**  */
 export async function createUserSession(
@@ -342,7 +342,7 @@ export async function touchUserSession(
 export type UpdateUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt'
->;
+> & {expires?: Date};
 export type UpdateUserSessionOutput = ResultType<UserSession>;
 
 /**  */
@@ -451,7 +451,8 @@ export function marshallUserSession(
   const eav: Record<string, unknown> = {
     ':entity': 'UserSession',
     ':createdAt': now.getTime(),
-    ':expires': now.getTime() + 86400000,
+    ':expires':
+      'expires' in input ? input.expires.getTime() : now.getTime() + 86400000,
     ':session': input.session,
     ':sessionId': input.sessionId,
     ':updatedAt': now.getTime(),

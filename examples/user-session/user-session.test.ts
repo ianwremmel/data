@@ -72,6 +72,23 @@ describe('createUserSession()', () => {
     // cleanup, not part of test
     await deleteUserSession(result.item);
   });
+
+  it('creates a record with a custom expiration Date', async () => {
+    const expires = new Date(Date.now() + 3 * 60 * 60 * 1000);
+
+    const result = await createUserSession({
+      expires,
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
+
+    expect(result.item.expires.getTime()).not.toBeNaN();
+
+    expect(result.item.expires).toStrictEqual(expires);
+
+    // cleanup, not part of test
+    await deleteUserSession(result.item);
+  });
 });
 
 describe('deleteUserSession()', () => {
@@ -376,6 +393,31 @@ describe('updateUserSession()', () => {
 
     expect(readResult.item.createdAt).toEqual(updateResult.item.createdAt);
     expect(readResult.item.updatedAt).toEqual(updateResult.item.updatedAt);
+
+    // cleanup, not part of test
+    await deleteUserSession(createResult.item);
+  });
+
+  it('updates a record with a custom expiration Date', async () => {
+    const expires = new Date(Date.now() + 3 * 60 * 60 * 1000);
+
+    const createResult = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
+
+    expect(createResult.item.expires).not.toBe(expires);
+
+    const updateResult = await updateUserSession({
+      ...createResult.item,
+      expires,
+      session: {foo: 'bar'},
+    });
+
+    expect(updateResult.item.expires).toStrictEqual(expires);
+
+    const readResult = await readUserSession(createResult.item);
+    expect(readResult.item.expires).toStrictEqual(expires);
 
     // cleanup, not part of test
     await deleteUserSession(createResult.item);

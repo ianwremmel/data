@@ -65,7 +65,10 @@ ${secondaryIndexes
           return `':version': ('version' in input ? input.version : 0) + 1,`;
         }
         if (fieldName === ttlConfig?.fieldName) {
-          return `':${fieldName}': now.getTime() + ${ttlConfig.duration},`;
+          return `':${fieldName}': '${fieldName}' in input ? ${marshalField(
+            fieldName,
+            isDateType
+          )} : now.getTime() + ${ttlConfig.duration},`;
         }
         if (fieldName === 'createdAt') {
           return `':${fieldName}': now.getTime(),`;

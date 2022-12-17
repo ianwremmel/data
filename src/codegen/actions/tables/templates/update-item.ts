@@ -7,7 +7,7 @@ export interface UpdateItemTplInput {
   readonly key: Record<string, string>;
   readonly marshallPrimaryKey: string;
   readonly tableName: string;
-  readonly ttlInfo: TTLConfig | undefined;
+  readonly ttlConfig: TTLConfig | undefined;
   readonly typeName: string;
 }
 
@@ -16,7 +16,7 @@ export function updateItemTpl({
   marshallPrimaryKey,
   key,
   tableName,
-  ttlInfo,
+  ttlConfig,
   typeName,
 }: UpdateItemTplInput) {
   const inputTypeName = `Update${typeName}Input`;
@@ -24,14 +24,16 @@ export function updateItemTpl({
     'id',
     'createdAt',
     'updatedAt',
-    ...(ttlInfo ? [ttlInfo.fieldName] : []),
+    ...(ttlConfig ? [ttlConfig.fieldName] : []),
   ]
     .map((f) => `'${f}'`)
     .sort();
   const outputTypeName = `Update${typeName}Output`;
 
   return `
-export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join('|')}>;
+export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join(
+    '|'
+  )}> ${ttlConfig ? ` & {${ttlConfig.fieldName}?: Date}` : ''};
 export type ${outputTypeName} = ResultType<${typeName}>
 
 /**  */
