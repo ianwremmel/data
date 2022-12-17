@@ -20,6 +20,8 @@ async function handleRecord(
   batchItemFailures: string[]
 ) {
   try {
+    const modelName = record.dynamodb?.NewImage?._et.S;
+
     await eventBridge.send(
       new PutEventsCommand({
         Entries: [
@@ -29,7 +31,7 @@ async function handleRecord(
             Resources: record.eventSourceARN
               ? [record.eventSourceARN.split('/stream')[0]]
               : [],
-            Source: `${tableName}`,
+            Source: [tableName, modelName].join('.'),
             Time: record.dynamodb?.ApproximateCreationDateTime
               ? new Date(record.dynamodb.ApproximateCreationDateTime)
               : undefined,
