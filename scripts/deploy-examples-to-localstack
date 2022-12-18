@@ -4,7 +4,7 @@ set -euo pipefail
 pip3 install --upgrade pyopenssl
 pip3 install localstack awscli-local[ver1] aws-sam-cli-local
 docker pull localstack/localstack
-localstack start -d
+PROVIDER_OVERRIDE_LAMBDA=asf localstack start -d
 
 echo "Waiting for LocalStack startup..."
 localstack wait -t 30
