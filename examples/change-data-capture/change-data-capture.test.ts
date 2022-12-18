@@ -14,7 +14,7 @@ describe('Change Date Capture', () => {
   // some part of the eventbridge setup doesn't work in localstack. This means
   // there's no test for this in CI right now, but it works when tested locally
   // against a real AWS account, which I don't want to wire into CI right now.
-  (process.env.TEST_MODE === 'localstack' ? it.skip : it)(
+  it(
     'applies a custom mapper to update one model based on another',
     async () => {
       const externalId = String(faker.datatype.number());
