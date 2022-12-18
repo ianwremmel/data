@@ -12,6 +12,19 @@ import {
   getSegment,
 } from 'aws-xray-sdk-core';
 
+/** Figure out the correct URL for lambda to lambda calls. */
+function getEndpointUrl() {
+  if (process.env.LOCALSTACK_HOSTNAME && process.env.EDGE_PORT) {
+    return `http://${process.env.LOCALSTACK_HOSTNAME}:${process.env.EDGE_PORT}`;
+  }
+
+  if (process.env.AWS_ENDPOINT) {
+    return process.env.AWS_ENDPOINT;
+  }
+
+  return undefined;
+}
+
 // Pre SDKv3, XRay could safely run anywhere and just no-opped if it wasn't
 // inside a Lambda. Now, we have to decide to no-op manually.
 const isRunningInLambda =
@@ -23,14 +36,14 @@ if (isRunningInLambda) {
 }
 
 const _ddb = new DynamoDBClient({
-  endpoint: process.env.AWS_ENDPOINT,
+  endpoint: getEndpointUrl(),
 });
 export const ddb: DynamoDBClient = isRunningInLambda
   ? captureAWSv3Client(_ddb)
   : _ddb;
 
 const _eventBridge = new EventBridgeClient({
-  endpoint: process.env.AWS_ENDPOINT,
+  endpoint: getEndpointUrl(),
 });
 export const eventBridge: EventBridgeClient = isRunningInLambda
   ? captureAWSv3Client(_eventBridge)
