@@ -11,6 +11,7 @@ import {parse} from '../parser';
 
 import type {ActionPluginConfig} from './config';
 import {
+  blindWriteTemplate,
   createItemTemplate,
   deleteItemTemplate,
   queryTemplate,
@@ -66,6 +67,7 @@ ${parse(schema, documents, config, info)
         )
       )}`,
       createItemTemplate(table),
+      blindWriteTemplate(table),
       deleteItemTemplate(table),
       readItemTemplate(table),
       touchItemTemplate(table),

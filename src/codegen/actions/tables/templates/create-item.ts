@@ -1,3 +1,5 @@
+import type {TTLConfig} from '../../../parser';
+
 import {ensureTableTemplate} from './ensure-table';
 import {objectToString} from './helpers';
 
@@ -5,11 +7,13 @@ export interface CreateItemTplInput {
   readonly key: Record<string, string>;
   readonly omit: readonly string[];
   readonly tableName: string;
+  readonly ttlConfig: TTLConfig | undefined;
   readonly typeName: string;
 }
 
 /** template */
 export function createItemTpl({
+  ttlConfig,
   key,
   tableName,
   typeName,
@@ -22,7 +26,9 @@ export function createItemTpl({
   const outputTypeName = `Create${typeName}Output`;
 
   return `
-export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join('|')}>;
+export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join('|')}>${
+    ttlConfig ? ` & {${ttlConfig.fieldName}?: Date}` : ''
+  };
 export type ${outputTypeName} = ResultType<${typeName}>
 /**  */
 export async function create${typeName}(input: Readonly<Create${typeName}Input>): Promise<Readonly<${outputTypeName}>> {

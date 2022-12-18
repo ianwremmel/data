@@ -1,5 +1,6 @@
 import type {PrimaryKeyConfig, Table} from '../../parser';
 
+import {blindWriteTpl} from './templates/blind-write';
 import {createItemTpl} from './templates/create-item';
 import {deleteItemTpl} from './templates/delete-item';
 import {makeKeyTemplate, objectToString} from './templates/helpers';
@@ -16,6 +17,19 @@ export function createItemTemplate(irTable: Table) {
     key: makeKey(irTable.primaryKey),
     omit: ['id', irTable.ttlConfig?.fieldName ?? ''].filter(Boolean),
     tableName: irTable.tableName,
+    ttlConfig: irTable.ttlConfig,
+    typeName: irTable.typeName,
+  });
+}
+
+/**
+ * Generates the createItem function for a table
+ */
+export function blindWriteTemplate(irTable: Table) {
+  return blindWriteTpl({
+    key: makeKey(irTable.primaryKey),
+    tableName: irTable.tableName,
+    ttlConfig: irTable.ttlConfig,
     typeName: irTable.typeName,
   });
 }
@@ -119,7 +133,7 @@ export function updateItemTemplate(irTable: Table) {
       )
     ),
     tableName: irTable.tableName,
-    ttlInfo: irTable.ttlConfig,
+    ttlConfig: irTable.ttlConfig,
     typeName: irTable.typeName,
   });
 }

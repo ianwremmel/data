@@ -13,6 +13,7 @@ import {camelCase, snakeCase, upperFirst} from 'lodash';
  * Loads stack outputs as environment variables
  */
 export default async function loadAwsEnv() {
+  process.env.TEST_MODE = process.env.TEST_MODE ?? 'localstack';
   if (process.env.TEST_MODE === 'localstack') {
     // Set fake credentials for localstack
     process.env.AWS_ACCESS_KEY_ID = 'test';

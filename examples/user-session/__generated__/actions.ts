@@ -145,7 +145,7 @@ export interface UserSessionPrimaryKey {
 export type CreateUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
->;
+> & {expires?: Date};
 export type CreateUserSessionOutput = ResultType<UserSession>;
 /**  */
 export async function createUserSession(
@@ -175,6 +175,69 @@ export async function createUserSession(
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
       UpdateExpression,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'UserSession',
+    () =>
+      new DataIntegrityError(
+        `Expected to write UserSession but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallUserSession(item),
+    metrics,
+  };
+}
+
+export type BlindWriteUserSessionInput = Omit<
+  UserSession,
+  'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
+> & {expires?: Date};
+export type BlindWriteUserSessionOutput = ResultType<UserSession>;
+/** */
+export async function blindWriteUserSession(
+  input: Readonly<BlindWriteUserSessionInput>
+): Promise<Readonly<BlindWriteUserSessionOutput>> {
+  const tableName = process.env.TABLE_USER_SESSION;
+  assert(tableName, 'TABLE_USER_SESSION is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallUserSession(input);
+
+  delete ExpressionAttributeNames['#pk'];
+  delete ExpressionAttributeValues[':version'];
+
+  const eav = {...ExpressionAttributeValues, ':one': 1};
+  const ue = `${UpdateExpression.split(', ')
+    .filter((e) => !e.startsWith('#version'))
+    .join(', ')} ADD #version :one`;
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(
+    new UpdateCommand({
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: eav,
+      Key: {pk: `USER_SESSION#${input.sessionId}`},
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: ue,
     })
   );
 
@@ -336,7 +399,7 @@ export async function touchUserSession(
 export type UpdateUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt'
->;
+> & {expires?: Date};
 export type UpdateUserSessionOutput = ResultType<UserSession>;
 
 /**  */
@@ -445,7 +508,8 @@ export function marshallUserSession(
   const eav: Record<string, unknown> = {
     ':entity': 'UserSession',
     ':createdAt': now.getTime(),
-    ':expires': now.getTime() + 86400000,
+    ':expires':
+      'expires' in input ? input.expires.getTime() : now.getTime() + 86400000,
     ':session': input.session,
     ':sessionId': input.sessionId,
     ':updatedAt': now.getTime(),
