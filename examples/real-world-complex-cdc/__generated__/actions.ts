@@ -257,6 +257,72 @@ export async function createCaseInstance(
   };
 }
 
+export type BlindWriteCaseInstanceInput = Omit<
+  CaseInstance,
+  'createdAt' | 'id' | 'updatedAt' | 'version'
+>;
+export type BlindWriteCaseInstanceOutput = ResultType<CaseInstance>;
+/** */
+export async function blindWriteCaseInstance(
+  input: Readonly<BlindWriteCaseInstanceInput>
+): Promise<Readonly<BlindWriteCaseInstanceOutput>> {
+  const tableName = process.env.TABLE_CASE_INSTANCE;
+  assert(tableName, 'TABLE_CASE_INSTANCE is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallCaseInstance(input);
+
+  delete ExpressionAttributeNames['#pk'];
+  delete ExpressionAttributeValues[':version'];
+
+  const eav = {...ExpressionAttributeValues, ':one': 1};
+  const ue = `${UpdateExpression.split(', ')
+    .filter((e) => !e.startsWith('#version'))
+    .join(', ')} ADD #version :one`;
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(
+    new UpdateCommand({
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: eav,
+      Key: {
+        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+        sk: `INSTANCE#${input.sha}#${input.retry}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: ue,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'CaseInstance',
+    () =>
+      new DataIntegrityError(
+        `Expected to write CaseInstance but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallCaseInstance(item),
+    metrics,
+  };
+}
+
 export type DeleteCaseInstanceOutput = ResultType<void>;
 
 /**  */
@@ -1115,6 +1181,72 @@ export async function createCaseSummary(
   };
 }
 
+export type BlindWriteCaseSummaryInput = Omit<
+  CaseSummary,
+  'createdAt' | 'id' | 'updatedAt' | 'version'
+>;
+export type BlindWriteCaseSummaryOutput = ResultType<CaseSummary>;
+/** */
+export async function blindWriteCaseSummary(
+  input: Readonly<BlindWriteCaseSummaryInput>
+): Promise<Readonly<BlindWriteCaseSummaryOutput>> {
+  const tableName = process.env.TABLE_CASE_SUMMARY;
+  assert(tableName, 'TABLE_CASE_SUMMARY is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallCaseSummary(input);
+
+  delete ExpressionAttributeNames['#pk'];
+  delete ExpressionAttributeValues[':version'];
+
+  const eav = {...ExpressionAttributeValues, ':one': 1};
+  const ue = `${UpdateExpression.split(', ')
+    .filter((e) => !e.startsWith('#version'))
+    .join(', ')} ADD #version :one`;
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(
+    new UpdateCommand({
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: eav,
+      Key: {
+        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+        sk: `SUMMARY`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: ue,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'CaseSummary',
+    () =>
+      new DataIntegrityError(
+        `Expected to write CaseSummary but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallCaseSummary(item),
+    metrics,
+  };
+}
+
 export type DeleteCaseSummaryOutput = ResultType<void>;
 
 /**  */
@@ -1788,6 +1920,72 @@ export async function createFileTiming(
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
       UpdateExpression,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'FileTiming',
+    () =>
+      new DataIntegrityError(
+        `Expected to write FileTiming but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallFileTiming(item),
+    metrics,
+  };
+}
+
+export type BlindWriteFileTimingInput = Omit<
+  FileTiming,
+  'createdAt' | 'id' | 'updatedAt' | 'version'
+>;
+export type BlindWriteFileTimingOutput = ResultType<FileTiming>;
+/** */
+export async function blindWriteFileTiming(
+  input: Readonly<BlindWriteFileTimingInput>
+): Promise<Readonly<BlindWriteFileTimingOutput>> {
+  const tableName = process.env.TABLE_FILE_TIMING;
+  assert(tableName, 'TABLE_FILE_TIMING is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallFileTiming(input);
+
+  delete ExpressionAttributeNames['#pk'];
+  delete ExpressionAttributeValues[':version'];
+
+  const eav = {...ExpressionAttributeValues, ':one': 1};
+  const ue = `${UpdateExpression.split(', ')
+    .filter((e) => !e.startsWith('#version'))
+    .join(', ')} ADD #version :one`;
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(
+    new UpdateCommand({
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: eav,
+      Key: {
+        pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        sk: `FILE#${input.filename}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: ue,
     })
   );
 

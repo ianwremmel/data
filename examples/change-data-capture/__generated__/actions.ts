@@ -223,6 +223,69 @@ export async function createAccount(
   };
 }
 
+export type BlindWriteAccountInput = Omit<
+  Account,
+  'createdAt' | 'id' | 'updatedAt' | 'version'
+>;
+export type BlindWriteAccountOutput = ResultType<Account>;
+/** */
+export async function blindWriteAccount(
+  input: Readonly<BlindWriteAccountInput>
+): Promise<Readonly<BlindWriteAccountOutput>> {
+  const tableName = process.env.TABLE_ACCOUNT;
+  assert(tableName, 'TABLE_ACCOUNT is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallAccount(input);
+
+  delete ExpressionAttributeNames['#pk'];
+  delete ExpressionAttributeValues[':version'];
+
+  const eav = {...ExpressionAttributeValues, ':one': 1};
+  const ue = `${UpdateExpression.split(', ')
+    .filter((e) => !e.startsWith('#version'))
+    .join(', ')} ADD #version :one`;
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(
+    new UpdateCommand({
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: eav,
+      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: ue,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'Account',
+    () =>
+      new DataIntegrityError(
+        `Expected to write Account but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallAccount(item),
+    metrics,
+  };
+}
+
 export type DeleteAccountOutput = ResultType<void>;
 
 /**  */
@@ -786,6 +849,72 @@ export async function createSubscription(
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
       UpdateExpression,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'Subscription',
+    () =>
+      new DataIntegrityError(
+        `Expected to write Subscription but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallSubscription(item),
+    metrics,
+  };
+}
+
+export type BlindWriteSubscriptionInput = Omit<
+  Subscription,
+  'createdAt' | 'id' | 'updatedAt' | 'version'
+>;
+export type BlindWriteSubscriptionOutput = ResultType<Subscription>;
+/** */
+export async function blindWriteSubscription(
+  input: Readonly<BlindWriteSubscriptionInput>
+): Promise<Readonly<BlindWriteSubscriptionOutput>> {
+  const tableName = process.env.TABLE_SUBSCRIPTION;
+  assert(tableName, 'TABLE_SUBSCRIPTION is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallSubscription(input);
+
+  delete ExpressionAttributeNames['#pk'];
+  delete ExpressionAttributeValues[':version'];
+
+  const eav = {...ExpressionAttributeValues, ':one': 1};
+  const ue = `${UpdateExpression.split(', ')
+    .filter((e) => !e.startsWith('#version'))
+    .join(', ')} ADD #version :one`;
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(
+    new UpdateCommand({
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: eav,
+      Key: {
+        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+        sk: `SUBSCRIPTION#${input.effectiveDate.getTime()}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: ue,
     })
   );
 

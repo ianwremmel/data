@@ -203,6 +203,72 @@ export async function createUserLogin(
   };
 }
 
+export type BlindWriteUserLoginInput = Omit<
+  UserLogin,
+  'createdAt' | 'id' | 'updatedAt' | 'version'
+>;
+export type BlindWriteUserLoginOutput = ResultType<UserLogin>;
+/** */
+export async function blindWriteUserLogin(
+  input: Readonly<BlindWriteUserLoginInput>
+): Promise<Readonly<BlindWriteUserLoginOutput>> {
+  const tableName = process.env.TABLE_USER_LOGIN;
+  assert(tableName, 'TABLE_USER_LOGIN is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallUserLogin(input);
+
+  delete ExpressionAttributeNames['#pk'];
+  delete ExpressionAttributeValues[':version'];
+
+  const eav = {...ExpressionAttributeValues, ':one': 1};
+  const ue = `${UpdateExpression.split(', ')
+    .filter((e) => !e.startsWith('#version'))
+    .join(', ')} ADD #version :one`;
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(
+    new UpdateCommand({
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: eav,
+      Key: {
+        pk: `USER#${input.vendor}#${input.externalId}`,
+        sk: `LOGIN#${input.login}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: ue,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'UserLogin',
+    () =>
+      new DataIntegrityError(
+        `Expected to write UserLogin but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallUserLogin(item),
+    metrics,
+  };
+}
+
 export type DeleteUserLoginOutput = ResultType<void>;
 
 /**  */
