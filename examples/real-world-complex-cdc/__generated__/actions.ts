@@ -9,12 +9,15 @@ import {
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import {ServiceException} from '@aws-sdk/smithy-client';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
 import {
   assert,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
+  UnexpectedAwsError,
+  UnexpectedError,
 } from '@ianwremmel/data';
 import Base64 from 'base64url';
 
@@ -365,7 +368,10 @@ export async function deleteCaseInstance(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('CaseInstance', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -459,7 +465,10 @@ export async function touchCaseInstance(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('CaseInstance', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -558,7 +567,10 @@ export async function updateCaseInstance(
         vendor: input.vendor,
       });
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -1289,7 +1301,10 @@ export async function deleteCaseSummary(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('CaseSummary', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -1383,7 +1398,10 @@ export async function touchCaseSummary(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('CaseSummary', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -1476,7 +1494,10 @@ export async function updateCaseSummary(
         vendor: input.vendor,
       });
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -2037,7 +2058,10 @@ export async function deleteFileTiming(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('FileTiming', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -2131,7 +2155,10 @@ export async function touchFileTiming(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('FileTiming', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -2224,7 +2251,10 @@ export async function updateFileTiming(
         vendor: input.vendor,
       });
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 

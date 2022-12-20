@@ -9,12 +9,15 @@ import {
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import {ServiceException} from '@aws-sdk/smithy-client';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
 import {
   assert,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
+  UnexpectedAwsError,
+  UnexpectedError,
 } from '@ianwremmel/data';
 import Base64 from 'base64url';
 
@@ -328,7 +331,10 @@ export async function deleteAccount(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('Account', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -419,7 +425,10 @@ export async function touchAccount(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('Account', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -500,7 +509,10 @@ export async function updateAccount(
         vendor: input.vendor,
       });
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -987,7 +999,10 @@ export async function deleteSubscription(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('Subscription', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -1081,7 +1096,10 @@ export async function touchSubscription(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('Subscription', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -1168,7 +1186,10 @@ export async function updateSubscription(
         vendor: input.vendor,
       });
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
