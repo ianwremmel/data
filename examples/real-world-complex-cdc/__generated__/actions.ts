@@ -1569,6 +1569,12 @@ function makeEavPkForQueryCaseSummary(input: QueryCaseSummaryInput): string {
 
 /** helper */
 function makeEavSkForQueryCaseSummary(input: QueryCaseSummaryInput): string {
+  if ('index' in input) {
+    const lsis = ['lsi1', 'lsi2'];
+    if (lsis.includes(input.index)) {
+      return input.index;
+    }
+  }
   return 'sk';
 }
 

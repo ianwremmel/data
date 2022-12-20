@@ -332,7 +332,7 @@ return 'pk'
 
 /** template */
 function skEavTemplate(gsis: readonly GSI[], lsis: readonly LSI[]) {
-  if (gsis.length === 0) {
+  if (gsis.length === 0 && lsis.length === 0) {
     return "return 'sk'";
   }
 
@@ -343,6 +343,18 @@ if ('index' in input) {
 }
 return 'sk';
     `;
+  }
+
+  if (gsis.length === 0) {
+    return `
+if ('index' in input) {
+  const lsis = [${lsis.map(({name}) => `'${name}'`).join(', ')}];
+  if (lsis.includes(input.index)) {
+    return input.index;
+  }
+}
+return 'sk'
+`;
   }
 
   return `

@@ -548,6 +548,12 @@ function makeEavPkForQueryAccount(input: QueryAccountInput): string {
 
 /** helper */
 function makeEavSkForQueryAccount(input: QueryAccountInput): string {
+  if ('index' in input) {
+    const lsis = ['lsi1'];
+    if (lsis.includes(input.index)) {
+      return input.index;
+    }
+  }
   return 'sk';
 }
 
