@@ -1,5 +1,7 @@
+import {BaseDataLibraryError} from './base-error';
+
 /** Thrown when an unexpected error is caught and rethrown. */
-export class UnexpectedError extends Error {
+export class UnexpectedError extends BaseDataLibraryError {
   /** constructor */
   constructor(cause: unknown) {
     if (cause instanceof Error) {
