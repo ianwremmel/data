@@ -9,12 +9,15 @@ import {
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import {ServiceException} from '@aws-sdk/smithy-client';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
 import {
   assert,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
+  UnexpectedAwsError,
+  UnexpectedError,
 } from '@ianwremmel/data';
 import Base64 from 'base64url';
 
@@ -365,7 +368,10 @@ export async function deleteCaseInstance(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('CaseInstance', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -459,7 +465,10 @@ export async function touchCaseInstance(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('CaseInstance', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -558,7 +567,10 @@ export async function updateCaseInstance(
         vendor: input.vendor,
       });
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -867,9 +879,23 @@ export interface MarshallCaseInstanceOutput {
   UpdateExpression: string;
 }
 
+export type MarshallCaseInstanceInput = Required<
+  Pick<
+    CaseInstance,
+    | 'branchName'
+    | 'conclusion'
+    | 'lineage'
+    | 'repoId'
+    | 'retry'
+    | 'sha'
+    | 'vendor'
+  >
+> &
+  Partial<Pick<CaseInstance, 'duration' | 'filename' | 'label' | 'version'>>;
+
 /** Marshalls a DynamoDB record into a CaseInstance object */
 export function marshallCaseInstance(
-  input: Record<string, any>
+  input: MarshallCaseInstanceInput
 ): MarshallCaseInstanceOutput {
   const now = new Date();
 
@@ -918,14 +944,14 @@ export function marshallCaseInstance(
     ':entity': 'CaseInstance',
     ':branchName': input.branchName,
     ':conclusion': input.conclusion,
-    ':createdAt': now.getTime(),
     ':lineage': input.lineage,
     ':repoId': input.repoId,
     ':retry': input.retry,
     ':sha': input.sha,
-    ':updatedAt': now.getTime(),
     ':vendor': input.vendor,
-    ':version': ('version' in input ? input.version : 0) + 1,
+    ':createdAt': now.getTime(),
+    ':updatedAt': now.getTime(),
+    ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
     ':gsi1pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.sha}`,
     ':gsi1sk': `INSTANCE#${input.lineage}#${input.retry}`,
     ':gsi2pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}`,
@@ -1289,7 +1315,10 @@ export async function deleteCaseSummary(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('CaseSummary', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -1383,7 +1412,10 @@ export async function touchCaseSummary(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('CaseSummary', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -1476,7 +1508,10 @@ export async function updateCaseSummary(
         vendor: input.vendor,
       });
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -1669,9 +1704,17 @@ export interface MarshallCaseSummaryOutput {
   UpdateExpression: string;
 }
 
+export type MarshallCaseSummaryInput = Required<
+  Pick<
+    CaseSummary,
+    'branchName' | 'duration' | 'lineage' | 'repoId' | 'stability' | 'vendor'
+  >
+> &
+  Partial<Pick<CaseSummary, 'label' | 'version'>>;
+
 /** Marshalls a DynamoDB record into a CaseSummary object */
 export function marshallCaseSummary(
-  input: Record<string, any>
+  input: MarshallCaseSummaryInput
 ): MarshallCaseSummaryOutput {
   const now = new Date();
 
@@ -1709,14 +1752,14 @@ export function marshallCaseSummary(
   const eav: Record<string, unknown> = {
     ':entity': 'CaseSummary',
     ':branchName': input.branchName,
-    ':createdAt': now.getTime(),
     ':duration': input.duration,
     ':lineage': input.lineage,
     ':repoId': input.repoId,
     ':stability': input.stability,
-    ':updatedAt': now.getTime(),
     ':vendor': input.vendor,
-    ':version': ('version' in input ? input.version : 0) + 1,
+    ':createdAt': now.getTime(),
+    ':updatedAt': now.getTime(),
+    ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
     ':lsi1sk': `SUMMARY#${input.stability}`,
     ':lsi2sk': `SUMMARY#${input.duration}`,
   };
@@ -2037,7 +2080,10 @@ export async function deleteFileTiming(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('FileTiming', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -2131,7 +2177,10 @@ export async function touchFileTiming(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('FileTiming', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -2224,7 +2273,10 @@ export async function updateFileTiming(
         vendor: input.vendor,
       });
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -2414,9 +2466,14 @@ export interface MarshallFileTimingOutput {
   UpdateExpression: string;
 }
 
+export type MarshallFileTimingInput = Required<
+  Pick<FileTiming, 'branchName' | 'duration' | 'filename' | 'repoId' | 'vendor'>
+> &
+  Partial<Pick<FileTiming, 'label' | 'version'>>;
+
 /** Marshalls a DynamoDB record into a FileTiming object */
 export function marshallFileTiming(
-  input: Record<string, any>
+  input: MarshallFileTimingInput
 ): MarshallFileTimingOutput {
   const now = new Date();
 
@@ -2454,13 +2511,13 @@ export function marshallFileTiming(
   const eav: Record<string, unknown> = {
     ':entity': 'FileTiming',
     ':branchName': input.branchName,
-    ':createdAt': now.getTime(),
     ':duration': input.duration,
     ':filename': input.filename,
     ':repoId': input.repoId,
-    ':updatedAt': now.getTime(),
     ':vendor': input.vendor,
-    ':version': ('version' in input ? input.version : 0) + 1,
+    ':createdAt': now.getTime(),
+    ':updatedAt': now.getTime(),
+    ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
     ':gsi2pk': `BRANCH#${input.vendor}#${input.repoId}#${input.branchName}`,
     ':gsi2sk': `FILE`,
     ':lsi1sk': `FILE#${input.duration}`,

@@ -79,6 +79,13 @@ of functions that were way easier to import than to try to include in codegen,
 so you'll need `@ianwremmel/data` to be available at runtime (or, if you're
 using esbuild, build-time _should_ be fine).
 
+#### Error Handling
+
+All Errors thrown or rethrown by this library (except `AssertionError` which is
+the default Node `AssertionError`) or generated code are instance of
+`BaseDataLibraryError`, which is a subclass of `Error`. Rethrown errors always
+have a `cause` property that is the original error.
+
 ## Known Issues
 
 -   Even though Dead Letter Queues are configured for CDC handlers, the Start

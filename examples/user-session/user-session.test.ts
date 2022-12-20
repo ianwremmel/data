@@ -1,9 +1,6 @@
-import {GetCommand, QueryCommand, ScanCommand} from '@aws-sdk/lib-dynamodb';
 import {faker} from '@faker-js/faker';
 import {NotFoundError, OptimisticLockingError} from '@ianwremmel/data';
 import Base64 from 'base64url';
-
-import {ddbDocClient} from '../dependencies';
 
 import {
   blindWriteUserSession,
@@ -93,6 +90,21 @@ describe('createUserSession()', () => {
     // cleanup, not part of test
     await deleteUserSession(result.item);
   });
+
+  it('creates a record with a custom expiration Date that is undefined', async () => {
+    const expires = undefined;
+
+    const result = await createUserSession({
+      expires,
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
+
+    expect(result.item.expires.getTime()).not.toBeNaN();
+
+    // cleanup, not part of test
+    await deleteUserSession(result.item);
+  });
 });
 
 describe('blindWriteUserSession()', () => {
@@ -160,6 +172,23 @@ describe('blindWriteUserSession()', () => {
     expect(result.item.expires.getTime()).not.toBeNaN();
 
     expect(result.item.expires).toStrictEqual(expires);
+    expect(result.item.version).toBe(1);
+
+    // cleanup, not part of test
+    await deleteUserSession(result.item);
+  });
+
+  it('creates a user session with a custom expiration date that is undefined if it does not exist', async () => {
+    const expires = undefined;
+
+    const result = await blindWriteUserSession({
+      expires,
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
+
+    expect(result.item.expires.getTime()).not.toBeNaN();
+
     expect(result.item.version).toBe(1);
 
     // cleanup, not part of test
@@ -312,6 +341,31 @@ describe('blindWriteUserSession()', () => {
 
     const readResult = await readUserSession(createResult.item);
     expect(readResult.item.expires).toStrictEqual(expires);
+
+    // cleanup, not part of test
+    await deleteUserSession(createResult.item);
+  });
+
+  it('overwrites an existing record with a custom expiration Date that does not exist', async () => {
+    const expires = undefined;
+
+    const createResult = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
+
+    expect(createResult.item.expires).not.toBe(expires);
+    expect(createResult.item.version).toBe(1);
+
+    const updateResult = await blindWriteUserSession({
+      ...createResult.item,
+      expires,
+      session: {foo: 'bar'},
+    });
+
+    expect(updateResult.item.version).toBe(2);
+
+    const readResult = await readUserSession(createResult.item);
 
     // cleanup, not part of test
     await deleteUserSession(createResult.item);
@@ -645,6 +699,26 @@ describe('updateUserSession()', () => {
 
     const readResult = await readUserSession(createResult.item);
     expect(readResult.item.expires).toStrictEqual(expires);
+
+    // cleanup, not part of test
+    await deleteUserSession(createResult.item);
+  });
+
+  it('updates a record with a custom expiration Date that does not exist', async () => {
+    const expires = undefined;
+
+    const createResult = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
+
+    const updateResult = await updateUserSession({
+      ...createResult.item,
+      expires,
+      session: {foo: 'bar'},
+    });
+
+    const readResult = await readUserSession(createResult.item);
 
     // cleanup, not part of test
     await deleteUserSession(createResult.item);

@@ -1,6 +1,6 @@
 import type {Table} from '../../../parser';
 
-import {unmarshalField} from './helpers';
+import {unmarshallField} from './helpers';
 
 export const DIVIDER = '#:#';
 
@@ -44,7 +44,7 @@ ${requiredFields.map((field) => {
     }
     return `id: Base64.encode(\`${typeName}:\${item.pk}\`)`;
   }
-  return unmarshalField(field);
+  return unmarshallField(field);
 })}
   };
 
@@ -55,7 +55,7 @@ ${optionalFields
   if ('${field.columnName}' in item) {
     result = {
       ...result,
-      ${unmarshalField(field)}
+      ${unmarshallField(field)}
     }
   }
   `

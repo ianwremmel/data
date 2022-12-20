@@ -6,6 +6,7 @@ import type {
   WithTableName,
   WithTelemetry,
 } from '../../dependencies';
+import {BaseDataLibraryError} from '../../errors';
 import {makeLambdaOTelAttributes} from '../telemetry';
 
 /** Processes a single DynamoDB record. */
@@ -43,8 +44,9 @@ async function handleRecord(
     captureException(err);
 
     if (!record.dynamodb?.SequenceNumber) {
-      const err2 = new Error(
-        'Missing SequenceNumber. Did you forget to set FunctionResponseTypes in your CloudFormation template?'
+      const err2 = new BaseDataLibraryError(
+        'Missing SequenceNumber. Did you forget to set FunctionResponseTypes in your CloudFormation template?',
+        {cause: err}
       );
       captureException(err2);
       throw err2;

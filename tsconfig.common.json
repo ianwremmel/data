@@ -7,15 +7,15 @@
     "jsx": "react",
     "lib": [
       "dom",
-      "es2021"
+      "es2022"
     ],
     "module": "commonjs",
     "moduleResolution": "node",
     "outDir": "dist/types",
     "resolveJsonModule": true,
     "strict": true,
-    "target": "es2021",
-    // Node 16.0.0 and later
+    // Node 18 and later
+    "target": "es2022",
     "types": [
       "node"
     ]

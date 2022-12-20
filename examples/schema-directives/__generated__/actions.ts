@@ -9,12 +9,15 @@ import {
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import {ServiceException} from '@aws-sdk/smithy-client';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
 import {
   assert,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
+  UnexpectedAwsError,
+  UnexpectedError,
 } from '@ianwremmel/data';
 import Base64 from 'base64url';
 
@@ -307,7 +310,10 @@ export async function deleteUserSession(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('UserSession', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -398,7 +404,10 @@ export async function touchUserSession(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('UserSession', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -474,7 +483,10 @@ export async function updateUserSession(
         sessionId: input.sessionId,
       });
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -484,9 +496,14 @@ export interface MarshallUserSessionOutput {
   UpdateExpression: string;
 }
 
+export type MarshallUserSessionInput = Required<
+  Pick<UserSession, 'session' | 'sessionId'>
+> &
+  Partial<Pick<UserSession, 'optionalField' | 'expires' | 'version'>>;
+
 /** Marshalls a DynamoDB record into a UserSession object */
 export function marshallUserSession(
-  input: Record<string, any>
+  input: MarshallUserSessionInput
 ): MarshallUserSessionOutput {
   const now = new Date();
 
@@ -513,13 +530,15 @@ export function marshallUserSession(
 
   const eav: Record<string, unknown> = {
     ':entity': 'UserSession',
-    ':createdAt': now.getTime(),
-    ':expires':
-      'expires' in input ? input.expires.getTime() : now.getTime() + 86400000,
     ':session': input.session,
     ':sessionId': input.sessionId,
+    ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
-    ':version': ('version' in input ? input.version : 0) + 1,
+    ':expires':
+      'expires' in input && input.expires
+        ? input.expires.getTime()
+        : now.getTime() + 86400000,
+    ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
   };
 
   if ('optionalField' in input && typeof input.optionalField !== 'undefined') {

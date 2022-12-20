@@ -9,12 +9,15 @@ import {
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import {ServiceException} from '@aws-sdk/smithy-client';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
 import {
   assert,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
+  UnexpectedAwsError,
+  UnexpectedError,
 } from '@ianwremmel/data';
 import Base64 from 'base64url';
 
@@ -311,7 +314,10 @@ export async function deleteUserLogin(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('UserLogin', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -405,7 +411,10 @@ export async function touchUserLogin(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('UserLogin', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -492,7 +501,10 @@ export async function updateUserLogin(
         vendor: input.vendor,
       });
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -639,9 +651,14 @@ export interface MarshallUserLoginOutput {
   UpdateExpression: string;
 }
 
+export type MarshallUserLoginInput = Required<
+  Pick<UserLogin, 'externalId' | 'login' | 'vendor'>
+> &
+  Partial<Pick<UserLogin, 'version'>>;
+
 /** Marshalls a DynamoDB record into a UserLogin object */
 export function marshallUserLogin(
-  input: Record<string, any>
+  input: MarshallUserLoginInput
 ): MarshallUserLoginOutput {
   const now = new Date();
 
@@ -672,12 +689,12 @@ export function marshallUserLogin(
 
   const eav: Record<string, unknown> = {
     ':entity': 'UserLogin',
-    ':createdAt': now.getTime(),
     ':externalId': input.externalId,
     ':login': input.login,
-    ':updatedAt': now.getTime(),
     ':vendor': input.vendor,
-    ':version': ('version' in input ? input.version : 0) + 1,
+    ':createdAt': now.getTime(),
+    ':updatedAt': now.getTime(),
+    ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
     ':gsi1pk': `LOGIN#${input.vendor}#${input.login}`,
     ':gsi1sk': `MODIFIED#${now.getTime()}`,
   };

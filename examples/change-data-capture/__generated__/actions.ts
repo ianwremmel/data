@@ -9,12 +9,15 @@ import {
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import {ServiceException} from '@aws-sdk/smithy-client';
 import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
 import {
   assert,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
+  UnexpectedAwsError,
+  UnexpectedError,
 } from '@ianwremmel/data';
 import Base64 from 'base64url';
 
@@ -328,7 +331,10 @@ export async function deleteAccount(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('Account', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -419,7 +425,10 @@ export async function touchAccount(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('Account', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -500,7 +509,10 @@ export async function updateAccount(
         vendor: input.vendor,
       });
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -640,9 +652,14 @@ export interface MarshallAccountOutput {
   UpdateExpression: string;
 }
 
+export type MarshallAccountInput = Required<
+  Pick<Account, 'effectiveDate' | 'externalId' | 'vendor'>
+> &
+  Partial<Pick<Account, 'cancelled' | 'onFreeTrial' | 'planName' | 'version'>>;
+
 /** Marshalls a DynamoDB record into a Account object */
 export function marshallAccount(
-  input: Record<string, any>
+  input: MarshallAccountInput
 ): MarshallAccountOutput {
   const now = new Date();
 
@@ -671,12 +688,12 @@ export function marshallAccount(
 
   const eav: Record<string, unknown> = {
     ':entity': 'Account',
-    ':createdAt': now.getTime(),
     ':effectiveDate': input.effectiveDate.getTime(),
     ':externalId': input.externalId,
-    ':updatedAt': now.getTime(),
     ':vendor': input.vendor,
-    ':version': ('version' in input ? input.version : 0) + 1,
+    ':createdAt': now.getTime(),
+    ':updatedAt': now.getTime(),
+    ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
     ':lsi1sk': `INSTANCE#${now.getTime()}`,
   };
 
@@ -987,7 +1004,10 @@ export async function deleteSubscription(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('Subscription', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -1081,7 +1101,10 @@ export async function touchSubscription(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('Subscription', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -1168,7 +1191,10 @@ export async function updateSubscription(
         vendor: input.vendor,
       });
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 
@@ -1300,9 +1326,16 @@ export interface MarshallSubscriptionOutput {
   UpdateExpression: string;
 }
 
+export type MarshallSubscriptionInput = Required<
+  Pick<Subscription, 'effectiveDate' | 'externalId' | 'vendor'>
+> &
+  Partial<
+    Pick<Subscription, 'cancelled' | 'onFreeTrial' | 'planName' | 'version'>
+  >;
+
 /** Marshalls a DynamoDB record into a Subscription object */
 export function marshallSubscription(
-  input: Record<string, any>
+  input: MarshallSubscriptionInput
 ): MarshallSubscriptionOutput {
   const now = new Date();
 
@@ -1329,12 +1362,12 @@ export function marshallSubscription(
 
   const eav: Record<string, unknown> = {
     ':entity': 'Subscription',
-    ':createdAt': now.getTime(),
     ':effectiveDate': input.effectiveDate.getTime(),
     ':externalId': input.externalId,
-    ':updatedAt': now.getTime(),
     ':vendor': input.vendor,
-    ':version': ('version' in input ? input.version : 0) + 1,
+    ':createdAt': now.getTime(),
+    ':updatedAt': now.getTime(),
+    ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
   };
 
   if ('cancelled' in input && typeof input.cancelled !== 'undefined') {

@@ -8,6 +8,8 @@ import type {Stack} from '@aws-sdk/client-cloudformation/dist-types/models/model
 import {glob} from 'glob';
 import {camelCase, snakeCase, upperFirst} from 'lodash';
 
+const CI = !!process.env.CI;
+
 /* eslint-disable complexity */
 /**
  * Loads stack outputs as environment variables
@@ -56,21 +58,24 @@ export default async function loadAwsEnv() {
     const stack: Stack | undefined = stackData.Stacks.find(
       (s) => s.StackName === stackName
     );
-    assert(stack, `There should be a stack named ${stackName}`);
-    assert(
-      stack.Outputs,
-      `"${process.env.TEST_MODE}" should have returned stack outputs`
-    );
-
-    for (const output of stack.Outputs) {
-      const name = snakeCase(output.OutputKey).toUpperCase();
+    if (stack) {
       assert(
-        name,
-        `"${process.env.TEST_MODE}" should have returned a parameter name`
+        stack.Outputs,
+        `"${process.env.TEST_MODE}" should have returned stack outputs`
       );
-      const value = output.OutputValue;
-      console.log(`Setting env ${name} to ${value} from stack`);
-      process.env[name] = value;
+
+      for (const output of stack.Outputs) {
+        const name = snakeCase(output.OutputKey).toUpperCase();
+        assert(
+          name,
+          `"${process.env.TEST_MODE}" should have returned a parameter name`
+        );
+        const value = output.OutputValue;
+        console.log(`Setting env ${name} to ${value} from stack`);
+        process.env[name] = value;
+      }
+    } else if (CI) {
+      assert.fail(`There should be a stack named "${stackName}"`);
     }
   }
 }
