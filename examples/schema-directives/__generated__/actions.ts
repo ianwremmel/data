@@ -496,9 +496,14 @@ export interface MarshallUserSessionOutput {
   UpdateExpression: string;
 }
 
+export type MarshallUserSessionInput = Required<
+  Pick<UserSession, 'session' | 'sessionId'>
+> &
+  Partial<Pick<UserSession, 'optionalField' | 'expires' | 'version'>>;
+
 /** Marshalls a DynamoDB record into a UserSession object */
 export function marshallUserSession(
-  input: Record<string, any>
+  input: MarshallUserSessionInput
 ): MarshallUserSessionOutput {
   const now = new Date();
 
@@ -525,13 +530,15 @@ export function marshallUserSession(
 
   const eav: Record<string, unknown> = {
     ':entity': 'UserSession',
-    ':createdAt': now.getTime(),
-    ':expires':
-      'expires' in input ? input.expires.getTime() : now.getTime() + 86400000,
     ':session': input.session,
     ':sessionId': input.sessionId,
+    ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
-    ':version': ('version' in input ? input.version : 0) + 1,
+    ':expires':
+      'expires' in input && input.expires
+        ? input.expires.getTime()
+        : now.getTime() + 86400000,
+    ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
   };
 
   if ('optionalField' in input && typeof input.optionalField !== 'undefined') {
