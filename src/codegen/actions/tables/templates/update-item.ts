@@ -77,7 +77,10 @@ ${ensureTableTemplate(tableName)}
       }
       throw new OptimisticLockingError('${typeName}', ${marshallPrimaryKey});
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }`;
 }

@@ -44,7 +44,10 @@ ${ensureTableTemplate(tableName)}
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('${typeName}', input);
     }
-    throw err;
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
   }
 }
 `;
