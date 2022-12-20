@@ -4,25 +4,12 @@ Describes the aggregate state of a Case.
 type CaseSummary implements Model & Timestamped & Versioned
   @compositeKey(
     pkPrefix: "CASE"
-    pkFields: ["vendor", "repoId", "branchName", "label", "lineage"]
-    skPrefix: "SUMMARY"
-    skFields: []
-  )
-  @compositeIndex(
-    name: "gsi1"
     pkFields: ["vendor", "repoId", "branchName", "label"]
-    pkPrefix: "CASE"
-    skFields: []
     skPrefix: "SUMMARY"
+    skFields: ["lineage"]
   )
-  @compositeIndex(
-    name: "gsi2"
-    pkFields: ["vendor", "repoId", "branchName"]
-    pkPrefix: "BRANCH"
-    skFields: ["label"]
-    skPrefix: "INSTANCE"
-  )
-  @secondaryIndex(fields: ["stability"], name: "lsi1", prefix: "INSTANCE") {
+  @secondaryIndex(fields: ["stability"], name: "lsi1", prefix: "SUMMARY")
+  @secondaryIndex(fields: ["duration"], name: "lsi2", prefix: "SUMMARY") {
   branchName: String!
   createdAt: Date!
   duration: Float!

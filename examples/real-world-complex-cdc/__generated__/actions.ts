@@ -1149,8 +1149,8 @@ export async function createCaseSummary(
       ExpressionAttributeNames,
       ExpressionAttributeValues,
       Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-        sk: `SUMMARY`,
+        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        sk: `SUMMARY#${input.lineage}`,
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -1215,8 +1215,8 @@ export async function blindWriteCaseSummary(
       ExpressionAttributeNames,
       ExpressionAttributeValues: eav,
       Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-        sk: `SUMMARY`,
+        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        sk: `SUMMARY#${input.lineage}`,
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -1265,8 +1265,8 @@ export async function deleteCaseSummary(
             '#pk': 'pk',
           },
           Key: {
-            pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-            sk: `SUMMARY`,
+            pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+            sk: `SUMMARY#${input.lineage}`,
           },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
@@ -1306,8 +1306,8 @@ export async function readCaseSummary(
     new GetCommand({
       ConsistentRead: false,
       Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-        sk: `SUMMARY`,
+        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        sk: `SUMMARY#${input.lineage}`,
       },
       ReturnConsumedCapacity: 'INDEXES',
       TableName: tableName,
@@ -1358,8 +1358,8 @@ export async function touchCaseSummary(
             ':versionInc': 1,
           },
           Key: {
-            pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-            sk: `SUMMARY`,
+            pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+            sk: `SUMMARY#${input.lineage}`,
           },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
@@ -1419,8 +1419,8 @@ export async function updateCaseSummary(
           ':previousVersion': input.version,
         },
         Key: {
-          pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-          sk: `SUMMARY`,
+          pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+          sk: `SUMMARY#${input.lineage}`,
         },
         ReturnConsumedCapacity: 'INDEXES',
         ReturnItemCollectionMetrics: 'SIZE',
@@ -1484,32 +1484,10 @@ export type QueryCaseSummaryInput =
   | {
       branchName: Scalars['String'];
       label?: Maybe<Scalars['String']>;
-      lineage: Scalars['String'];
       repoId: Scalars['String'];
       vendor: Vendor;
     }
   | {
-      index: 'gsi1';
-      branchName: Scalars['String'];
-      label?: Maybe<Scalars['String']>;
-      repoId: Scalars['String'];
-      vendor: Vendor;
-    }
-  | {
-      index: 'gsi2';
-      branchName: Scalars['String'];
-      repoId: Scalars['String'];
-      vendor: Vendor;
-    }
-  | {
-      index: 'gsi2';
-      branchName: Scalars['String'];
-      label?: Maybe<Scalars['String']>;
-      repoId: Scalars['String'];
-      vendor: Vendor;
-    }
-  | {
-      index: 'lsi1';
       branchName: Scalars['String'];
       label?: Maybe<Scalars['String']>;
       lineage: Scalars['String'];
@@ -1520,9 +1498,30 @@ export type QueryCaseSummaryInput =
       index: 'lsi1';
       branchName: Scalars['String'];
       label?: Maybe<Scalars['String']>;
-      lineage: Scalars['String'];
+      repoId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'lsi1';
+      branchName: Scalars['String'];
+      label?: Maybe<Scalars['String']>;
       repoId: Scalars['String'];
       stability: Scalars['Float'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'lsi2';
+      branchName: Scalars['String'];
+      label?: Maybe<Scalars['String']>;
+      repoId: Scalars['String'];
+      vendor: Vendor;
+    }
+  | {
+      index: 'lsi2';
+      branchName: Scalars['String'];
+      duration: Scalars['Float'];
+      label?: Maybe<Scalars['String']>;
+      repoId: Scalars['String'];
       vendor: Vendor;
     };
 export type QueryCaseSummaryOutput = MultiResultType<CaseSummary>;
@@ -1532,13 +1531,11 @@ function makePartitionKeyForQueryCaseSummary(
   input: QueryCaseSummaryInput
 ): string {
   if (!('index' in input)) {
-    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`;
-  } else if ('index' in input && input.index === 'gsi1') {
     return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`;
-  } else if ('index' in input && input.index === 'gsi2') {
-    return `BRANCH#${input.vendor}#${input.repoId}#${input.branchName}`;
   } else if ('index' in input && input.index === 'lsi1') {
-    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`;
+    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`;
+  } else if ('index' in input && input.index === 'lsi2') {
+    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`;
   }
 
   throw new Error('Could not construct partition key from input');
@@ -1549,42 +1546,34 @@ function makeSortKeyForQueryCaseSummary(
   input: QueryCaseSummaryInput
 ): string | undefined {
   if ('index' in input) {
-    if (input.index === 'gsi1') {
-      return ['SUMMARY'].filter(Boolean).join('#');
-    } else if (input.index === 'gsi2') {
-      return ['INSTANCE', 'label' in input && input.label]
+    if (input.index === 'lsi1') {
+      return ['SUMMARY', 'stability' in input && input.stability]
         .filter(Boolean)
         .join('#');
-    } else if (input.index === 'lsi1') {
-      return ['INSTANCE', 'stability' in input && input.stability]
+    } else if (input.index === 'lsi2') {
+      return ['SUMMARY', 'duration' in input && input.duration]
         .filter(Boolean)
         .join('#');
     }
   } else {
-    return ['SUMMARY'].filter(Boolean).join('#');
+    return ['SUMMARY', 'lineage' in input && input.lineage]
+      .filter(Boolean)
+      .join('#');
   }
 }
 
 /** helper */
 function makeEavPkForQueryCaseSummary(input: QueryCaseSummaryInput): string {
-  if ('index' in input) {
-    const lsis = ['lsi1'];
-    if (lsis.includes(input.index)) {
-      return 'pk';
-    }
-    return `${input.index}pk`;
-  }
   return 'pk';
 }
 
 /** helper */
 function makeEavSkForQueryCaseSummary(input: QueryCaseSummaryInput): string {
   if ('index' in input) {
-    const lsis = ['lsi1'];
+    const lsis = ['lsi1', 'lsi2'];
     if (lsis.includes(input.index)) {
       return input.index;
     }
-    return `${input.index}sk`;
   }
   return 'sk';
 }
@@ -1655,8 +1644,13 @@ export async function queryCaseSummaryByNodeId(
     repoId: primaryKeyValues[2],
     branchName: primaryKeyValues[3],
     label: primaryKeyValues[4],
-    lineage: primaryKeyValues[5],
   };
+
+  if (typeof primaryKeyValues[2] !== 'undefined') {
+    // @ts-ignore - TSC will usually see this as an error because it determined
+    // that primaryKey is the no-sort-fields-specified version of the type.
+    primaryKey.lineage = primaryKeyValues[7];
+  }
 
   const {capacity, items} = await queryCaseSummary(primaryKey);
 
@@ -1692,11 +1686,8 @@ export function marshallCaseSummary(
     '#updatedAt = :updatedAt',
     '#vendor = :vendor',
     '#version = :version',
-    '#gsi1pk = :gsi1pk',
-    '#gsi1sk = :gsi1sk',
-    '#gsi2pk = :gsi2pk',
-    '#gsi2sk = :gsi2sk',
     '#lsi1sk = :lsi1sk',
+    '#lsi2sk = :lsi2sk',
   ];
 
   const ean: Record<string, string> = {
@@ -1711,11 +1702,8 @@ export function marshallCaseSummary(
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#gsi1pk': 'gsi1pk',
-    '#gsi1sk': 'gsi1sk',
-    '#gsi2pk': 'gsi2pk',
-    '#gsi2sk': 'gsi2sk',
     '#lsi1sk': 'lsi1sk',
+    '#lsi2sk': 'lsi2sk',
   };
 
   const eav: Record<string, unknown> = {
@@ -1729,11 +1717,8 @@ export function marshallCaseSummary(
     ':updatedAt': now.getTime(),
     ':vendor': input.vendor,
     ':version': ('version' in input ? input.version : 0) + 1,
-    ':gsi1pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-    ':gsi1sk': `SUMMARY`,
-    ':gsi2pk': `BRANCH#${input.vendor}#${input.repoId}#${input.branchName}`,
-    ':gsi2sk': `INSTANCE#${input.label}`,
-    ':lsi1sk': `INSTANCE#${input.stability}`,
+    ':lsi1sk': `SUMMARY#${input.stability}`,
+    ':lsi2sk': `SUMMARY#${input.duration}`,
   };
 
   if ('label' in input && typeof input.label !== 'undefined') {
