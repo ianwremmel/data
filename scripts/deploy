@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+build () {
+  local example="$1"
+  local dir
+  dir="$(get_example_dir "$example")"
+
+  log "Building $example in $dir"
+
+  sam build \
+    --beta-features \
+    --template "$dir/__generated__/template.yml"
+}
+
+deploy () {
+  local provider="$1"
+  shift
+  if [ "$#" == "0" ]; then
+    log "No examples specified, deploying all to $provider"
+    deploy_all "$provider"
+  else
+    log "Deploying $* to $provider"
+    deploy_one "$provider" "$@"
+  fi
+}
+
+deploy_all () {
+  local provider="$1"
+
+  for file in $(find examples -mindepth 1 -maxdepth 1 -type d); do
+    local example
+    example="$(basename "$file")"
+    deploy_one "$provider" "$example"
+  done
+}
+
+deploy_one () {
+  local provider="$1"
+  local example="$2"
+
+  log "Deploying $example to $provider"
+
+  build "$example"
+
+  local stackname
+  stackname="$(get_stack_name "$example")"
+
+  local cmd
+  case "$provider" in
+    aws)
+      cmd="sam"
+      ;;
+    localstack)
+      cmd="samlocal"
+      ;;
+    *)
+      log "Unknown provider $provider"
+      return 1
+      ;;
+  esac
+
+  # doesn't need a template because it will use the one in .aws-sam that was
+  # just created by sam build
+  "$cmd" deploy \
+    --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
+    --no-fail-on-empty-changeset \
+    --resolve-s3 \
+    --stack-name "$stackname" \
+    --region "${AWS_REGION:-us-east-1}"
+}
+
+get_example_dir () {
+  local example="$1"
+  local dir="examples/$example"
+
+  if [ ! -d "$dir" ]; then
+    log "Example $example does not exist"
+    return 1
+  fi
+
+  echo "$dir"
+  return 0
+}
+
+get_stack_name () {
+  local example="$1"
+  local dir
+  dir="$(get_example_dir "$example")"
+
+  local stackname
+  stackname=$(echo "$dir" | awk -F/ '{print $2}' | sed -r 's/(^|[-_ ]+)([0-9a-z])/\U\2/g')
+  echo "$stackname"
+  return 0
+}
+
+initialize_localstack () {
+  log "Ensuing LocalStack is dependencies are installed"
+  pip3 install --upgrade pyopenssl
+  pip3 install localstack awscli-local[ver1] aws-sam-cli-local
+  docker pull localstack/localstack
+
+  log "Starting LocalStack"
+  PROVIDER_OVERRIDE_LAMBDA=asf localstack start -d
+
+  log "Waiting for LocalStack startup..."
+  localstack wait -t 30
+  log "Startup complete"
+
+  return 0
+}
+
+log () {
+  echo "$@" 1>&2
+
+  return 0
+}
+
+main () {
+  local provider="$1"
+
+  case "$provider" in
+    aws)
+      log "Deploying to AWS"
+      deploy "$@"
+      return 0
+      ;;
+    localstack)
+      log "Initializing LocalStack"
+      initialize_localstack
+      log "Deploying to LocalStack"
+      deploy "$@"
+      return 0
+      ;;
+    *)
+      log "Unknown provider $provider"
+      return 1
+      ;;
+  esac
+}
+
+main "$@"

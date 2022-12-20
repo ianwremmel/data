@@ -2,19 +2,4 @@
 
 set -euo pipefail
 
-for file in $(find examples -mindepth 1 -maxdepth 1 -type d); do
-  stackname=$(echo "$file" | awk -F/ '{print $2}' | sed -r 's/(^|[-_ ]+)([0-9a-z])/\U\2/g')
-
-  sam build \
-    --beta-features \
-    --template "$file/__generated__/template.yml"
-
-  # doesn't need a template because it will use the one in .aws-sam that was
-  # just created by sam build
-  sam deploy \
-    --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
-    --no-fail-on-empty-changeset \
-    --resolve-s3 \
-    --stack-name "$stackname" \
-    --region "${AWS_REGION:-us-east-1}"
-done
+./scripts/deploy aws "$@"

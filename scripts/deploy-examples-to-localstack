@@ -1,28 +1,5 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-pip3 install --upgrade pyopenssl
-pip3 install localstack awscli-local[ver1] aws-sam-cli-local
-docker pull localstack/localstack
-PROVIDER_OVERRIDE_LAMBDA=asf localstack start -d
 
-echo "Waiting for LocalStack startup..."
-localstack wait -t 30
-echo "Startup complete"
-
-for file in $(find examples -mindepth 1 -maxdepth 1 -type d); do
-  stackname=$(echo "$file" | awk -F/ '{print $2}' | sed -r 's/(^|[-_ ]+)([0-9a-z])/\U\2/g')
-
-  sam build \
-    --beta-features \
-    --template "$file/__generated__/template.yml"
-
-  # doesn't need a template because it will use the one in .aws-sam that was
-  # just created by sam build
-  samlocal deploy \
-    --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
-    --no-fail-on-empty-changeset \
-    --resolve-s3 \
-    --stack-name "$stackname" \
-    --region "${AWS_REGION:-us-east-1}"
-done
+./scripts/deploy localstack "$@"
