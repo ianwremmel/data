@@ -24,9 +24,9 @@ export function getTypeScriptTypeForField({
 }
 
 /**
- * Marshals the specified field value for use with ddb.
+ * Marshalls the specified field value for use with ddb.
  */
-export function marshalField(fieldName: string, isDate: boolean): string {
+export function marshallField(fieldName: string, isDate: boolean): string {
   return isDate ? `input.${fieldName}.getTime()` : `input.${fieldName}`;
 }
 
@@ -45,7 +45,7 @@ export function makeKeyTemplate(
         // eslint-disable-next-line no-template-curly-in-string
         return '${now.getTime()}';
       }
-      return `\${${marshalField(fieldName, isDateType)}}`;
+      return `\${${marshallField(fieldName, isDateType)}}`;
     }),
   ].join('#');
 }
@@ -58,7 +58,7 @@ export function objectToString(obj: Record<string, string>): string {
 /**
  * Helper function for building a field unmarshaller
  */
-export function unmarshalField({
+export function unmarshallField({
   columnName,
   fieldName,
   isDateType,

@@ -1,6 +1,6 @@
 import type {Table} from '../../../parser';
 
-import {makeKeyTemplate, marshalField} from './helpers';
+import {makeKeyTemplate, marshallField} from './helpers';
 
 export interface MarshallTplInput {
   readonly table: Table;
@@ -65,7 +65,7 @@ ${secondaryIndexes
           return `':version': ('version' in input ? input.version : 0) + 1,`;
         }
         if (fieldName === ttlConfig?.fieldName) {
-          return `':${fieldName}': '${fieldName}' in input ? ${marshalField(
+          return `':${fieldName}': '${fieldName}' in input ? ${marshallField(
             fieldName,
             isDateType
           )} : now.getTime() + ${ttlConfig.duration},`;
@@ -77,7 +77,7 @@ ${secondaryIndexes
           return `':${fieldName}': now.getTime(),`;
         }
 
-        return `':${fieldName}': ${marshalField(fieldName, isDateType)},`;
+        return `':${fieldName}': ${marshallField(fieldName, isDateType)},`;
       })
       .join('\n')}
 ${secondaryIndexes
@@ -111,7 +111,7 @@ ${secondaryIndexes
       ({columnName, fieldName, isDateType}) => `
   if ('${fieldName}' in input && typeof input.${fieldName} !== 'undefined') {
     ean['#${fieldName}'] = '${columnName}';
-    eav[':${fieldName}'] = ${marshalField(fieldName, isDateType)};
+    eav[':${fieldName}'] = ${marshallField(fieldName, isDateType)};
     updateExpression.push('#${fieldName} = :${fieldName}');
   }
   `
