@@ -1,9 +1,6 @@
-import {GetCommand, QueryCommand, ScanCommand} from '@aws-sdk/lib-dynamodb';
 import {faker} from '@faker-js/faker';
 import {NotFoundError, OptimisticLockingError} from '@ianwremmel/data';
 import Base64 from 'base64url';
-
-import {ddbDocClient} from '../dependencies';
 
 import {
   blindWriteUserSession,
