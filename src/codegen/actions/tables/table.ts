@@ -15,7 +15,6 @@ import {updateItemTpl} from './templates/update-item';
 export function createItemTemplate(irTable: Table) {
   return createItemTpl({
     key: makeKey(irTable.primaryKey),
-    omit: ['id', irTable.ttlConfig?.fieldName ?? ''].filter(Boolean),
     tableName: irTable.tableName,
     ttlConfig: irTable.ttlConfig,
     typeName: irTable.typeName,

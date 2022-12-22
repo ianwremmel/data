@@ -5,7 +5,6 @@ import {objectToString} from './helpers';
 
 export interface CreateItemTplInput {
   readonly key: Record<string, string>;
-  readonly omit: readonly string[];
   readonly tableName: string;
   readonly ttlConfig: TTLConfig | undefined;
   readonly typeName: string;
@@ -17,10 +16,16 @@ export function createItemTpl({
   key,
   tableName,
   typeName,
-  omit,
 }: CreateItemTplInput) {
   const inputTypeName = `Create${typeName}Input`;
-  const omitInputFields = ['createdAt', 'updatedAt', 'version', ...omit]
+  const omitInputFields = [
+    'createdAt',
+    'id',
+    'updatedAt',
+    'version',
+    ttlConfig?.fieldName,
+  ]
+    .filter(Boolean)
     .map((f) => `'${f}'`)
     .sort();
   const outputTypeName = `Create${typeName}Output`;
