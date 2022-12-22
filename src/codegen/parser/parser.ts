@@ -244,6 +244,15 @@ function extractTTLConfig(
   const directive = getDirective('ttl', field);
   const duration = getOptionalArgStringValue('duration', directive);
 
+  if (!duration) {
+    assert(
+      !isNonNullType(field),
+      'TTL field must be nullable if duration is not specified'
+    );
+
+    return {fieldName};
+  }
+
   const durationUnit = duration?.slice(-1);
   const durationValue = duration?.slice(0, -1);
 

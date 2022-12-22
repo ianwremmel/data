@@ -148,7 +148,8 @@ export interface UserSessionPrimaryKey {
 export type CreateUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
-> & {expires?: Date};
+> &
+  Partial<Pick<UserSession, 'expires'>>;
 export type CreateUserSessionOutput = ResultType<UserSession>;
 /**  */
 export async function createUserSession(
@@ -205,7 +206,8 @@ export async function createUserSession(
 export type BlindWriteUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
-> & {expires?: Date};
+> &
+  Partial<Pick<UserSession, 'expires'>>;
 export type BlindWriteUserSessionOutput = ResultType<UserSession>;
 /** */
 export async function blindWriteUserSession(
@@ -408,7 +410,8 @@ export async function touchUserSession(
 export type UpdateUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt'
-> & {expires?: Date};
+> &
+  Partial<Pick<UserSession, 'expires'>>;
 export type UpdateUserSessionOutput = ResultType<UserSession>;
 
 /**  */
@@ -504,7 +507,6 @@ export function marshallUserSession(
   const updateExpression: string[] = [
     '#entity = :entity',
     '#createdAt = :createdAt',
-    '#expires = :expires',
     '#session = :session',
     '#sessionId = :sessionId',
     '#updatedAt = :updatedAt',
@@ -515,7 +517,6 @@ export function marshallUserSession(
     '#entity': '_et',
     '#pk': 'pk',
     '#createdAt': '_ct',
-    '#expires': 'ttl',
     '#session': 'session',
     '#sessionId': 'session_id',
     '#updatedAt': '_md',
@@ -528,12 +529,22 @@ export function marshallUserSession(
     ':sessionId': input.sessionId,
     ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
-    ':expires':
-      'expires' in input && input.expires
-        ? input.expires.getTime()
-        : now.getTime() + 86400000,
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
   };
+
+  if ('expires' in input && typeof input.expires !== 'undefined') {
+    assert(
+      !Number.isNaN(input.expires.getTime()),
+      'expires was passed but is not a valid date'
+    );
+    ean['#expires'] = 'ttl';
+    eav[':expires'] = input.expires === null ? null : input.expires.getTime();
+    updateExpression.push('#expires = :expires');
+  } else {
+    ean['#expires'] = 'ttl';
+    eav[':expires'] = now.getTime() + 86400000;
+    updateExpression.push('#expires = :expires');
+  }
 
   updateExpression.sort();
 

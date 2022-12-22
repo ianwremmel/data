@@ -1,4 +1,6 @@
-import type {Field, Table} from '../../../parser';
+import assert from 'assert';
+
+import type {Field, Table, TTLConfig} from '../../../parser';
 
 import {makeKeyTemplate, marshallField} from './helpers';
 
@@ -70,6 +72,7 @@ export function marshall${typeName}(input: ${inputTypeName}): Marshall${typeName
   const updateExpression: string[] = [
   "#entity = :entity",
   ${requiredFields
+    .filter(({fieldName}) => fieldName !== ttlConfig?.fieldName)
     .map(({fieldName}) => `'#${fieldName} = :${fieldName}',`)
     .join('\n')}
   ${secondaryIndexes
@@ -86,6 +89,7 @@ export function marshall${typeName}(input: ${inputTypeName}): Marshall${typeName
     "#entity": "_et",
     "#pk": "pk",
 ${requiredFields
+  .filter(({fieldName}) => fieldName !== ttlConfig?.fieldName)
   .map(({columnName, fieldName}) => `'#${fieldName}': '${columnName}',`)
   .join('\n')}
 ${secondaryIndexes
@@ -110,19 +114,19 @@ ${secondaryIndexes
       .map(({fieldName}) => `':${fieldName}': now.getTime(),`)
       .join('\n')}
     ${requiredFieldsWithDefaultBehaviors
-      .map(({fieldName, isDateType}) => {
+      .map(({fieldName}) => {
         if (fieldName === 'version') {
           return `':version': ('version' in input ? (input.version ?? 0) : 0) + 1,`;
         }
         if (fieldName === ttlConfig?.fieldName) {
-          return `':${fieldName}': '${fieldName}' in input && input.${fieldName} ? ${marshallField(
-            fieldName,
-            isDateType
-          )} : now.getTime() + ${ttlConfig.duration},`;
+          // do nothing because we're handling ttl later, but still keep the
+          // conditional to avoid throwing down below.
+          return '';
         }
 
         throw new Error(`No default behavior for field \`${fieldName}\``);
       })
+      .filter(Boolean)
       .join('\n')}
 ${secondaryIndexes
   .map((index) =>
@@ -151,6 +155,8 @@ ${secondaryIndexes
   };
 
   ${optionalFields
+    // the TTL field will always be handled by renderTTL
+    .filter(({fieldName}) => fieldName !== ttlConfig?.fieldName)
     .map(
       ({columnName, fieldName, isDateType}) => `
   if ('${fieldName}' in input && typeof input.${fieldName} !== 'undefined') {
@@ -162,7 +168,7 @@ ${secondaryIndexes
     )
     .join('\n')};
 
-
+  ${renderTTL(ttlConfig, fields)}
 
   updateExpression.sort();
 
@@ -174,4 +180,48 @@ ${secondaryIndexes
 }
 
   `;
+}
+
+/** template helper */
+function renderTTL(
+  ttlConfig: TTLConfig | undefined,
+  fields: readonly Field[]
+): string {
+  if (!ttlConfig) {
+    return '';
+  }
+
+  const {duration, fieldName} = ttlConfig;
+
+  const field = fields.find(({fieldName: f}) => f === fieldName);
+  assert(field, `Field ${fieldName} not found`);
+
+  const {isDateType} = field;
+  const out = `
+  if ('${fieldName}' in input && typeof input.${fieldName} !== 'undefined') {
+    assert(!Number.isNaN(input.${fieldName}${
+    field.isRequired ? '' : '?'
+  }.getTime()),'${fieldName} was passed but is not a valid date');
+    ean['#${fieldName}'] = 'ttl';
+    eav[':${fieldName}'] = input.${fieldName} === null
+      ? null
+      : ${marshallField(fieldName, isDateType)};
+    updateExpression.push('#${fieldName} = :${fieldName}');
+  }
+  `;
+
+  if (duration) {
+    return `${out} else {
+      ean['#${fieldName}'] = 'ttl';
+      eav[':${fieldName}'] = now.getTime() + ${duration};
+      updateExpression.push('#${fieldName} = :${fieldName}');
+    }`;
+  }
+
+  assert(
+    !field.isRequired,
+    'TTL field must be optional if duration is not present'
+  );
+
+  return out;
 }

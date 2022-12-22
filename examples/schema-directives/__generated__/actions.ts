@@ -109,7 +109,7 @@ export type UserSession = Model &
   Versioned & {
     __typename?: 'UserSession';
     createdAt: Scalars['Date'];
-    expires: Scalars['Date'];
+    expires?: Maybe<Scalars['Date']>;
     id: Scalars['ID'];
     /**
      * This field has nothing to do with UserSession, but this was the easiest place
@@ -154,7 +154,8 @@ export interface UserSessionPrimaryKey {
 export type CreateUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
-> & {expires?: Date};
+> &
+  Partial<Pick<UserSession, 'expires'>>;
 export type CreateUserSessionOutput = ResultType<UserSession>;
 /**  */
 export async function createUserSession(
@@ -211,7 +212,8 @@ export async function createUserSession(
 export type BlindWriteUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
-> & {expires?: Date};
+> &
+  Partial<Pick<UserSession, 'expires'>>;
 export type BlindWriteUserSessionOutput = ResultType<UserSession>;
 /** */
 export async function blindWriteUserSession(
@@ -372,12 +374,10 @@ export async function touchUserSession(
         new UpdateCommand({
           ConditionExpression: 'attribute_exists(#pk)',
           ExpressionAttributeNames: {
-            '#expires': 'ttl',
             '#pk': 'pk',
             '#version': '_v',
           },
           ExpressionAttributeValues: {
-            ':ttlInc': 86400000,
             ':versionInc': 1,
           },
           Key: {pk: `USER_SESSION#${input.sessionId}`},
@@ -385,8 +385,7 @@ export async function touchUserSession(
           ReturnItemCollectionMetrics: 'SIZE',
           ReturnValues: 'ALL_NEW',
           TableName: tableName,
-          UpdateExpression:
-            'SET #expires = #expires + :ttlInc, #version = #version + :versionInc',
+          UpdateExpression: 'SET #version = #version + :versionInc',
         })
       );
 
@@ -414,7 +413,8 @@ export async function touchUserSession(
 export type UpdateUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt'
-> & {expires?: Date};
+> &
+  Partial<Pick<UserSession, 'expires'>>;
 export type UpdateUserSessionOutput = ResultType<UserSession>;
 
 /**  */
@@ -499,7 +499,7 @@ export interface MarshallUserSessionOutput {
 export type MarshallUserSessionInput = Required<
   Pick<UserSession, 'session' | 'sessionId'>
 > &
-  Partial<Pick<UserSession, 'optionalField' | 'expires' | 'version'>>;
+  Partial<Pick<UserSession, 'expires' | 'optionalField' | 'version'>>;
 
 /** Marshalls a DynamoDB record into a UserSession object */
 export function marshallUserSession(
@@ -510,7 +510,6 @@ export function marshallUserSession(
   const updateExpression: string[] = [
     '#entity = :entity',
     '#createdAt = :createdAt',
-    '#expires = :expires',
     '#session = :session',
     '#sessionId = :sessionId',
     '#updatedAt = :updatedAt',
@@ -521,7 +520,6 @@ export function marshallUserSession(
     '#entity': '_et',
     '#pk': 'pk',
     '#createdAt': '_ct',
-    '#expires': 'ttl',
     '#session': 'session',
     '#sessionId': 'session_id',
     '#updatedAt': '_md',
@@ -534,10 +532,6 @@ export function marshallUserSession(
     ':sessionId': input.sessionId,
     ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
-    ':expires':
-      'expires' in input && input.expires
-        ? input.expires.getTime()
-        : now.getTime() + 86400000,
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
   };
 
@@ -546,6 +540,16 @@ export function marshallUserSession(
     eav[':optionalField'] = input.optionalField;
     updateExpression.push('#optionalField = :optionalField');
   }
+  if ('expires' in input && typeof input.expires !== 'undefined') {
+    assert(
+      !Number.isNaN(input.expires?.getTime()),
+      'expires was passed but is not a valid date'
+    );
+    ean['#expires'] = 'ttl';
+    eav[':expires'] = input.expires === null ? null : input.expires.getTime();
+    updateExpression.push('#expires = :expires');
+  }
+
   updateExpression.sort();
 
   return {
@@ -565,16 +569,6 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
     assert(
       typeof item._ct !== 'undefined',
       () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('ttl' in item) {
-    assert(
-      item.ttl !== null,
-      () => new DataIntegrityError('Expected expires to be non-null')
-    );
-    assert(
-      typeof item.ttl !== 'undefined',
-      () => new DataIntegrityError('Expected expires to be defined')
     );
   }
   if ('id' in item) {
@@ -630,13 +624,19 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
 
   let result: UserSession = {
     createdAt: new Date(item._ct),
-    expires: new Date(item.ttl),
     id: Base64.encode(`UserSession:${item.pk}`),
     session: item.session,
     sessionId: item.session_id,
     updatedAt: new Date(item._md),
     version: item._v,
   };
+
+  if ('ttl' in item) {
+    result = {
+      ...result,
+      expires: item.ttl ? new Date(item.ttl) : null,
+    };
+  }
 
   if ('optional_field' in item) {
     result = {

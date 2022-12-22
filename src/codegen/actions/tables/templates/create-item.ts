@@ -27,7 +27,7 @@ export function createItemTpl({
 
   return `
 export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join('|')}>${
-    ttlConfig ? ` & {${ttlConfig.fieldName}?: Date}` : ''
+    ttlConfig ? ` & Partial<Pick<${typeName}, '${ttlConfig.fieldName}'>>` : ''
   };
 export type ${outputTypeName} = ResultType<${typeName}>
 /**  */

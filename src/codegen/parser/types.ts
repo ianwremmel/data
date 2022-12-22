@@ -68,5 +68,5 @@ export type PrimaryKeyConfig = {type: 'primary'} & (
 
 export interface TTLConfig {
   readonly fieldName: string;
-  readonly duration: number;
+  readonly duration?: number;
 }
