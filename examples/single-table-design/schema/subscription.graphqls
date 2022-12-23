@@ -1,0 +1,23 @@
+"""
+An object to track a user's logins
+"""
+type Subscription implements Model & Node & Timestamped & Versioned
+  @compositeKey(
+    pkPrefix: "ACCOUNT"
+    pkFields: ["vendor", "externalId"]
+    skPrefix: "SUBSCRIPTION"
+    skFields: ["effectiveDate"]
+  )
+  @cdc(event: "INSERT", handler: "../handler", produces: "Account")
+  @table(name: "TableAccounts") {
+  cancelled: Boolean
+  createdAt: Date!
+  effectiveDate: Date!
+  externalId: String!
+  id: ID!
+  onFreeTrial: Boolean
+  planName: PlanName
+  updatedAt: Date!
+  version: Int!
+  vendor: Vendor!
+}
