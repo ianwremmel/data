@@ -108,6 +108,7 @@ export type UserSession = Model &
   Timestamped &
   Versioned & {
     __typename?: 'UserSession';
+    aliasedField?: Maybe<Scalars['String']>;
     createdAt: Scalars['Date'];
     expires?: Maybe<Scalars['Date']>;
     id: Scalars['ID'];
@@ -499,7 +500,9 @@ export interface MarshallUserSessionOutput {
 export type MarshallUserSessionInput = Required<
   Pick<UserSession, 'session' | 'sessionId'>
 > &
-  Partial<Pick<UserSession, 'expires' | 'optionalField' | 'version'>>;
+  Partial<
+    Pick<UserSession, 'aliasedField' | 'expires' | 'optionalField' | 'version'>
+  >;
 
 /** Marshalls a DynamoDB record into a UserSession object */
 export function marshallUserSession(
@@ -534,6 +537,12 @@ export function marshallUserSession(
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
   };
+
+  if ('aliasedField' in input && typeof input.aliasedField !== 'undefined') {
+    ean['#aliasedField'] = 'renamedField';
+    eav[':aliasedField'] = input.aliasedField;
+    updateExpression.push('#aliasedField = :aliasedField');
+  }
 
   if ('optionalField' in input && typeof input.optionalField !== 'undefined') {
     ean['#optionalField'] = 'optional_field';
@@ -630,6 +639,13 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
     updatedAt: new Date(item._md),
     version: item._v,
   };
+
+  if ('renamedField' in item) {
+    result = {
+      ...result,
+      aliasedField: item.renamedField,
+    };
+  }
 
   if ('ttl' in item) {
     result = {

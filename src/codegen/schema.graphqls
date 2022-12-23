@@ -9,6 +9,11 @@ Arbitrary JSON stored as a Map in DynamoDB
 scalar JSONObject
 
 """
+Allows specifiying an alternatie column name.
+"""
+directive @alias(name: String!) on FIELD_DEFINITION
+
+"""
 Indicates all reads for this type will be done using DynamoDB's
 strong-consistency mode. General discouraged, though certain user-facing flows
 might require it.

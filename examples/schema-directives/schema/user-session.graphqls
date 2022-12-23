@@ -22,4 +22,6 @@ type UserSession implements Model & Node & Timestamped & Versioned
   when an optional field is absent from the payload.
   """
   optionalField: String
+
+  aliasedField: String @alias(name: "renamedField")
 }

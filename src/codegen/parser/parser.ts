@@ -280,6 +280,13 @@ export function getAliasForField(field: GraphQLField<unknown, unknown>) {
   if (hasDirective('ttl', field)) {
     return 'ttl';
   }
+
+  if (hasDirective('alias', field)) {
+    const {astNode} = field;
+    assert(astNode);
+    return getArgStringValue('name', getDirective('alias', astNode));
+  }
+
   switch (field.name) {
     case 'version':
       return '_v';
