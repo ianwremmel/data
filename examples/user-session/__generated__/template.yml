@@ -45,7 +45,11 @@ Resources:
         - AttributeName: pk
           KeyType: HASH
       PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true
+        PointInTimeRecoveryEnabled:
+          Fn::If:
+            - IsProd
+            - true
+            - false
       SSESpecification:
         SSEEnabled:
           Fn::If:

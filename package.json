@@ -19,7 +19,8 @@
       "require": "./dist/cjs/runtime/index.js"
     },
     "./codegen/actions": "./dist/codegen/actions.js",
-    "./codegen/cloudformation": "./dist/codegen/cloudformation.js"
+    "./codegen/cloudformation": "./dist/codegen/cloudformation.js",
+    "./codegen/parser": "./dist/codegen/parser.js"
   },
   "engines": {
     "node": "18.x",

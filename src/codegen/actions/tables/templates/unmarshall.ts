@@ -1,11 +1,11 @@
-import type {Table} from '../../../parser';
+import type {Model} from '../../../parser';
 
 import {unmarshallField} from './helpers';
 
 export const DIVIDER = '#:#';
 
 export interface UnmarshallTplInput {
-  readonly table: Table;
+  readonly table: Model;
 }
 
 /** Generates the unmarshall function for a table */

@@ -1,0 +1,41 @@
+"""
+Represents an email that is schedule to be sent to a user.
+"""
+type ScheduledEmail implements Model & Timestamped & Versioned
+  @compositeKey(
+    pkFields: ["vendor", "externalId"]
+    pkPrefix: "ACCOUNT"
+    skFields: ["template"]
+    skPrefix: "SCHEDULED_EMAIL"
+  )
+  @table(name: "TableEmail") {
+  createdAt: Date!
+  sendAt: Date @ttl(duration: "1d")
+  externalId: String!
+  id: ID!
+  template: String!
+  updatedAt: Date!
+  version: Int!
+  vendor: Vendor!
+}
+
+"""
+Represents an email that has been sent to a user
+"""
+type SentEmail implements Model & Timestamped & Versioned
+  @compositeKey(
+    pkFields: ["vendor", "externalId"]
+    pkPrefix: "ACCOUNT"
+    skFields: ["template", "createdAt"]
+    skPrefix: "TEMPLATE"
+  )
+  @table(name: "TableEmail") {
+  createdAt: Date!
+  externalId: String!
+  id: ID!
+  messageId: String!
+  template: String!
+  updatedAt: Date!
+  vendor: Vendor!
+  version: Int!
+}

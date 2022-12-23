@@ -114,9 +114,10 @@ describe('blindWriteUserSession()', () => {
       sessionId: faker.datatype.uuid(),
     });
 
-    expect(result).toMatchInlineSnapshot(
-      itemMatcher,
-      `
+    try {
+      expect(result).toMatchInlineSnapshot(
+        itemMatcher,
+        `
       {
         "capacity": {
           "CapacityUnits": 1,
@@ -145,19 +146,20 @@ describe('blindWriteUserSession()', () => {
         "metrics": undefined,
       }
     `
-    );
+      );
 
-    expect(Base64.decode(result.item.id)).toMatchInlineSnapshot(
-      `"UserSession:USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20"`
-    );
+      expect(Base64.decode(result.item.id)).toMatchInlineSnapshot(
+        `"UserSession:USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20"`
+      );
 
-    expect(result.item.createdAt.getTime()).not.toBeNaN();
-    expect(result.item.expires.getTime()).not.toBeNaN();
-    expect(result.item.updatedAt.getTime()).not.toBeNaN();
-    expect(result.item.version).toBe(1);
-
-    // cleanup, not part of test
-    await deleteUserSession(result.item);
+      expect(result.item.createdAt.getTime()).not.toBeNaN();
+      expect(result.item.expires.getTime()).not.toBeNaN();
+      expect(result.item.updatedAt.getTime()).not.toBeNaN();
+      expect(result.item.version).toBe(1);
+    } finally {
+      // cleanup, not part of test
+      await deleteUserSession(result.item);
+    }
   });
 
   it('creates a user session with a custom expiration date if it does not exist', async () => {

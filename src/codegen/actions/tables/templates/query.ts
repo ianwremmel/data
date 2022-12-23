@@ -262,13 +262,21 @@ function makePartitionKeyForQuery(
 
       if (index.type === 'primary') {
         return `if (!('index' in input)) {
-  return \`${makeKeyTemplate(partitionKeyPrefix ?? '', partitionKeyFields)}\`
+  return \`${makeKeyTemplate(
+    partitionKeyPrefix ?? '',
+    partitionKeyFields,
+    'read'
+  )}\`
 }`;
       }
 
       return `
 if ('index' in input && input.index === '${index.name}') {
-  return \`${makeKeyTemplate(partitionKeyPrefix ?? '', partitionKeyFields)}\`;
+  return \`${makeKeyTemplate(
+    partitionKeyPrefix ?? '',
+    partitionKeyFields,
+    'read'
+  )}\`;
 }`;
     })
     .join('\n else ');

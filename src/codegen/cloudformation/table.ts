@@ -7,15 +7,13 @@ import type {CloudFormationFragment} from './types';
 /* eslint-disable complexity */
 /** cloudformation generator */
 export function defineTable({
-  changeDataCaptureConfig,
   enablePointInTimeRecovery,
+  hasCdc,
+  hasTtl,
   tableName,
   primaryKey: {isComposite},
   secondaryIndexes,
-  ttlConfig: ttlInfo,
 }: Table): CloudFormationFragment {
-  const hasCdc = !!changeDataCaptureConfig;
-
   const attributeDefinitions = isComposite
     ? [
         {
@@ -127,7 +125,7 @@ export function defineTable({
       : undefined,
     PointInTimeRecoverySpecification: enablePointInTimeRecovery
       ? {
-          PointInTimeRecoveryEnabled: true,
+          PointInTimeRecoveryEnabled: {'Fn::If': ['IsProd', true, false]},
         }
       : undefined,
     SSESpecification: {
@@ -158,7 +156,7 @@ export function defineTable({
     delete properties.GlobalSecondaryIndexes;
   }
 
-  if (!ttlInfo) {
+  if (!hasTtl) {
     delete properties.TimeToLiveSpecification;
   }
 

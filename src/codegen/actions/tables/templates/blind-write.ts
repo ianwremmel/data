@@ -39,19 +39,29 @@ export type ${outputTypeName} = ResultType<${typeName}>;
 /** */
 export async function blindWrite${typeName}(input: Readonly<${inputTypeName}>): Promise<Readonly<${outputTypeName}>> {
 ${ensureTableTemplate(tableName)}
-  const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${typeName}(input);
+  const now = new Date();
+  const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${typeName}(input, now);
 
   delete ExpressionAttributeNames['#pk'];
   delete ExpressionAttributeValues[':version'];
 
-  const eav = {...ExpressionAttributeValues, ':one': 1};
-  const ue = UpdateExpression
-    .split(', ')
-    .filter((e) => !e.startsWith('#version'))
-    .join(', ') + ' ADD #version :one'
+  const ean ={
+    ...ExpressionAttributeNames,
+    '#createdAt': '_ct'
+  }
+  const eav = {
+    ...ExpressionAttributeValues, ':one': 1,
+    ':createdAt': now.getTime()
+  };
+  const ue = [
+    ...UpdateExpression
+      .split(', ')
+      .filter((e) => !e.startsWith('#version')),
+    '#createdAt = if_not_exists(#createdAt, :createdAt)'
+  ].join(', ') + ' ADD #version :one';
 
   const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand({
-    ExpressionAttributeNames,
+    ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
     Key: ${objectToString(key)},
     ReturnConsumedCapacity: 'INDEXES',

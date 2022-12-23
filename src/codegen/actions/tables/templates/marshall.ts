@@ -1,11 +1,11 @@
 import assert from 'assert';
 
-import type {Field, Table, TTLConfig} from '../../../parser';
+import type {Field, Model, TTLConfig} from '../../../parser';
 
 import {makeKeyTemplate, marshallField} from './helpers';
 
 export interface MarshallTplInput {
-  readonly table: Table;
+  readonly table: Model;
 }
 /** helper */
 function wrapFieldNameWithQuotes({fieldName}: Field): string {
@@ -34,9 +34,6 @@ export function marshallTpl({
   // These are fields that are required on the object but have explicit,
   // non-overridable behaviors
   const builtinDateFieldNames = ['createdAt', 'updatedAt'];
-  const builtinDateFields = requiredFields.filter(({fieldName}) =>
-    builtinDateFieldNames.includes(fieldName)
-  );
 
   const normalRequiredFields = requiredFields.filter(
     ({fieldName}) =>
@@ -66,13 +63,14 @@ export interface Marshall${typeName}Output {
 export type ${inputTypeName} = ${marshallType};
 
 /** Marshalls a DynamoDB record into a ${typeName} object */
-export function marshall${typeName}(input: ${inputTypeName}): Marshall${typeName}Output {
-  const now = new Date();
-
+export function marshall${typeName}(input: ${inputTypeName}, now = new Date()): Marshall${typeName}Output {
   const updateExpression: string[] = [
   "#entity = :entity",
   ${requiredFields
-    .filter(({fieldName}) => fieldName !== ttlConfig?.fieldName)
+    .filter(
+      ({fieldName}) =>
+        fieldName !== ttlConfig?.fieldName && fieldName !== 'createdAt'
+    )
     .map(({fieldName}) => `'#${fieldName} = :${fieldName}',`)
     .join('\n')}
   ${secondaryIndexes
@@ -89,7 +87,10 @@ export function marshall${typeName}(input: ${inputTypeName}): Marshall${typeName
     "#entity": "_et",
     "#pk": "pk",
 ${requiredFields
-  .filter(({fieldName}) => fieldName !== ttlConfig?.fieldName)
+  .filter(
+    ({fieldName}) =>
+      fieldName !== ttlConfig?.fieldName && fieldName !== 'createdAt'
+  )
   .map(({columnName, fieldName}) => `'#${fieldName}': '${columnName}',`)
   .join('\n')}
 ${secondaryIndexes
@@ -110,9 +111,7 @@ ${secondaryIndexes
           `':${fieldName}': ${marshallField(fieldName, isDateType)},`
       )
       .join('\n')}
-    ${builtinDateFields
-      .map(({fieldName}) => `':${fieldName}': now.getTime(),`)
-      .join('\n')}
+    ':updatedAt': now.getTime(),
     ${requiredFieldsWithDefaultBehaviors
       .map(({fieldName}) => {
         if (fieldName === 'version') {
@@ -134,19 +133,22 @@ ${secondaryIndexes
       ? [
           `':${index.name}pk': \`${makeKeyTemplate(
             index.partitionKeyPrefix,
-            index.partitionKeyFields
+            index.partitionKeyFields,
+            'read'
           )}\`,`,
           index.isComposite
             ? `':${index.name}sk': \`${makeKeyTemplate(
                 index.sortKeyPrefix,
-                index.sortKeyFields
+                index.sortKeyFields,
+                'read'
               )}\`,`
             : undefined,
         ]
       : [
           `':${index.name}sk': \`${makeKeyTemplate(
             index.sortKeyPrefix,
-            index.sortKeyFields
+            index.sortKeyFields,
+            'read'
           )}\`,`,
         ]
   )

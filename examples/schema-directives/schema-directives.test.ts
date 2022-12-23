@@ -1,5 +1,10 @@
+import assert from 'assert';
+
+import {GetCommand} from '@aws-sdk/lib-dynamodb';
 import {faker} from '@faker-js/faker';
 import Base64 from 'base64url';
+
+import {ddbDocClient} from '../dependencies';
 
 import {
   createUserSession,
@@ -244,5 +249,46 @@ describe('optional ttl', () => {
 
     // cleanup, not part of test
     await deleteUserSession(result.item);
+  });
+});
+
+describe('@alias', () => {
+  it("changes field's column name", async () => {
+    async function loadRaw(sessionId: string) {
+      const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+        new GetCommand({
+          ConsistentRead: true,
+          Key: {pk: `USER_SESSION#${sessionId}`},
+          ReturnConsumedCapacity: 'INDEXES',
+          TableName: process.env.TABLE_USER_SESSIONS,
+        })
+      );
+      assert(item);
+      return item;
+    }
+
+    const createResult = await createUserSession({
+      aliasedField: 'foo',
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
+
+    const createRaw = await loadRaw(createResult.item.sessionId);
+    expect(createRaw.renamedField).toBe(createResult.item.aliasedField);
+    expect(createRaw.aliasedField).toBeUndefined();
+
+    const readResult1 = await readUserSession(createResult.item);
+    expect(readResult1.item.aliasedField).toBe('foo');
+
+    const updateResult = await updateUserSession({
+      ...createResult.item,
+      aliasedField: 'bar',
+    });
+    const updateRaw = await loadRaw(updateResult.item.sessionId);
+    expect(updateRaw.renamedField).toBe(updateResult.item.aliasedField);
+    expect(updateRaw.aliasedField).toBeUndefined();
+
+    const readResult2 = await readUserSession(createResult.item);
+    expect(readResult2.item.aliasedField).toBe('bar');
   });
 });

@@ -1,3 +1,5 @@
+import assert from 'assert';
+
 import type {GraphQLField} from 'graphql';
 
 import type {Field} from '../../../parser';
@@ -33,14 +35,29 @@ export function marshallField(fieldName: string, isDate: boolean): string {
 /** Generates the template for producing the desired primary key or index column */
 export function makeKeyTemplate(
   prefix: string,
-  fields: readonly GraphQLField<unknown, unknown>[] | readonly Field[]
+  fields: readonly GraphQLField<unknown, unknown>[] | readonly Field[],
+  mode: 'blind' | 'create' | 'read'
 ): string {
   return [
     prefix,
     ...fields.map((field) => {
       const fieldName = 'fieldName' in field ? field.fieldName : field.name;
       const isDateType = 'isDateType' in field ? field.isDateType : false;
-      if (fieldName === 'createdAt' || fieldName === 'updatedAt') {
+      if (fieldName === 'createdAt') {
+        if (mode === 'blind') {
+          return "'createdAt' in input ? input.createdAt.getTime() : now.getTime()";
+        }
+        if (mode === 'create') {
+          // this template gets passed through so it's available in the output.
+          // eslint-disable-next-line no-template-curly-in-string
+          return '${now.getTime()}';
+        }
+        if (mode === 'read') {
+          return 'input.createdAt.getTime()';
+        }
+        assert.fail('Invalid mode');
+      }
+      if (fieldName === 'updatedAt') {
         // this template gets passed through so it's available in the output.
         // eslint-disable-next-line no-template-curly-in-string
         return '${now.getTime()}';

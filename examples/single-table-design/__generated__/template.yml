@@ -8,34 +8,34 @@ Globals:
   Function:
     Environment:
       Variables:
-        TABLE_ACCOUNT:
-          Ref: TableAccount
-        TABLE_SUBSCRIPTION:
-          Ref: TableSubscription
+        TABLE_ACCOUNTS:
+          Ref: TableAccounts
+        TABLE_EMAIL:
+          Ref: TableEmail
     Handler: index.handler
     MemorySize: 256
     Runtime: nodejs18.x
     Timeout: 30
     Tracing: Active
 Outputs:
-  TableAccount:
-    Description: The name of the DynamoDB table for TableAccount
+  TableAccounts:
+    Description: The name of the DynamoDB table for TableAccounts
     Export:
       Name:
-        Fn::Sub: ${AWS::StackName}-TableAccount
+        Fn::Sub: ${AWS::StackName}-TableAccounts
       Value:
-        Ref: TableAccount
+        Ref: TableAccounts
     Value:
-      Ref: TableAccount
-  TableSubscription:
-    Description: The name of the DynamoDB table for TableSubscription
+      Ref: TableAccounts
+  TableEmail:
+    Description: The name of the DynamoDB table for TableEmail
     Export:
       Name:
-        Fn::Sub: ${AWS::StackName}-TableSubscription
+        Fn::Sub: ${AWS::StackName}-TableEmail
       Value:
-        Ref: TableSubscription
+        Ref: TableEmail
     Value:
-      Ref: TableSubscription
+      Ref: TableEmail
 Parameters:
   LogRetentionInDays:
     Default: 3
@@ -87,10 +87,10 @@ Resources:
                 - INSERT
               resources:
                 - Fn::GetAtt:
-                    - TableSubscription
+                    - TableAccounts
                     - Arn
               source:
-                - TableSubscription.Subscription
+                - TableAccounts.Subscription
           Type: EventBridgeRule
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -100,7 +100,7 @@ Resources:
         - CloudWatchPutMetricPolicy: {}
         - DynamoDBCrudPolicy:
             TableName:
-              Ref: TableAccount
+              Ref: TableAccounts
         - SQSSendMessagePolicy:
             QueueName:
               Fn::GetAtt:
@@ -122,7 +122,7 @@ Resources:
       RetentionInDays:
         Ref: LogRetentionInDays
     Type: AWS::Logs::LogGroup
-  TableAccount:
+  TableAccounts:
     Properties:
       AttributeDefinitions:
         - AttributeName: pk
@@ -158,14 +158,58 @@ Resources:
             - IsProd
             - true
             - false
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
       Tags:
         - Key: StageName
           Value:
             Ref: StageName
         - Key: TableName
-          Value: TableAccount
+          Value: TableAccounts
     Type: AWS::DynamoDB::Table
-  TableSubscription:
+  TableAccountsCDCDispatcher:
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - ./index
+        Minify: false
+        Sourcemap: true
+        Target: es2020
+    Properties:
+      CodeUri: dispatcher-table-accounts
+      Events:
+        Stream:
+          Properties:
+            BatchSize: 10
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+            MaximumRetryAttempts: 3
+            StartingPosition: TRIM_HORIZON
+            Stream:
+              Fn::GetAtt:
+                - TableAccounts
+                - StreamArn
+          Type: DynamoDB
+      MemorySize: 384
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSLambda_ReadOnlyAccess
+        - AWSXrayWriteOnlyAccess
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+        - CloudWatchPutMetricPolicy: {}
+        - EventBridgePutEventsPolicy:
+            EventBusName: default
+      Timeout: 60
+    Type: AWS::Serverless::Function
+  TableAccountsCDCDispatcherLogGroup:
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${TableAccountsCDCDispatcher}
+      RetentionInDays:
+        Ref: LogRetentionInDays
+    Type: AWS::Logs::LogGroup
+  TableEmail:
     Properties:
       AttributeDefinitions:
         - AttributeName: pk
@@ -190,55 +234,14 @@ Resources:
             - IsProd
             - true
             - false
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
       Tags:
         - Key: StageName
           Value:
             Ref: StageName
         - Key: TableName
-          Value: TableSubscription
+          Value: TableEmail
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
     Type: AWS::DynamoDB::Table
-  TableSubscriptionCDCDispatcher:
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        EntryPoints:
-          - ./index
-        Minify: false
-        Sourcemap: true
-        Target: es2020
-    Properties:
-      CodeUri: dispatcher-table-subscription
-      Events:
-        Stream:
-          Properties:
-            BatchSize: 10
-            FunctionResponseTypes:
-              - ReportBatchItemFailures
-            MaximumRetryAttempts: 3
-            StartingPosition: TRIM_HORIZON
-            Stream:
-              Fn::GetAtt:
-                - TableSubscription
-                - StreamArn
-          Type: DynamoDB
-      MemorySize: 384
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - AWSLambda_ReadOnlyAccess
-        - AWSXrayWriteOnlyAccess
-        - CloudWatchLambdaInsightsExecutionRolePolicy
-        - CloudWatchPutMetricPolicy: {}
-        - EventBridgePutEventsPolicy:
-            EventBusName: default
-      Timeout: 60
-    Type: AWS::Serverless::Function
-  TableSubscriptionCDCDispatcherLogGroup:
-    Properties:
-      LogGroupName:
-        Fn::Sub: /aws/lambda/${TableSubscriptionCDCDispatcher}
-      RetentionInDays:
-        Ref: LogRetentionInDays
-    Type: AWS::Logs::LogGroup
 Transform: AWS::Serverless-2016-10-31
