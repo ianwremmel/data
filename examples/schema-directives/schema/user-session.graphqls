@@ -6,7 +6,7 @@ type UserSession implements Model & Node & Timestamped & Versioned
   @partitionKey(pkFields: ["sessionId"], pkPrefix: "USER_SESSION")
   @table(enablePointInTimeRecovery: false, name: "TableUserSessions") {
   createdAt: Date!
-  expires: Date! @ttl(duration: "1d")
+  expires: Date @ttl
   id: ID!
   """
   Since `id` is a reserved field, sessionId is the field we'll use to inject a

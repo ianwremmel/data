@@ -117,7 +117,7 @@ Indicates the field will be configured as the DynamoDB ttl field for this type.
 Always gets saved to a column named "ttl" to avoid conflicts in single-table
 entities that all might use different names
 """
-directive @ttl(duration: String!) on FIELD_DEFINITION
+directive @ttl(duration: String) on FIELD_DEFINITION
 
 """
 Models are DynamoDB tables with a key schema that may or may not include a sort

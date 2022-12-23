@@ -89,7 +89,10 @@ export function touchItemTemplate(irTable: Table) {
       ean.push(`'#version': '_v'`);
       eav.push(`':versionInc': 1`);
       updateExpressions.push(`#version = #version + :versionInc`);
-    } else if (fieldName === irTable.ttlConfig?.fieldName) {
+    } else if (
+      fieldName === irTable.ttlConfig?.fieldName &&
+      irTable.ttlConfig.duration
+    ) {
       ean.push(`'#${fieldName}': 'ttl'`);
       eav.push(`':ttlInc': ${irTable.ttlConfig.duration}`);
       updateExpressions.push(`#${fieldName} = #${fieldName} + :ttlInc`);
