@@ -147,7 +147,11 @@ Resources:
           Projection:
             ProjectionType: ALL
       PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true
+        PointInTimeRecoveryEnabled:
+          Fn::If:
+            - IsProd
+            - true
+            - false
       SSESpecification:
         SSEEnabled:
           Fn::If:
@@ -175,7 +179,11 @@ Resources:
         - AttributeName: sk
           KeyType: RANGE
       PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true
+        PointInTimeRecoveryEnabled:
+          Fn::If:
+            - IsProd
+            - true
+            - false
       SSESpecification:
         SSEEnabled:
           Fn::If:

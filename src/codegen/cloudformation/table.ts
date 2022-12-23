@@ -127,7 +127,7 @@ export function defineTable({
       : undefined,
     PointInTimeRecoverySpecification: enablePointInTimeRecovery
       ? {
-          PointInTimeRecoveryEnabled: true,
+          PointInTimeRecoveryEnabled: {'Fn::If': ['IsProd', true, false]},
         }
       : undefined,
     SSESpecification: {
