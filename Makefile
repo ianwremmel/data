@@ -48,7 +48,8 @@ EXAMPLE_OUTPUT           := $(foreach X,$(EXAMPLE_DIRS),$(foreach Y,$(addprefix 
 
 GENERATED_DIRS           := $(addsuffix /__generated__,$(EXAMPLE_DIRS))
 
-CODEGEN_SRC              := $(shell find src/codegen -name *.ts)
+PARSER_SRC               := $(shell find src/codegen/parser -name *.ts)
+CODEGEN_SRC              := $(shell find src/codegen -name *.ts) $(PARSER_SRC)
 RUNTIME_SRC              := $(filter-out $(filter %.test.ts,$(RUNTIME_SRC)),$(shell find ./src/runtime -name '*.ts'))
 RUNTIME_DIST_CJS_JS      := $(subst .ts,.js,$(subst src,dist/cjs,$(RUNTIME_SRC)))
 RUNTIME_DIST_ESM_JS      := $(subst .ts,.js,$(subst src,dist/esm,$(RUNTIME_SRC)))
@@ -58,7 +59,7 @@ RUNTIME_TYPES            := $(subst .ts,.d.ts,$(subst src,dist/types,$(RUNTIME_S
 ## Public Targets
 ################################################################################
 
-build: README.md dist/codegen/actions.js dist/codegen/cloudformation.js $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_ESM_JS) $(RUNTIME_TYPES) $(EXAMPLE_OUTPUT) | $(SENTINEL_DIR) $(TMP_DIR)
+build: README.md dist/codegen/actions.js dist/codegen/cloudformation.js dist/codegen/parser.js $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_ESM_JS) $(RUNTIME_TYPES) $(EXAMPLE_OUTPUT) | $(SENTINEL_DIR) $(TMP_DIR)
 .PHONY: build
 
 clean:
@@ -108,10 +109,13 @@ $(RUNTIME_DIST_ESM_JS) &: $(RUNTIME_SRC)
 	$(NPX) esbuild $(?) --format=esm --outbase=src --outdir=dist/esm --platform=node
 
 dist/codegen/actions.js: src/codegen/actions/index.ts dist/schema.graphqls $(CODEGEN_SRC)
-	$(NPX) esbuild $(<) --bundle --external:graphql --format=cjs --outfile=$@ --platform=node
+	$(NPX) esbuild $(<) --bundle --external:graphql --format=cjs --outfile=$@ --platform=node --sourcemap=external
 
 dist/codegen/cloudformation.js: src/codegen/cloudformation/index.ts dist/schema.graphqls $(CODEGEN_SRC)
-	$(NPX) esbuild $(<) --bundle --external:graphql --format=cjs --outfile=$@ --platform=node
+	$(NPX) esbuild $(<) --bundle --external:graphql --format=cjs --outfile=$@ --platform=node --sourcemap=external
+
+dist/codegen/parser.js: src/codegen/parser/index.ts $(PARSER_SRC)
+	$(NPX) esbuild $(<) --bundle --external:graphql --format=cjs --outfile=$@ --platform=node --sourcemap=external
 
 dist/schema.graphqls: src/codegen/schema.graphqls
 	mkdir -p dist
