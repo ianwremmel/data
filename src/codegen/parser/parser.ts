@@ -27,8 +27,10 @@ import type {
   Field,
   PrimaryKeyConfig,
   SecondaryIndex,
-  Table,
+  Model,
   TTLConfig,
+  Table,
+  TableSecondaryIndex,
 } from './types';
 
 export interface Info {
@@ -49,12 +51,12 @@ export function parse<T extends {dependenciesModuleId: string}>(
   documents: Types.DocumentFile[],
   config: T,
   info?: Info
-): readonly Table[] {
+): {models: readonly Model[]; tables: readonly Table[]} {
   const outputFile = info?.outputFile;
   assert(outputFile, 'outputFile is required');
 
   const typesMap = schema.getTypeMap();
-  return Object.keys(typesMap)
+  const models = Object.keys(typesMap)
     .filter((typeName) => {
       const type = schema.getTypeMap()[typeName];
       return isObjectType(type) && hasInterface('Model', type);
@@ -83,6 +85,112 @@ export function parse<T extends {dependenciesModuleId: string}>(
         ...extractTableInfo(type),
       };
     });
+
+  const tables: Table[] = Array.from(
+    models
+      .reduce((acc, model) => {
+        const set = acc.get(model.tableName) ?? new Set();
+        set.add(model);
+        acc.set(model.tableName, set);
+        return acc;
+      }, new Map<string, Set<Model>>())
+      .entries()
+  )
+    .map(
+      ([tableName, tableModels]) =>
+        [tableName, Array.from(tableModels)] as const
+    )
+    .map(([tableName, [firstModel, ...tableModels]]) => {
+      return tableModels.reduce(
+        (acc, model) => {
+          assert.equal(
+            acc.primaryKey.isComposite,
+            model.primaryKey.isComposite,
+            `Please check the Model definitions for ${tableName}. All Models in the same table must have the same type of primary key (either partition or composite).`
+          );
+          const secondaryIndexes = compareIndexes(
+            tableName,
+            acc.secondaryIndexes,
+            model.secondaryIndexes
+          );
+
+          return {
+            dependenciesModuleId: model.dependenciesModuleId,
+            enablePointInTimeRecovery:
+              acc.enablePointInTimeRecovery || model.enablePointInTimeRecovery,
+            hasCdc: acc.hasCdc || !!model.changeDataCaptureConfig,
+            hasTtl: acc.hasTtl || !!model.ttlConfig,
+            libImportPath: model.libImportPath,
+            primaryKey: {
+              isComposite: acc.primaryKey.isComposite,
+            },
+            secondaryIndexes,
+            tableName,
+          };
+        },
+        {
+          dependenciesModuleId: firstModel.dependenciesModuleId,
+          enablePointInTimeRecovery: firstModel.enablePointInTimeRecovery,
+          hasCdc: !!firstModel.changeDataCaptureConfig,
+          hasTtl: !!firstModel.ttlConfig,
+          libImportPath: firstModel.libImportPath,
+          primaryKey: {
+            isComposite: firstModel.primaryKey.isComposite,
+          },
+          secondaryIndexes: firstModel.secondaryIndexes.map(
+            ({isComposite, name, type}) => ({
+              isComposite,
+              name,
+              type,
+            })
+          ),
+          tableName,
+        } as Table
+      );
+    });
+
+  return {models, tables};
+}
+
+/** helper */
+function compareIndexes(
+  tableName: string,
+  tableIndexes: readonly TableSecondaryIndex[],
+  modelIndexes: readonly SecondaryIndex[]
+): TableSecondaryIndex[] {
+  const tableIndexMap = new Map<string, TableSecondaryIndex>(
+    tableIndexes.map((t) => [t.name, t])
+  );
+
+  const modelIndexMap = new Map<string, SecondaryIndex>(
+    modelIndexes.map((m) => [m.name, m])
+  );
+
+  const long =
+    tableIndexMap.size > modelIndexMap.size ? tableIndexMap : modelIndexMap;
+  const short =
+    tableIndexMap.size > modelIndexMap.size ? modelIndexMap : tableIndexMap;
+
+  for (const [name, index] of short.entries()) {
+    const longIndex = long.get(name);
+    if (longIndex) {
+      assert.equal(
+        index.isComposite,
+        longIndex.isComposite,
+        `Please check the secondary index ${name} for the table ${tableName}. All indees of the same name must be of the same type (either partition or composite).`
+      );
+
+      assert.equal(
+        index.type,
+        longIndex.type,
+        `Please check the secondary index ${name} for the table ${tableName}. All indees of the same name must be of the same type (either gsi or lsi).`
+      );
+    } else {
+      long.set(name, index);
+    }
+  }
+
+  return Array.from(long.values());
 }
 
 /** helper */

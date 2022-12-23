@@ -10,6 +10,8 @@ Globals:
       Variables:
         TABLE_ACCOUNTS:
           Ref: TableAccounts
+        TABLE_EMAIL:
+          Ref: TableEmail
     Handler: index.handler
     MemorySize: 256
     Runtime: nodejs18.x
@@ -25,6 +27,15 @@ Outputs:
         Ref: TableAccounts
     Value:
       Ref: TableAccounts
+  TableEmail:
+    Description: The name of the DynamoDB table for TableEmail
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-TableEmail
+      Value:
+        Ref: TableEmail
+    Value:
+      Ref: TableEmail
 Parameters:
   LogRetentionInDays:
     Default: 3
@@ -118,12 +129,23 @@ Resources:
           AttributeType: S
         - AttributeName: sk
           AttributeType: S
+        - AttributeName: lsi1
+          AttributeType: S
       BillingMode: PAY_PER_REQUEST
       KeySchema:
         - AttributeName: pk
           KeyType: HASH
         - AttributeName: sk
           KeyType: RANGE
+      LocalSecondaryIndexes:
+        - IndexName: lsi1
+          KeySchema:
+            - AttributeName: pk
+              KeyType: HASH
+            - AttributeName: lsi1
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled:
           Fn::If:
@@ -187,4 +209,39 @@ Resources:
       RetentionInDays:
         Ref: LogRetentionInDays
     Type: AWS::Logs::LogGroup
+  TableEmail:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled:
+          Fn::If:
+            - IsProd
+            - true
+            - false
+      SSESpecification:
+        SSEEnabled:
+          Fn::If:
+            - IsProd
+            - true
+            - false
+      Tags:
+        - Key: StageName
+          Value:
+            Ref: StageName
+        - Key: TableName
+          Value: TableEmail
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+    Type: AWS::DynamoDB::Table
 Transform: AWS::Serverless-2016-10-31

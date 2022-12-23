@@ -1,11 +1,11 @@
 import assert from 'assert';
 
-import type {Field, Table, TTLConfig} from '../../../parser';
+import type {Field, Model, TTLConfig} from '../../../parser';
 
 import {makeKeyTemplate, marshallField} from './helpers';
 
 export interface MarshallTplInput {
-  readonly table: Table;
+  readonly table: Model;
 }
 /** helper */
 function wrapFieldNameWithQuotes({fieldName}: Field): string {

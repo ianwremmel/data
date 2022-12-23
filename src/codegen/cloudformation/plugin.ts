@@ -11,7 +11,7 @@ import {CLOUDFORMATION_SCHEMA} from 'js-yaml-cloudformation-schema';
 
 import {parse} from '../parser';
 
-import {defineCdc} from './cdc';
+import {defineModelCdc, defineTableCdc} from './cdc';
 import type {CloudformationPluginConfig} from './config';
 import {combineFragments} from './fragments/combine-fragments';
 import {defineTable} from './table';
@@ -50,13 +50,16 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
   const outputFile = info?.outputFile;
   assert(outputFile, 'outputFile is required');
 
+  const {models, tables} = parse(schema, documents, config, info);
+
   const allResources = combineFragments(
-    ...parse(schema, documents, config, info).map((table) =>
+    ...tables.map((table) =>
       combineFragments(
-        defineCdc(table, config, {outputFile}),
+        defineTableCdc(table, config, {outputFile}),
         defineTable(table)
       )
-    )
+    ),
+    ...models.map((model) => defineModelCdc(model, config, {outputFile}))
   );
 
   const initialTemplate = getInitialTemplate(config);

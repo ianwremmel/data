@@ -1,4 +1,4 @@
-import type {PrimaryKeyConfig, Table} from '../../parser';
+import type {PrimaryKeyConfig, Model} from '../../parser';
 
 import {blindWriteTpl} from './templates/blind-write';
 import {createItemTpl} from './templates/create-item';
@@ -12,76 +12,76 @@ import {updateItemTpl} from './templates/update-item';
 /**
  * Generates the createItem function for a table
  */
-export function createItemTemplate(irTable: Table) {
+export function createItemTemplate(model: Model) {
   return createItemTpl({
-    key: makeKey(irTable.primaryKey),
-    tableName: irTable.tableName,
-    ttlConfig: irTable.ttlConfig,
-    typeName: irTable.typeName,
+    key: makeKey(model.primaryKey),
+    tableName: model.tableName,
+    ttlConfig: model.ttlConfig,
+    typeName: model.typeName,
   });
 }
 
 /**
  * Generates the createItem function for a table
  */
-export function blindWriteTemplate(irTable: Table) {
+export function blindWriteTemplate(model: Model) {
   return blindWriteTpl({
-    key: makeKey(irTable.primaryKey),
-    tableName: irTable.tableName,
-    ttlConfig: irTable.ttlConfig,
-    typeName: irTable.typeName,
+    key: makeKey(model.primaryKey),
+    tableName: model.tableName,
+    ttlConfig: model.ttlConfig,
+    typeName: model.typeName,
   });
 }
 
 /**
  * Generates the deleteItem function for a table
  */
-export function deleteItemTemplate(irTable: Table) {
+export function deleteItemTemplate(model: Model) {
   return deleteItemTpl({
-    key: makeKey(irTable.primaryKey),
-    tableName: irTable.tableName,
-    typeName: irTable.typeName,
+    key: makeKey(model.primaryKey),
+    tableName: model.tableName,
+    typeName: model.typeName,
   });
 }
 
 /**
  * Generates the query function for a table
  */
-export function queryTemplate(irTable: Table) {
-  if (!irTable.primaryKey.isComposite) {
+export function queryTemplate(model: Model) {
+  if (!model.primaryKey.isComposite) {
     return '';
   }
 
   return queryTpl({
-    consistent: irTable.consistent,
-    primaryKey: irTable.primaryKey,
-    secondaryIndexes: irTable.secondaryIndexes,
-    tableName: irTable.tableName,
-    typeName: irTable.typeName,
+    consistent: model.consistent,
+    primaryKey: model.primaryKey,
+    secondaryIndexes: model.secondaryIndexes,
+    tableName: model.tableName,
+    typeName: model.typeName,
   });
 }
 
 /**
  * Generates the readItem function for a table
  */
-export function readItemTemplate(irTable: Table) {
+export function readItemTemplate(model: Model) {
   return readItemTpl({
-    consistent: irTable.consistent,
-    key: makeKey(irTable.primaryKey),
-    tableName: irTable.tableName,
-    typeName: irTable.typeName,
+    consistent: model.consistent,
+    key: makeKey(model.primaryKey),
+    tableName: model.tableName,
+    typeName: model.typeName,
   });
 }
 
 /**
  * Generates the updateItem function for a table
  */
-export function touchItemTemplate(irTable: Table) {
+export function touchItemTemplate(model: Model) {
   const ean: string[] = [];
   const eav: string[] = [];
   const updateExpressions: string[] = [];
 
-  for (const {fieldName} of irTable.fields) {
+  for (const {fieldName} of model.fields) {
     if (fieldName === 'id') {
       continue;
     } else if (fieldName === 'version') {
@@ -89,11 +89,11 @@ export function touchItemTemplate(irTable: Table) {
       eav.push(`':versionInc': 1`);
       updateExpressions.push(`#version = #version + :versionInc`);
     } else if (
-      fieldName === irTable.ttlConfig?.fieldName &&
-      irTable.ttlConfig.duration
+      fieldName === model.ttlConfig?.fieldName &&
+      model.ttlConfig.duration
     ) {
       ean.push(`'#${fieldName}': 'ttl'`);
-      eav.push(`':ttlInc': ${irTable.ttlConfig.duration}`);
+      eav.push(`':ttlInc': ${model.ttlConfig.duration}`);
       updateExpressions.push(`#${fieldName} = #${fieldName} + :ttlInc`);
     }
   }
@@ -107,9 +107,9 @@ export function touchItemTemplate(irTable: Table) {
   return touchItemTpl({
     ean,
     eav,
-    key: makeKey(irTable.primaryKey),
-    tableName: irTable.tableName,
-    typeName: irTable.typeName,
+    key: makeKey(model.primaryKey),
+    tableName: model.tableName,
+    typeName: model.typeName,
     updateExpressions,
   });
 }
@@ -117,26 +117,26 @@ export function touchItemTemplate(irTable: Table) {
 /**
  * Generates the updateItem function for a table
  */
-export function updateItemTemplate(irTable: Table) {
+export function updateItemTemplate(model: Model) {
   return updateItemTpl({
-    key: makeKey(irTable.primaryKey),
+    key: makeKey(model.primaryKey),
     marshallPrimaryKey: objectToString(
       Object.fromEntries(
-        (irTable.primaryKey.isComposite
+        (model.primaryKey.isComposite
           ? [
-              ...irTable.primaryKey.partitionKeyFields,
-              ...irTable.primaryKey.sortKeyFields,
+              ...model.primaryKey.partitionKeyFields,
+              ...model.primaryKey.sortKeyFields,
             ]
-          : irTable.primaryKey.partitionKeyFields
+          : model.primaryKey.partitionKeyFields
         )
           .map(({fieldName}) => fieldName)
           .sort()
           .map((fieldName) => [fieldName, `input.${fieldName}`])
       )
     ),
-    tableName: irTable.tableName,
-    ttlConfig: irTable.ttlConfig,
-    typeName: irTable.typeName,
+    tableName: model.tableName,
+    ttlConfig: model.ttlConfig,
+    typeName: model.typeName,
   });
 }
 

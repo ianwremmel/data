@@ -1,4 +1,25 @@
 export interface Table {
+  readonly dependenciesModuleId: string;
+  readonly enablePointInTimeRecovery: boolean;
+  readonly hasCdc: boolean;
+  readonly hasTtl: boolean;
+  readonly libImportPath: string;
+  readonly primaryKey: TablePrimaryKeyConfig;
+  readonly secondaryIndexes: readonly TableSecondaryIndex[];
+  readonly tableName: string;
+}
+
+export interface TablePrimaryKeyConfig {
+  readonly isComposite: boolean;
+}
+
+export interface TableSecondaryIndex {
+  readonly isComposite: boolean;
+  readonly name: string;
+  readonly type: 'gsi' | 'lsi';
+}
+
+export interface Model {
   readonly changeDataCaptureConfig?: ChangeDataCaptureConfig;
   readonly consistent: boolean;
   readonly dependenciesModuleId: string;

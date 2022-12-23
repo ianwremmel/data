@@ -111,6 +111,34 @@ export interface QueryNodeArgs {
   id: Scalars['ID'];
 }
 
+export type ScheduledEmail = Model &
+  Timestamped &
+  Versioned & {
+    __typename?: 'ScheduledEmail';
+    createdAt: Scalars['Date'];
+    expires?: Maybe<Scalars['Date']>;
+    externalId: Scalars['String'];
+    id: Scalars['ID'];
+    template: Scalars['String'];
+    updatedAt: Scalars['Date'];
+    vendor: Vendor;
+    version: Scalars['Int'];
+  };
+
+export type SentEmail = Model &
+  Timestamped &
+  Versioned & {
+    __typename?: 'SentEmail';
+    createdAt: Scalars['Date'];
+    externalId: Scalars['String'];
+    id: Scalars['ID'];
+    messageId: Scalars['String'];
+    template: Scalars['String'];
+    updatedAt: Scalars['Date'];
+    vendor: Vendor;
+    version: Scalars['Int'];
+  };
+
 /** An object to track a user's logins */
 export type Subscription = Model &
   Node &
@@ -826,6 +854,1339 @@ export function unmarshallAccount(item: Record<string, any>): Account {
       planName: item.plan_name,
     };
   }
+
+  return result;
+}
+
+export interface ScheduledEmailPrimaryKey {
+  externalId: Scalars['String'];
+  template: Scalars['String'];
+  vendor: Vendor;
+}
+
+export type CreateScheduledEmailInput = Omit<
+  ScheduledEmail,
+  'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
+> &
+  Partial<Pick<ScheduledEmail, 'expires'>>;
+export type CreateScheduledEmailOutput = ResultType<ScheduledEmail>;
+/**  */
+export async function createScheduledEmail(
+  input: Readonly<CreateScheduledEmailInput>
+): Promise<Readonly<CreateScheduledEmailOutput>> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallScheduledEmail(input);
+  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+  // cannot return the newly written values.
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(
+    new UpdateCommand({
+      ConditionExpression: 'attribute_not_exists(#pk)',
+      ExpressionAttributeNames,
+      ExpressionAttributeValues,
+      Key: {
+        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+        sk: `SCHEDULED_EMAIL#${input.template}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'ScheduledEmail',
+    () =>
+      new DataIntegrityError(
+        `Expected to write ScheduledEmail but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallScheduledEmail(item),
+    metrics,
+  };
+}
+
+export type BlindWriteScheduledEmailInput = Omit<
+  ScheduledEmail,
+  'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
+> &
+  Partial<Pick<ScheduledEmail, 'expires'>>;
+export type BlindWriteScheduledEmailOutput = ResultType<ScheduledEmail>;
+/** */
+export async function blindWriteScheduledEmail(
+  input: Readonly<BlindWriteScheduledEmailInput>
+): Promise<Readonly<BlindWriteScheduledEmailOutput>> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallScheduledEmail(input);
+
+  delete ExpressionAttributeNames['#pk'];
+  delete ExpressionAttributeValues[':version'];
+
+  const eav = {...ExpressionAttributeValues, ':one': 1};
+  const ue = `${UpdateExpression.split(', ')
+    .filter((e) => !e.startsWith('#version'))
+    .join(', ')} ADD #version :one`;
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(
+    new UpdateCommand({
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: eav,
+      Key: {
+        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+        sk: `SCHEDULED_EMAIL#${input.template}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: ue,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'ScheduledEmail',
+    () =>
+      new DataIntegrityError(
+        `Expected to write ScheduledEmail but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallScheduledEmail(item),
+    metrics,
+  };
+}
+
+export type DeleteScheduledEmailOutput = ResultType<void>;
+
+/**  */
+export async function deleteScheduledEmail(
+  input: ScheduledEmailPrimaryKey
+): Promise<DeleteScheduledEmailOutput> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+
+  try {
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
+      await ddbDocClient.send(
+        new DeleteCommand({
+          ConditionExpression: 'attribute_exists(#pk)',
+          ExpressionAttributeNames: {
+            '#pk': 'pk',
+          },
+          Key: {
+            pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+            sk: `SCHEDULED_EMAIL#${input.template}`,
+          },
+          ReturnConsumedCapacity: 'INDEXES',
+          ReturnItemCollectionMetrics: 'SIZE',
+          ReturnValues: 'NONE',
+          TableName: tableName,
+        })
+      );
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
+    return {
+      capacity,
+      item: undefined,
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new NotFoundError('ScheduledEmail', input);
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
+}
+
+export type ReadScheduledEmailOutput = ResultType<ScheduledEmail>;
+
+/**  */
+export async function readScheduledEmail(
+  input: ScheduledEmailPrimaryKey
+): Promise<Readonly<ReadScheduledEmailOutput>> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+
+  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+    new GetCommand({
+      ConsistentRead: false,
+      Key: {
+        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+        sk: `SCHEDULED_EMAIL#${input.template}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      TableName: tableName,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, () => new NotFoundError('ScheduledEmail', input));
+  assert(
+    item._et === 'ScheduledEmail',
+    () =>
+      new DataIntegrityError(
+        `Expected ${JSON.stringify(
+          input
+        )} to load a ScheduledEmail but loaded ${item._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallScheduledEmail(item),
+    metrics: undefined,
+  };
+}
+
+export type TouchScheduledEmailOutput = ResultType<void>;
+
+/**  */
+export async function touchScheduledEmail(
+  input: ScheduledEmailPrimaryKey
+): Promise<TouchScheduledEmailOutput> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+  try {
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
+      await ddbDocClient.send(
+        new UpdateCommand({
+          ConditionExpression: 'attribute_exists(#pk)',
+          ExpressionAttributeNames: {
+            '#expires': 'ttl',
+            '#pk': 'pk',
+            '#version': '_v',
+          },
+          ExpressionAttributeValues: {
+            ':ttlInc': 86400000,
+            ':versionInc': 1,
+          },
+          Key: {
+            pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+            sk: `SCHEDULED_EMAIL#${input.template}`,
+          },
+          ReturnConsumedCapacity: 'INDEXES',
+          ReturnItemCollectionMetrics: 'SIZE',
+          ReturnValues: 'ALL_NEW',
+          TableName: tableName,
+          UpdateExpression:
+            'SET #expires = #expires + :ttlInc, #version = #version + :versionInc',
+        })
+      );
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
+    return {
+      capacity,
+      item: undefined,
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new NotFoundError('ScheduledEmail', input);
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
+}
+
+export type UpdateScheduledEmailInput = Omit<
+  ScheduledEmail,
+  'createdAt' | 'expires' | 'id' | 'updatedAt'
+> &
+  Partial<Pick<ScheduledEmail, 'expires'>>;
+export type UpdateScheduledEmailOutput = ResultType<ScheduledEmail>;
+
+/**  */
+export async function updateScheduledEmail(
+  input: Readonly<UpdateScheduledEmailInput>
+): Promise<Readonly<UpdateScheduledEmailOutput>> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallScheduledEmail(input);
+  try {
+    const {
+      Attributes: item,
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+    } = await ddbDocClient.send(
+      new UpdateCommand({
+        ConditionExpression:
+          '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+        ExpressionAttributeNames,
+        ExpressionAttributeValues: {
+          ...ExpressionAttributeValues,
+          ':previousVersion': input.version,
+        },
+        Key: {
+          pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+          sk: `SCHEDULED_EMAIL#${input.template}`,
+        },
+        ReturnConsumedCapacity: 'INDEXES',
+        ReturnItemCollectionMetrics: 'SIZE',
+        ReturnValues: 'ALL_NEW',
+        TableName: tableName,
+        UpdateExpression,
+      })
+    );
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'ScheduledEmail',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify({
+            externalId: input.externalId,
+            template: input.template,
+            vendor: input.vendor,
+          })} to update a ScheduledEmail but updated ${item._et} instead`
+        )
+    );
+
+    return {
+      capacity,
+      item: unmarshallScheduledEmail(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      try {
+        await readScheduledEmail(input);
+      } catch {
+        throw new NotFoundError('ScheduledEmail', {
+          externalId: input.externalId,
+          template: input.template,
+          vendor: input.vendor,
+        });
+      }
+      throw new OptimisticLockingError('ScheduledEmail', {
+        externalId: input.externalId,
+        template: input.template,
+        vendor: input.vendor,
+      });
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
+}
+
+export type QueryScheduledEmailInput =
+  | {externalId: Scalars['String']; vendor: Vendor}
+  | {
+      externalId: Scalars['String'];
+      template: Scalars['String'];
+      vendor: Vendor;
+    };
+export type QueryScheduledEmailOutput = MultiResultType<ScheduledEmail>;
+
+/** helper */
+function makePartitionKeyForQueryScheduledEmail(
+  input: QueryScheduledEmailInput
+): string {
+  if (!('index' in input)) {
+    return `ACCOUNT#${input.vendor}#${input.externalId}`;
+  }
+
+  throw new Error('Could not construct partition key from input');
+}
+
+/** helper */
+function makeSortKeyForQueryScheduledEmail(
+  input: QueryScheduledEmailInput
+): string | undefined {
+  return ['SCHEDULED_EMAIL', 'template' in input && input.template]
+    .filter(Boolean)
+    .join('#');
+}
+
+/** helper */
+function makeEavPkForQueryScheduledEmail(
+  input: QueryScheduledEmailInput
+): string {
+  return 'pk';
+}
+
+/** helper */
+function makeEavSkForQueryScheduledEmail(
+  input: QueryScheduledEmailInput
+): string {
+  return 'sk';
+}
+
+/** queryScheduledEmail */
+export async function queryScheduledEmail(
+  input: Readonly<QueryScheduledEmailInput>,
+  {
+    limit = undefined,
+    operator = 'begins_with',
+    reverse = false,
+  }: QueryOptions = {}
+): Promise<Readonly<QueryScheduledEmailOutput>> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+
+  const {ConsumedCapacity: capacity, Items: items = []} =
+    await ddbDocClient.send(
+      new QueryCommand({
+        ConsistentRead: false,
+        ExpressionAttributeNames: {
+          '#pk': makeEavPkForQueryScheduledEmail(input),
+          '#sk': makeEavSkForQueryScheduledEmail(input),
+        },
+        ExpressionAttributeValues: {
+          ':pk': makePartitionKeyForQueryScheduledEmail(input),
+          ':sk': makeSortKeyForQueryScheduledEmail(input),
+        },
+        IndexName: undefined,
+        KeyConditionExpression: `#pk = :pk AND ${
+          operator === 'begins_with'
+            ? 'begins_with(#sk, :sk)'
+            : `#sk ${operator} :sk`
+        }`,
+        Limit: limit,
+        ReturnConsumedCapacity: 'INDEXES',
+        ScanIndexForward: !reverse,
+        TableName: tableName,
+      })
+    );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  return {
+    capacity,
+    items: items.map((item) => {
+      assert(
+        item._et === 'ScheduledEmail',
+        () => new DataIntegrityError('TODO')
+      );
+      return unmarshallScheduledEmail(item);
+    }),
+  };
+}
+
+/** queries the ScheduledEmail table by primary key using a node id */
+export async function queryScheduledEmailByNodeId(
+  id: Scalars['ID']
+): Promise<Readonly<Omit<ResultType<ScheduledEmail>, 'metrics'>>> {
+  const primaryKeyValues = Base64.decode(id)
+    .split(':')
+    .slice(1)
+    .join(':')
+    .split('#');
+
+  const primaryKey: QueryScheduledEmailInput = {
+    vendor: primaryKeyValues[1] as Vendor,
+    externalId: primaryKeyValues[2],
+  };
+
+  if (typeof primaryKeyValues[2] !== 'undefined') {
+    // @ts-ignore - TSC will usually see this as an error because it determined
+    // that primaryKey is the no-sort-fields-specified version of the type.
+    primaryKey.template = primaryKeyValues[5];
+  }
+
+  const {capacity, items} = await queryScheduledEmail(primaryKey);
+
+  assert(
+    items.length > 0,
+    () => new NotFoundError('ScheduledEmail', primaryKey)
+  );
+  assert(
+    items.length < 2,
+    () => new DataIntegrityError(`Found multiple ScheduledEmail with id ${id}`)
+  );
+
+  return {capacity, item: items[0]};
+}
+
+export interface MarshallScheduledEmailOutput {
+  ExpressionAttributeNames: Record<string, string>;
+  ExpressionAttributeValues: Record<string, NativeAttributeValue>;
+  UpdateExpression: string;
+}
+
+export type MarshallScheduledEmailInput = Required<
+  Pick<ScheduledEmail, 'externalId' | 'template' | 'vendor'>
+> &
+  Partial<Pick<ScheduledEmail, 'expires' | 'version'>>;
+
+/** Marshalls a DynamoDB record into a ScheduledEmail object */
+export function marshallScheduledEmail(
+  input: MarshallScheduledEmailInput
+): MarshallScheduledEmailOutput {
+  const now = new Date();
+
+  const updateExpression: string[] = [
+    '#entity = :entity',
+    '#createdAt = :createdAt',
+    '#externalId = :externalId',
+    '#template = :template',
+    '#updatedAt = :updatedAt',
+    '#vendor = :vendor',
+    '#version = :version',
+  ];
+
+  const ean: Record<string, string> = {
+    '#entity': '_et',
+    '#pk': 'pk',
+    '#createdAt': '_ct',
+    '#externalId': 'external_id',
+    '#template': 'template',
+    '#updatedAt': '_md',
+    '#vendor': 'vendor',
+    '#version': '_v',
+  };
+
+  const eav: Record<string, unknown> = {
+    ':entity': 'ScheduledEmail',
+    ':externalId': input.externalId,
+    ':template': input.template,
+    ':vendor': input.vendor,
+    ':createdAt': now.getTime(),
+    ':updatedAt': now.getTime(),
+    ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
+  };
+
+  if ('expires' in input && typeof input.expires !== 'undefined') {
+    assert(
+      !Number.isNaN(input.expires?.getTime()),
+      'expires was passed but is not a valid date'
+    );
+    ean['#expires'] = 'ttl';
+    eav[':expires'] = input.expires === null ? null : input.expires.getTime();
+    updateExpression.push('#expires = :expires');
+  } else {
+    ean['#expires'] = 'ttl';
+    eav[':expires'] = now.getTime() + 86400000;
+    updateExpression.push('#expires = :expires');
+  }
+
+  updateExpression.sort();
+
+  return {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    UpdateExpression: `SET ${updateExpression.join(', ')}`,
+  };
+}
+
+/** Unmarshalls a DynamoDB record into a ScheduledEmail object */
+export function unmarshallScheduledEmail(
+  item: Record<string, any>
+): ScheduledEmail {
+  if ('_ct' in item) {
+    assert(
+      item._ct !== null,
+      () => new DataIntegrityError('Expected createdAt to be non-null')
+    );
+    assert(
+      typeof item._ct !== 'undefined',
+      () => new DataIntegrityError('Expected createdAt to be defined')
+    );
+  }
+  if ('external_id' in item) {
+    assert(
+      item.external_id !== null,
+      () => new DataIntegrityError('Expected externalId to be non-null')
+    );
+    assert(
+      typeof item.external_id !== 'undefined',
+      () => new DataIntegrityError('Expected externalId to be defined')
+    );
+  }
+  if ('id' in item) {
+    assert(
+      item.id !== null,
+      () => new DataIntegrityError('Expected id to be non-null')
+    );
+    assert(
+      typeof item.id !== 'undefined',
+      () => new DataIntegrityError('Expected id to be defined')
+    );
+  }
+  if ('template' in item) {
+    assert(
+      item.template !== null,
+      () => new DataIntegrityError('Expected template to be non-null')
+    );
+    assert(
+      typeof item.template !== 'undefined',
+      () => new DataIntegrityError('Expected template to be defined')
+    );
+  }
+  if ('_md' in item) {
+    assert(
+      item._md !== null,
+      () => new DataIntegrityError('Expected updatedAt to be non-null')
+    );
+    assert(
+      typeof item._md !== 'undefined',
+      () => new DataIntegrityError('Expected updatedAt to be defined')
+    );
+  }
+  if ('vendor' in item) {
+    assert(
+      item.vendor !== null,
+      () => new DataIntegrityError('Expected vendor to be non-null')
+    );
+    assert(
+      typeof item.vendor !== 'undefined',
+      () => new DataIntegrityError('Expected vendor to be defined')
+    );
+  }
+  if ('_v' in item) {
+    assert(
+      item._v !== null,
+      () => new DataIntegrityError('Expected version to be non-null')
+    );
+    assert(
+      typeof item._v !== 'undefined',
+      () => new DataIntegrityError('Expected version to be defined')
+    );
+  }
+
+  let result: ScheduledEmail = {
+    createdAt: new Date(item._ct),
+    externalId: item.external_id,
+    id: Base64.encode(`ScheduledEmail:${item.pk}#:#${item.sk}`),
+    template: item.template,
+    updatedAt: new Date(item._md),
+    vendor: item.vendor,
+    version: item._v,
+  };
+
+  if ('ttl' in item) {
+    result = {
+      ...result,
+      expires: item.ttl ? new Date(item.ttl) : null,
+    };
+  }
+
+  return result;
+}
+
+export interface SentEmailPrimaryKey {
+  createdAt: Scalars['Date'];
+  externalId: Scalars['String'];
+  template: Scalars['String'];
+  vendor: Vendor;
+}
+
+export type CreateSentEmailInput = Omit<
+  SentEmail,
+  'createdAt' | 'id' | 'updatedAt' | 'version'
+>;
+export type CreateSentEmailOutput = ResultType<SentEmail>;
+/**  */
+export async function createSentEmail(
+  input: Readonly<CreateSentEmailInput>
+): Promise<Readonly<CreateSentEmailOutput>> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallSentEmail(input);
+  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+  // cannot return the newly written values.
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(
+    new UpdateCommand({
+      ConditionExpression: 'attribute_not_exists(#pk)',
+      ExpressionAttributeNames,
+      ExpressionAttributeValues,
+      Key: {
+        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+        sk: `TEMPLATE#${input.template}#${now.getTime()}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'SentEmail',
+    () =>
+      new DataIntegrityError(
+        `Expected to write SentEmail but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallSentEmail(item),
+    metrics,
+  };
+}
+
+export type BlindWriteSentEmailInput = Omit<
+  SentEmail,
+  'createdAt' | 'id' | 'updatedAt' | 'version'
+>;
+export type BlindWriteSentEmailOutput = ResultType<SentEmail>;
+/** */
+export async function blindWriteSentEmail(
+  input: Readonly<BlindWriteSentEmailInput>
+): Promise<Readonly<BlindWriteSentEmailOutput>> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallSentEmail(input);
+
+  delete ExpressionAttributeNames['#pk'];
+  delete ExpressionAttributeValues[':version'];
+
+  const eav = {...ExpressionAttributeValues, ':one': 1};
+  const ue = `${UpdateExpression.split(', ')
+    .filter((e) => !e.startsWith('#version'))
+    .join(', ')} ADD #version :one`;
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(
+    new UpdateCommand({
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: eav,
+      Key: {
+        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+        sk: `TEMPLATE#${input.template}#${now.getTime()}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: ue,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'SentEmail',
+    () =>
+      new DataIntegrityError(
+        `Expected to write SentEmail but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallSentEmail(item),
+    metrics,
+  };
+}
+
+export type DeleteSentEmailOutput = ResultType<void>;
+
+/**  */
+export async function deleteSentEmail(
+  input: SentEmailPrimaryKey
+): Promise<DeleteSentEmailOutput> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+
+  try {
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
+      await ddbDocClient.send(
+        new DeleteCommand({
+          ConditionExpression: 'attribute_exists(#pk)',
+          ExpressionAttributeNames: {
+            '#pk': 'pk',
+          },
+          Key: {
+            pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+            sk: `TEMPLATE#${input.template}#${now.getTime()}`,
+          },
+          ReturnConsumedCapacity: 'INDEXES',
+          ReturnItemCollectionMetrics: 'SIZE',
+          ReturnValues: 'NONE',
+          TableName: tableName,
+        })
+      );
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
+    return {
+      capacity,
+      item: undefined,
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new NotFoundError('SentEmail', input);
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
+}
+
+export type ReadSentEmailOutput = ResultType<SentEmail>;
+
+/**  */
+export async function readSentEmail(
+  input: SentEmailPrimaryKey
+): Promise<Readonly<ReadSentEmailOutput>> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+
+  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+    new GetCommand({
+      ConsistentRead: false,
+      Key: {
+        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+        sk: `TEMPLATE#${input.template}#${now.getTime()}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      TableName: tableName,
+    })
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, () => new NotFoundError('SentEmail', input));
+  assert(
+    item._et === 'SentEmail',
+    () =>
+      new DataIntegrityError(
+        `Expected ${JSON.stringify(input)} to load a SentEmail but loaded ${
+          item._et
+        } instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallSentEmail(item),
+    metrics: undefined,
+  };
+}
+
+export type TouchSentEmailOutput = ResultType<void>;
+
+/**  */
+export async function touchSentEmail(
+  input: SentEmailPrimaryKey
+): Promise<TouchSentEmailOutput> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+  try {
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
+      await ddbDocClient.send(
+        new UpdateCommand({
+          ConditionExpression: 'attribute_exists(#pk)',
+          ExpressionAttributeNames: {
+            '#pk': 'pk',
+            '#version': '_v',
+          },
+          ExpressionAttributeValues: {
+            ':versionInc': 1,
+          },
+          Key: {
+            pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+            sk: `TEMPLATE#${input.template}#${now.getTime()}`,
+          },
+          ReturnConsumedCapacity: 'INDEXES',
+          ReturnItemCollectionMetrics: 'SIZE',
+          ReturnValues: 'ALL_NEW',
+          TableName: tableName,
+          UpdateExpression: 'SET #version = #version + :versionInc',
+        })
+      );
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
+    return {
+      capacity,
+      item: undefined,
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new NotFoundError('SentEmail', input);
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
+}
+
+export type UpdateSentEmailInput = Omit<
+  SentEmail,
+  'createdAt' | 'id' | 'updatedAt'
+>;
+export type UpdateSentEmailOutput = ResultType<SentEmail>;
+
+/**  */
+export async function updateSentEmail(
+  input: Readonly<UpdateSentEmailInput>
+): Promise<Readonly<UpdateSentEmailOutput>> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallSentEmail(input);
+  try {
+    const {
+      Attributes: item,
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+    } = await ddbDocClient.send(
+      new UpdateCommand({
+        ConditionExpression:
+          '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+        ExpressionAttributeNames,
+        ExpressionAttributeValues: {
+          ...ExpressionAttributeValues,
+          ':previousVersion': input.version,
+        },
+        Key: {
+          pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+          sk: `TEMPLATE#${input.template}#${now.getTime()}`,
+        },
+        ReturnConsumedCapacity: 'INDEXES',
+        ReturnItemCollectionMetrics: 'SIZE',
+        ReturnValues: 'ALL_NEW',
+        TableName: tableName,
+        UpdateExpression,
+      })
+    );
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'SentEmail',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify({
+            createdAt: input.createdAt,
+            externalId: input.externalId,
+            template: input.template,
+            vendor: input.vendor,
+          })} to update a SentEmail but updated ${item._et} instead`
+        )
+    );
+
+    return {
+      capacity,
+      item: unmarshallSentEmail(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      try {
+        await readSentEmail(input);
+      } catch {
+        throw new NotFoundError('SentEmail', {
+          createdAt: input.createdAt,
+          externalId: input.externalId,
+          template: input.template,
+          vendor: input.vendor,
+        });
+      }
+      throw new OptimisticLockingError('SentEmail', {
+        createdAt: input.createdAt,
+        externalId: input.externalId,
+        template: input.template,
+        vendor: input.vendor,
+      });
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
+}
+
+export type QuerySentEmailInput =
+  | {externalId: Scalars['String']; vendor: Vendor}
+  | {externalId: Scalars['String']; template: Scalars['String']; vendor: Vendor}
+  | {
+      createdAt: Scalars['Date'];
+      externalId: Scalars['String'];
+      template: Scalars['String'];
+      vendor: Vendor;
+    };
+export type QuerySentEmailOutput = MultiResultType<SentEmail>;
+
+/** helper */
+function makePartitionKeyForQuerySentEmail(input: QuerySentEmailInput): string {
+  if (!('index' in input)) {
+    return `ACCOUNT#${input.vendor}#${input.externalId}`;
+  }
+
+  throw new Error('Could not construct partition key from input');
+}
+
+/** helper */
+function makeSortKeyForQuerySentEmail(
+  input: QuerySentEmailInput
+): string | undefined {
+  return [
+    'TEMPLATE',
+    'template' in input && input.template,
+    'createdAt' in input && input.createdAt,
+  ]
+    .filter(Boolean)
+    .join('#');
+}
+
+/** helper */
+function makeEavPkForQuerySentEmail(input: QuerySentEmailInput): string {
+  return 'pk';
+}
+
+/** helper */
+function makeEavSkForQuerySentEmail(input: QuerySentEmailInput): string {
+  return 'sk';
+}
+
+/** querySentEmail */
+export async function querySentEmail(
+  input: Readonly<QuerySentEmailInput>,
+  {
+    limit = undefined,
+    operator = 'begins_with',
+    reverse = false,
+  }: QueryOptions = {}
+): Promise<Readonly<QuerySentEmailOutput>> {
+  const tableName = process.env.TABLE_EMAIL;
+  assert(tableName, 'TABLE_EMAIL is not set');
+
+  const {ConsumedCapacity: capacity, Items: items = []} =
+    await ddbDocClient.send(
+      new QueryCommand({
+        ConsistentRead: false,
+        ExpressionAttributeNames: {
+          '#pk': makeEavPkForQuerySentEmail(input),
+          '#sk': makeEavSkForQuerySentEmail(input),
+        },
+        ExpressionAttributeValues: {
+          ':pk': makePartitionKeyForQuerySentEmail(input),
+          ':sk': makeSortKeyForQuerySentEmail(input),
+        },
+        IndexName: undefined,
+        KeyConditionExpression: `#pk = :pk AND ${
+          operator === 'begins_with'
+            ? 'begins_with(#sk, :sk)'
+            : `#sk ${operator} :sk`
+        }`,
+        Limit: limit,
+        ReturnConsumedCapacity: 'INDEXES',
+        ScanIndexForward: !reverse,
+        TableName: tableName,
+      })
+    );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  return {
+    capacity,
+    items: items.map((item) => {
+      assert(item._et === 'SentEmail', () => new DataIntegrityError('TODO'));
+      return unmarshallSentEmail(item);
+    }),
+  };
+}
+
+/** queries the SentEmail table by primary key using a node id */
+export async function querySentEmailByNodeId(
+  id: Scalars['ID']
+): Promise<Readonly<Omit<ResultType<SentEmail>, 'metrics'>>> {
+  const primaryKeyValues = Base64.decode(id)
+    .split(':')
+    .slice(1)
+    .join(':')
+    .split('#');
+
+  const primaryKey: QuerySentEmailInput = {
+    vendor: primaryKeyValues[1] as Vendor,
+    externalId: primaryKeyValues[2],
+  };
+
+  if (typeof primaryKeyValues[2] !== 'undefined') {
+    // @ts-ignore - TSC will usually see this as an error because it determined
+    // that primaryKey is the no-sort-fields-specified version of the type.
+    primaryKey.template = primaryKeyValues[5];
+  }
+
+  if (typeof primaryKeyValues[3] !== 'undefined') {
+    // @ts-ignore - TSC will usually see this as an error because it determined
+    // that primaryKey is the no-sort-fields-specified version of the type.
+    primaryKey.createdAt = new Date(primaryKeyValues[6]);
+  }
+
+  const {capacity, items} = await querySentEmail(primaryKey);
+
+  assert(items.length > 0, () => new NotFoundError('SentEmail', primaryKey));
+  assert(
+    items.length < 2,
+    () => new DataIntegrityError(`Found multiple SentEmail with id ${id}`)
+  );
+
+  return {capacity, item: items[0]};
+}
+
+export interface MarshallSentEmailOutput {
+  ExpressionAttributeNames: Record<string, string>;
+  ExpressionAttributeValues: Record<string, NativeAttributeValue>;
+  UpdateExpression: string;
+}
+
+export type MarshallSentEmailInput = Required<
+  Pick<SentEmail, 'externalId' | 'messageId' | 'template' | 'vendor'>
+> &
+  Partial<Pick<SentEmail, 'version'>>;
+
+/** Marshalls a DynamoDB record into a SentEmail object */
+export function marshallSentEmail(
+  input: MarshallSentEmailInput
+): MarshallSentEmailOutput {
+  const now = new Date();
+
+  const updateExpression: string[] = [
+    '#entity = :entity',
+    '#createdAt = :createdAt',
+    '#externalId = :externalId',
+    '#messageId = :messageId',
+    '#template = :template',
+    '#updatedAt = :updatedAt',
+    '#vendor = :vendor',
+    '#version = :version',
+  ];
+
+  const ean: Record<string, string> = {
+    '#entity': '_et',
+    '#pk': 'pk',
+    '#createdAt': '_ct',
+    '#externalId': 'external_id',
+    '#messageId': 'message_id',
+    '#template': 'template',
+    '#updatedAt': '_md',
+    '#vendor': 'vendor',
+    '#version': '_v',
+  };
+
+  const eav: Record<string, unknown> = {
+    ':entity': 'SentEmail',
+    ':externalId': input.externalId,
+    ':messageId': input.messageId,
+    ':template': input.template,
+    ':vendor': input.vendor,
+    ':createdAt': now.getTime(),
+    ':updatedAt': now.getTime(),
+    ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
+  };
+
+  updateExpression.sort();
+
+  return {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    UpdateExpression: `SET ${updateExpression.join(', ')}`,
+  };
+}
+
+/** Unmarshalls a DynamoDB record into a SentEmail object */
+export function unmarshallSentEmail(item: Record<string, any>): SentEmail {
+  if ('_ct' in item) {
+    assert(
+      item._ct !== null,
+      () => new DataIntegrityError('Expected createdAt to be non-null')
+    );
+    assert(
+      typeof item._ct !== 'undefined',
+      () => new DataIntegrityError('Expected createdAt to be defined')
+    );
+  }
+  if ('external_id' in item) {
+    assert(
+      item.external_id !== null,
+      () => new DataIntegrityError('Expected externalId to be non-null')
+    );
+    assert(
+      typeof item.external_id !== 'undefined',
+      () => new DataIntegrityError('Expected externalId to be defined')
+    );
+  }
+  if ('id' in item) {
+    assert(
+      item.id !== null,
+      () => new DataIntegrityError('Expected id to be non-null')
+    );
+    assert(
+      typeof item.id !== 'undefined',
+      () => new DataIntegrityError('Expected id to be defined')
+    );
+  }
+  if ('message_id' in item) {
+    assert(
+      item.message_id !== null,
+      () => new DataIntegrityError('Expected messageId to be non-null')
+    );
+    assert(
+      typeof item.message_id !== 'undefined',
+      () => new DataIntegrityError('Expected messageId to be defined')
+    );
+  }
+  if ('template' in item) {
+    assert(
+      item.template !== null,
+      () => new DataIntegrityError('Expected template to be non-null')
+    );
+    assert(
+      typeof item.template !== 'undefined',
+      () => new DataIntegrityError('Expected template to be defined')
+    );
+  }
+  if ('_md' in item) {
+    assert(
+      item._md !== null,
+      () => new DataIntegrityError('Expected updatedAt to be non-null')
+    );
+    assert(
+      typeof item._md !== 'undefined',
+      () => new DataIntegrityError('Expected updatedAt to be defined')
+    );
+  }
+  if ('vendor' in item) {
+    assert(
+      item.vendor !== null,
+      () => new DataIntegrityError('Expected vendor to be non-null')
+    );
+    assert(
+      typeof item.vendor !== 'undefined',
+      () => new DataIntegrityError('Expected vendor to be defined')
+    );
+  }
+  if ('_v' in item) {
+    assert(
+      item._v !== null,
+      () => new DataIntegrityError('Expected version to be non-null')
+    );
+    assert(
+      typeof item._v !== 'undefined',
+      () => new DataIntegrityError('Expected version to be defined')
+    );
+  }
+
+  const result: SentEmail = {
+    createdAt: new Date(item._ct),
+    externalId: item.external_id,
+    id: Base64.encode(`SentEmail:${item.pk}#:#${item.sk}`),
+    messageId: item.message_id,
+    template: item.template,
+    updatedAt: new Date(item._md),
+    vendor: item.vendor,
+    version: item._v,
+  };
 
   return result;
 }

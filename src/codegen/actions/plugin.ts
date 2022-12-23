@@ -39,6 +39,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   info
 ) => {
   try {
+    const {models} = parse(schema, documents, config, info);
     const content = `export interface ResultType<T> {
   capacity: ConsumedCapacity;
   item: T;
@@ -50,7 +51,7 @@ export interface MultiResultType<T> {
   items: T[];
 }
 
-${parse(schema, documents, config, info)
+${models
   .map((table) => {
     return [
       `export interface ${table.typeName}PrimaryKey ${objectToString(
