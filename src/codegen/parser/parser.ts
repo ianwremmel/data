@@ -108,6 +108,15 @@ function extractFields(
     };
   });
 }
+/** helper */
+function getFieldFromFieldMap(
+  fieldMap: Record<string, Field>,
+  fieldName: string
+): Field {
+  const field = fieldMap[fieldName];
+  assert(field, `Expected field ${fieldName} to exist`);
+  return field;
+}
 
 /** helper */
 function extractPrimaryKey(
@@ -120,11 +129,11 @@ function extractPrimaryKey(
     return {
       isComposite: true,
       partitionKeyFields: getArgStringArrayValue('pkFields', directive).map(
-        (fieldName) => fieldMap[fieldName]
+        (fieldName) => getFieldFromFieldMap(fieldMap, fieldName)
       ),
       partitionKeyPrefix: getOptionalArgStringValue('pkPrefix', directive),
       sortKeyFields: getArgStringArrayValue('skFields', directive).map(
-        (fieldName) => fieldMap[fieldName]
+        (fieldName) => getFieldFromFieldMap(fieldMap, fieldName)
       ),
       sortKeyPrefix: getOptionalArgStringValue('skPrefix', directive),
       type: 'primary',
@@ -137,7 +146,7 @@ function extractPrimaryKey(
     return {
       isComposite: false,
       partitionKeyFields: getArgStringArrayValue('pkFields', directive).map(
-        (fieldName) => fieldMap[fieldName]
+        (fieldName) => getFieldFromFieldMap(fieldMap, fieldName)
       ),
       partitionKeyPrefix: getOptionalArgStringValue('pkPrefix', directive),
       type: 'primary',
@@ -169,13 +178,13 @@ function extractSecondaryIndexes(
             partitionKeyFields: getArgStringArrayValue(
               'pkFields',
               directive
-            ).map((fieldName) => fieldMap[fieldName]),
+            ).map((fieldName) => getFieldFromFieldMap(fieldMap, fieldName)),
             partitionKeyPrefix: getOptionalArgStringValue(
               'pkPrefix',
               directive
             ),
             sortKeyFields: getArgStringArrayValue('skFields', directive).map(
-              (fieldName) => fieldMap[fieldName]
+              (fieldName) => getFieldFromFieldMap(fieldMap, fieldName)
             ),
             sortKeyPrefix: getOptionalArgStringValue('skPrefix', directive),
             type: 'gsi',
@@ -188,7 +197,7 @@ function extractSecondaryIndexes(
           isComposite: true,
           name: getArgStringValue('name', directive),
           sortKeyFields: getArgStringArrayValue('fields', directive).map(
-            (fieldName) => fieldMap[fieldName]
+            (fieldName) => getFieldFromFieldMap(fieldMap, fieldName)
           ),
           sortKeyPrefix: getOptionalArgStringValue('prefix', directive),
           type: 'lsi',
