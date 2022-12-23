@@ -211,11 +211,14 @@ export async function createCaseInstance(
 ): Promise<Readonly<CreateCaseInstanceOutput>> {
   const tableName = process.env.TABLE_CASE_INSTANCE;
   assert(tableName, 'TABLE_CASE_INSTANCE is not set');
+
+  const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallCaseInstance(input);
+  } = marshallCaseInstance(input, now);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -225,8 +228,14 @@ export async function createCaseInstance(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames,
-      ExpressionAttributeValues,
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
       Key: {
         pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
         sk: `INSTANCE#${input.sha}#${input.retry}`,
@@ -235,7 +244,7 @@ export async function createCaseInstance(
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression,
+      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
     })
   );
 
@@ -271,19 +280,29 @@ export async function blindWriteCaseInstance(
 ): Promise<Readonly<BlindWriteCaseInstanceOutput>> {
   const tableName = process.env.TABLE_CASE_INSTANCE;
   assert(tableName, 'TABLE_CASE_INSTANCE is not set');
+  const now = new Date();
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallCaseInstance(input);
+  } = marshallCaseInstance(input, now);
 
   delete ExpressionAttributeNames['#pk'];
   delete ExpressionAttributeValues[':version'];
 
-  const eav = {...ExpressionAttributeValues, ':one': 1};
-  const ue = `${UpdateExpression.split(', ')
-    .filter((e) => !e.startsWith('#version'))
-    .join(', ')} ADD #version :one`;
+  const ean = {
+    ...ExpressionAttributeNames,
+    '#createdAt': '_ct',
+  };
+  const eav = {
+    ...ExpressionAttributeValues,
+    ':one': 1,
+    ':createdAt': now.getTime(),
+  };
+  const ue = `${[
+    ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
+    '#createdAt = if_not_exists(#createdAt, :createdAt)',
+  ].join(', ')} ADD #version :one`;
 
   const {
     ConsumedCapacity: capacity,
@@ -291,7 +310,7 @@ export async function blindWriteCaseInstance(
     Attributes: item,
   } = await ddbDocClient.send(
     new UpdateCommand({
-      ExpressionAttributeNames,
+      ExpressionAttributeNames: ean,
       ExpressionAttributeValues: eav,
       Key: {
         pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
@@ -895,15 +914,13 @@ export type MarshallCaseInstanceInput = Required<
 
 /** Marshalls a DynamoDB record into a CaseInstance object */
 export function marshallCaseInstance(
-  input: MarshallCaseInstanceInput
+  input: MarshallCaseInstanceInput,
+  now = new Date()
 ): MarshallCaseInstanceOutput {
-  const now = new Date();
-
   const updateExpression: string[] = [
     '#entity = :entity',
     '#branchName = :branchName',
     '#conclusion = :conclusion',
-    '#createdAt = :createdAt',
     '#lineage = :lineage',
     '#repoId = :repoId',
     '#retry = :retry',
@@ -924,7 +941,6 @@ export function marshallCaseInstance(
     '#pk': 'pk',
     '#branchName': 'branch_name',
     '#conclusion': 'conclusion',
-    '#createdAt': '_ct',
     '#lineage': 'lineage',
     '#repoId': 'repo_id',
     '#retry': 'retry',
@@ -949,15 +965,14 @@ export function marshallCaseInstance(
     ':retry': input.retry,
     ':sha': input.sha,
     ':vendor': input.vendor,
-    ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
     ':gsi1pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.sha}`,
     ':gsi1sk': `INSTANCE#${input.lineage}#${input.retry}`,
     ':gsi2pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}`,
     ':gsi2sk': `INSTANCE#${input.label}#${input.sha}`,
-    ':lsi1sk': `INSTANCE#${now.getTime()}`,
-    ':lsi2sk': `INSTANCE#${input.conclusion}#${now.getTime()}`,
+    ':lsi1sk': `INSTANCE#input.createdAt.getTime()`,
+    ':lsi2sk': `INSTANCE#${input.conclusion}#input.createdAt.getTime()`,
   };
 
   if ('duration' in input && typeof input.duration !== 'undefined') {
@@ -1158,11 +1173,14 @@ export async function createCaseSummary(
 ): Promise<Readonly<CreateCaseSummaryOutput>> {
   const tableName = process.env.TABLE_CASE_SUMMARY;
   assert(tableName, 'TABLE_CASE_SUMMARY is not set');
+
+  const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallCaseSummary(input);
+  } = marshallCaseSummary(input, now);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -1172,8 +1190,14 @@ export async function createCaseSummary(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames,
-      ExpressionAttributeValues,
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
       Key: {
         pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
         sk: `SUMMARY#${input.lineage}`,
@@ -1182,7 +1206,7 @@ export async function createCaseSummary(
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression,
+      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
     })
   );
 
@@ -1218,19 +1242,29 @@ export async function blindWriteCaseSummary(
 ): Promise<Readonly<BlindWriteCaseSummaryOutput>> {
   const tableName = process.env.TABLE_CASE_SUMMARY;
   assert(tableName, 'TABLE_CASE_SUMMARY is not set');
+  const now = new Date();
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallCaseSummary(input);
+  } = marshallCaseSummary(input, now);
 
   delete ExpressionAttributeNames['#pk'];
   delete ExpressionAttributeValues[':version'];
 
-  const eav = {...ExpressionAttributeValues, ':one': 1};
-  const ue = `${UpdateExpression.split(', ')
-    .filter((e) => !e.startsWith('#version'))
-    .join(', ')} ADD #version :one`;
+  const ean = {
+    ...ExpressionAttributeNames,
+    '#createdAt': '_ct',
+  };
+  const eav = {
+    ...ExpressionAttributeValues,
+    ':one': 1,
+    ':createdAt': now.getTime(),
+  };
+  const ue = `${[
+    ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
+    '#createdAt = if_not_exists(#createdAt, :createdAt)',
+  ].join(', ')} ADD #version :one`;
 
   const {
     ConsumedCapacity: capacity,
@@ -1238,7 +1272,7 @@ export async function blindWriteCaseSummary(
     Attributes: item,
   } = await ddbDocClient.send(
     new UpdateCommand({
-      ExpressionAttributeNames,
+      ExpressionAttributeNames: ean,
       ExpressionAttributeValues: eav,
       Key: {
         pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
@@ -1714,14 +1748,12 @@ export type MarshallCaseSummaryInput = Required<
 
 /** Marshalls a DynamoDB record into a CaseSummary object */
 export function marshallCaseSummary(
-  input: MarshallCaseSummaryInput
+  input: MarshallCaseSummaryInput,
+  now = new Date()
 ): MarshallCaseSummaryOutput {
-  const now = new Date();
-
   const updateExpression: string[] = [
     '#entity = :entity',
     '#branchName = :branchName',
-    '#createdAt = :createdAt',
     '#duration = :duration',
     '#lineage = :lineage',
     '#repoId = :repoId',
@@ -1737,7 +1769,6 @@ export function marshallCaseSummary(
     '#entity': '_et',
     '#pk': 'pk',
     '#branchName': 'branch_name',
-    '#createdAt': '_ct',
     '#duration': 'duration',
     '#lineage': 'lineage',
     '#repoId': 'repo_id',
@@ -1757,7 +1788,6 @@ export function marshallCaseSummary(
     ':repoId': input.repoId,
     ':stability': input.stability,
     ':vendor': input.vendor,
-    ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
     ':lsi1sk': `SUMMARY#${input.stability}`,
@@ -1923,11 +1953,14 @@ export async function createFileTiming(
 ): Promise<Readonly<CreateFileTimingOutput>> {
   const tableName = process.env.TABLE_FILE_TIMING;
   assert(tableName, 'TABLE_FILE_TIMING is not set');
+
+  const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallFileTiming(input);
+  } = marshallFileTiming(input, now);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -1937,8 +1970,14 @@ export async function createFileTiming(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames,
-      ExpressionAttributeValues,
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
       Key: {
         pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
         sk: `FILE#${input.filename}`,
@@ -1947,7 +1986,7 @@ export async function createFileTiming(
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression,
+      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
     })
   );
 
@@ -1983,19 +2022,29 @@ export async function blindWriteFileTiming(
 ): Promise<Readonly<BlindWriteFileTimingOutput>> {
   const tableName = process.env.TABLE_FILE_TIMING;
   assert(tableName, 'TABLE_FILE_TIMING is not set');
+  const now = new Date();
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallFileTiming(input);
+  } = marshallFileTiming(input, now);
 
   delete ExpressionAttributeNames['#pk'];
   delete ExpressionAttributeValues[':version'];
 
-  const eav = {...ExpressionAttributeValues, ':one': 1};
-  const ue = `${UpdateExpression.split(', ')
-    .filter((e) => !e.startsWith('#version'))
-    .join(', ')} ADD #version :one`;
+  const ean = {
+    ...ExpressionAttributeNames,
+    '#createdAt': '_ct',
+  };
+  const eav = {
+    ...ExpressionAttributeValues,
+    ':one': 1,
+    ':createdAt': now.getTime(),
+  };
+  const ue = `${[
+    ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
+    '#createdAt = if_not_exists(#createdAt, :createdAt)',
+  ].join(', ')} ADD #version :one`;
 
   const {
     ConsumedCapacity: capacity,
@@ -2003,7 +2052,7 @@ export async function blindWriteFileTiming(
     Attributes: item,
   } = await ddbDocClient.send(
     new UpdateCommand({
-      ExpressionAttributeNames,
+      ExpressionAttributeNames: ean,
       ExpressionAttributeValues: eav,
       Key: {
         pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
@@ -2473,14 +2522,12 @@ export type MarshallFileTimingInput = Required<
 
 /** Marshalls a DynamoDB record into a FileTiming object */
 export function marshallFileTiming(
-  input: MarshallFileTimingInput
+  input: MarshallFileTimingInput,
+  now = new Date()
 ): MarshallFileTimingOutput {
-  const now = new Date();
-
   const updateExpression: string[] = [
     '#entity = :entity',
     '#branchName = :branchName',
-    '#createdAt = :createdAt',
     '#duration = :duration',
     '#filename = :filename',
     '#repoId = :repoId',
@@ -2496,7 +2543,6 @@ export function marshallFileTiming(
     '#entity': '_et',
     '#pk': 'pk',
     '#branchName': 'branch_name',
-    '#createdAt': '_ct',
     '#duration': 'duration',
     '#filename': 'filename',
     '#repoId': 'repo_id',
@@ -2515,7 +2561,6 @@ export function marshallFileTiming(
     ':filename': input.filename,
     ':repoId': input.repoId,
     ':vendor': input.vendor,
-    ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
     ':gsi2pk': `BRANCH#${input.vendor}#${input.repoId}#${input.branchName}`,

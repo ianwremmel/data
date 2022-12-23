@@ -6,6 +6,7 @@ import {objectToString} from './helpers';
 export interface UpdateItemTplInput {
   readonly key: Record<string, string>;
   readonly marshallPrimaryKey: string;
+  readonly primaryKeyFields: string[];
   readonly tableName: string;
   readonly ttlConfig: TTLConfig | undefined;
   readonly typeName: string;
@@ -15,6 +16,7 @@ export interface UpdateItemTplInput {
 export function updateItemTpl({
   marshallPrimaryKey,
   key,
+  primaryKeyFields,
   tableName,
   ttlConfig,
   typeName,
@@ -26,6 +28,7 @@ export function updateItemTpl({
     'updatedAt',
     ...(ttlConfig ? [ttlConfig.fieldName] : []),
   ]
+    .filter((fieldName) => !primaryKeyFields.includes(fieldName))
     .map((f) => `'${f}'`)
     .sort();
   const outputTypeName = `Update${typeName}Output`;

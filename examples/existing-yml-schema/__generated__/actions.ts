@@ -157,11 +157,14 @@ export async function createUserLogin(
 ): Promise<Readonly<CreateUserLoginOutput>> {
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
+
+  const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallUserLogin(input);
+  } = marshallUserLogin(input, now);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -171,8 +174,14 @@ export async function createUserLogin(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames,
-      ExpressionAttributeValues,
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
       Key: {
         pk: `USER#${input.vendor}#${input.externalId}`,
         sk: `LOGIN#${input.login}`,
@@ -181,7 +190,7 @@ export async function createUserLogin(
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression,
+      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
     })
   );
 
@@ -217,19 +226,29 @@ export async function blindWriteUserLogin(
 ): Promise<Readonly<BlindWriteUserLoginOutput>> {
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
+  const now = new Date();
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallUserLogin(input);
+  } = marshallUserLogin(input, now);
 
   delete ExpressionAttributeNames['#pk'];
   delete ExpressionAttributeValues[':version'];
 
-  const eav = {...ExpressionAttributeValues, ':one': 1};
-  const ue = `${UpdateExpression.split(', ')
-    .filter((e) => !e.startsWith('#version'))
-    .join(', ')} ADD #version :one`;
+  const ean = {
+    ...ExpressionAttributeNames,
+    '#createdAt': '_ct',
+  };
+  const eav = {
+    ...ExpressionAttributeValues,
+    ':one': 1,
+    ':createdAt': now.getTime(),
+  };
+  const ue = `${[
+    ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
+    '#createdAt = if_not_exists(#createdAt, :createdAt)',
+  ].join(', ')} ADD #version :one`;
 
   const {
     ConsumedCapacity: capacity,
@@ -237,7 +256,7 @@ export async function blindWriteUserLogin(
     Attributes: item,
   } = await ddbDocClient.send(
     new UpdateCommand({
-      ExpressionAttributeNames,
+      ExpressionAttributeNames: ean,
       ExpressionAttributeValues: eav,
       Key: {
         pk: `USER#${input.vendor}#${input.externalId}`,
@@ -658,13 +677,11 @@ export type MarshallUserLoginInput = Required<
 
 /** Marshalls a DynamoDB record into a UserLogin object */
 export function marshallUserLogin(
-  input: MarshallUserLoginInput
+  input: MarshallUserLoginInput,
+  now = new Date()
 ): MarshallUserLoginOutput {
-  const now = new Date();
-
   const updateExpression: string[] = [
     '#entity = :entity',
-    '#createdAt = :createdAt',
     '#externalId = :externalId',
     '#login = :login',
     '#updatedAt = :updatedAt',
@@ -677,7 +694,6 @@ export function marshallUserLogin(
   const ean: Record<string, string> = {
     '#entity': '_et',
     '#pk': 'pk',
-    '#createdAt': '_ct',
     '#externalId': 'external_id',
     '#login': 'login',
     '#updatedAt': '_md',
@@ -692,7 +708,6 @@ export function marshallUserLogin(
     ':externalId': input.externalId,
     ':login': input.login,
     ':vendor': input.vendor,
-    ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
     ':gsi1pk': `LOGIN#${input.vendor}#${input.login}`,

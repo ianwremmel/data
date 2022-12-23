@@ -38,19 +38,22 @@ export type ${outputTypeName} = ResultType<${typeName}>
 /**  */
 export async function create${typeName}(input: Readonly<Create${typeName}Input>): Promise<Readonly<${outputTypeName}>> {
 ${ensureTableTemplate(tableName)}
-  const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${typeName}(input);
+
+  const now = new Date();
+
+  const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${typeName}(input, now);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames,
-      ExpressionAttributeValues,
+      ExpressionAttributeNames: {...ExpressionAttributeNames, '#createdAt': '_ct'},
+      ExpressionAttributeValues: {...ExpressionAttributeValues, ':createdAt': now.getTime()},
       Key: ${objectToString(key)},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression,
+      UpdateExpression: UpdateExpression + ', #createdAt = :createdAt',
   }));
 
   assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');

@@ -26,7 +26,7 @@ export function createItemTemplate(model: Model) {
  */
 export function blindWriteTemplate(model: Model) {
   return blindWriteTpl({
-    key: makeKey(model.primaryKey),
+    key: makeKeyForBlind(model.primaryKey),
     tableName: model.tableName,
     ttlConfig: model.ttlConfig,
     typeName: model.typeName,
@@ -38,7 +38,7 @@ export function blindWriteTemplate(model: Model) {
  */
 export function deleteItemTemplate(model: Model) {
   return deleteItemTpl({
-    key: makeKey(model.primaryKey),
+    key: makeKeyForRead(model.primaryKey),
     tableName: model.tableName,
     typeName: model.typeName,
   });
@@ -67,7 +67,7 @@ export function queryTemplate(model: Model) {
 export function readItemTemplate(model: Model) {
   return readItemTpl({
     consistent: model.consistent,
-    key: makeKey(model.primaryKey),
+    key: makeKeyForRead(model.primaryKey),
     tableName: model.tableName,
     typeName: model.typeName,
   });
@@ -107,7 +107,7 @@ export function touchItemTemplate(model: Model) {
   return touchItemTpl({
     ean,
     eav,
-    key: makeKey(model.primaryKey),
+    key: makeKeyForBlind(model.primaryKey),
     tableName: model.tableName,
     typeName: model.typeName,
     updateExpressions,
@@ -119,7 +119,7 @@ export function touchItemTemplate(model: Model) {
  */
 export function updateItemTemplate(model: Model) {
   return updateItemTpl({
-    key: makeKey(model.primaryKey),
+    key: makeKeyForRead(model.primaryKey),
     marshallPrimaryKey: objectToString(
       Object.fromEntries(
         (model.primaryKey.isComposite
@@ -134,6 +134,13 @@ export function updateItemTemplate(model: Model) {
           .map((fieldName) => [fieldName, `input.${fieldName}`])
       )
     ),
+    primaryKeyFields: (model.primaryKey.isComposite
+      ? [
+          ...model.primaryKey.partitionKeyFields,
+          ...model.primaryKey.sortKeyFields,
+        ]
+      : model.primaryKey.partitionKeyFields
+    ).map(({fieldName}) => fieldName),
     tableName: model.tableName,
     ttlConfig: model.ttlConfig,
     typeName: model.typeName,
@@ -146,16 +153,74 @@ function makeKey(key: PrimaryKeyConfig): Record<string, string> {
     return {
       pk: `\`${makeKeyTemplate(
         key.partitionKeyPrefix,
-        key.partitionKeyFields
+        key.partitionKeyFields,
+        'create'
       )}\``,
-      sk: `\`${makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields)}\``,
+      sk: `\`${makeKeyTemplate(
+        key.sortKeyPrefix,
+        key.sortKeyFields,
+        'create'
+      )}\``,
     };
   }
 
   return {
     pk: `\`${makeKeyTemplate(
       key.partitionKeyPrefix,
-      key.partitionKeyFields
+      key.partitionKeyFields,
+      'create'
+    )}\``,
+  };
+}
+
+/** helper */
+function makeKeyForBlind(key: PrimaryKeyConfig): Record<string, string> {
+  if (key.isComposite) {
+    return {
+      pk: `\`${makeKeyTemplate(
+        key.partitionKeyPrefix,
+        key.partitionKeyFields,
+        'blind'
+      )}\``,
+      sk: `\`${makeKeyTemplate(
+        key.sortKeyPrefix,
+        key.sortKeyFields,
+        'blind'
+      )}\``,
+    };
+  }
+
+  return {
+    pk: `\`${makeKeyTemplate(
+      key.partitionKeyPrefix,
+      key.partitionKeyFields,
+      'blind'
+    )}\``,
+  };
+}
+
+/** helper */
+function makeKeyForRead(key: PrimaryKeyConfig): Record<string, string> {
+  if (key.isComposite) {
+    return {
+      pk: `\`${makeKeyTemplate(
+        key.partitionKeyPrefix,
+        key.partitionKeyFields,
+        'read'
+      )}\``,
+      sk: `\`${makeKeyTemplate(
+        key.sortKeyPrefix,
+        key.sortKeyFields,
+        'read'
+      )}\``,
+    };
+  }
+
+  return {
+    pk: `\`${makeKeyTemplate(
+      key.partitionKeyPrefix,
+      key.partitionKeyFields,
+      'read'
     )}\``,
   };
 }

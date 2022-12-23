@@ -164,11 +164,14 @@ export async function createUserSession(
 ): Promise<Readonly<CreateUserSessionOutput>> {
   const tableName = process.env.TABLE_USER_SESSIONS;
   assert(tableName, 'TABLE_USER_SESSIONS is not set');
+
+  const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallUserSession(input);
+  } = marshallUserSession(input, now);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -178,14 +181,20 @@ export async function createUserSession(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames,
-      ExpressionAttributeValues,
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
       Key: {pk: `USER_SESSION#${input.sessionId}`},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression,
+      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
     })
   );
 
@@ -222,19 +231,29 @@ export async function blindWriteUserSession(
 ): Promise<Readonly<BlindWriteUserSessionOutput>> {
   const tableName = process.env.TABLE_USER_SESSIONS;
   assert(tableName, 'TABLE_USER_SESSIONS is not set');
+  const now = new Date();
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallUserSession(input);
+  } = marshallUserSession(input, now);
 
   delete ExpressionAttributeNames['#pk'];
   delete ExpressionAttributeValues[':version'];
 
-  const eav = {...ExpressionAttributeValues, ':one': 1};
-  const ue = `${UpdateExpression.split(', ')
-    .filter((e) => !e.startsWith('#version'))
-    .join(', ')} ADD #version :one`;
+  const ean = {
+    ...ExpressionAttributeNames,
+    '#createdAt': '_ct',
+  };
+  const eav = {
+    ...ExpressionAttributeValues,
+    ':one': 1,
+    ':createdAt': now.getTime(),
+  };
+  const ue = `${[
+    ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
+    '#createdAt = if_not_exists(#createdAt, :createdAt)',
+  ].join(', ')} ADD #version :one`;
 
   const {
     ConsumedCapacity: capacity,
@@ -242,7 +261,7 @@ export async function blindWriteUserSession(
     Attributes: item,
   } = await ddbDocClient.send(
     new UpdateCommand({
-      ExpressionAttributeNames,
+      ExpressionAttributeNames: ean,
       ExpressionAttributeValues: eav,
       Key: {pk: `USER_SESSION#${input.sessionId}`},
       ReturnConsumedCapacity: 'INDEXES',
@@ -506,13 +525,11 @@ export type MarshallUserSessionInput = Required<
 
 /** Marshalls a DynamoDB record into a UserSession object */
 export function marshallUserSession(
-  input: MarshallUserSessionInput
+  input: MarshallUserSessionInput,
+  now = new Date()
 ): MarshallUserSessionOutput {
-  const now = new Date();
-
   const updateExpression: string[] = [
     '#entity = :entity',
-    '#createdAt = :createdAt',
     '#session = :session',
     '#sessionId = :sessionId',
     '#updatedAt = :updatedAt',
@@ -522,7 +539,6 @@ export function marshallUserSession(
   const ean: Record<string, string> = {
     '#entity': '_et',
     '#pk': 'pk',
-    '#createdAt': '_ct',
     '#session': 'session',
     '#sessionId': 'session_id',
     '#updatedAt': '_md',
@@ -533,7 +549,6 @@ export function marshallUserSession(
     ':entity': 'UserSession',
     ':session': input.session,
     ':sessionId': input.sessionId,
-    ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
   };

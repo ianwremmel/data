@@ -111,20 +111,22 @@ export interface QueryNodeArgs {
   id: Scalars['ID'];
 }
 
+/** Represents an email that is schedule to be sent to a user. */
 export type ScheduledEmail = Model &
   Timestamped &
   Versioned & {
     __typename?: 'ScheduledEmail';
     createdAt: Scalars['Date'];
-    expires?: Maybe<Scalars['Date']>;
     externalId: Scalars['String'];
     id: Scalars['ID'];
+    sendAt?: Maybe<Scalars['Date']>;
     template: Scalars['String'];
     updatedAt: Scalars['Date'];
     vendor: Vendor;
     version: Scalars['Int'];
   };
 
+/** Represents an email that has been sent to a user */
 export type SentEmail = Model &
   Timestamped &
   Versioned & {
@@ -208,11 +210,14 @@ export async function createAccount(
 ): Promise<Readonly<CreateAccountOutput>> {
   const tableName = process.env.TABLE_ACCOUNTS;
   assert(tableName, 'TABLE_ACCOUNTS is not set');
+
+  const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallAccount(input);
+  } = marshallAccount(input, now);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -222,14 +227,20 @@ export async function createAccount(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames,
-      ExpressionAttributeValues,
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
       Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression,
+      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
     })
   );
 
@@ -265,19 +276,29 @@ export async function blindWriteAccount(
 ): Promise<Readonly<BlindWriteAccountOutput>> {
   const tableName = process.env.TABLE_ACCOUNTS;
   assert(tableName, 'TABLE_ACCOUNTS is not set');
+  const now = new Date();
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallAccount(input);
+  } = marshallAccount(input, now);
 
   delete ExpressionAttributeNames['#pk'];
   delete ExpressionAttributeValues[':version'];
 
-  const eav = {...ExpressionAttributeValues, ':one': 1};
-  const ue = `${UpdateExpression.split(', ')
-    .filter((e) => !e.startsWith('#version'))
-    .join(', ')} ADD #version :one`;
+  const ean = {
+    ...ExpressionAttributeNames,
+    '#createdAt': '_ct',
+  };
+  const eav = {
+    ...ExpressionAttributeValues,
+    ':one': 1,
+    ':createdAt': now.getTime(),
+  };
+  const ue = `${[
+    ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
+    '#createdAt = if_not_exists(#createdAt, :createdAt)',
+  ].join(', ')} ADD #version :one`;
 
   const {
     ConsumedCapacity: capacity,
@@ -285,7 +306,7 @@ export async function blindWriteAccount(
     Attributes: item,
   } = await ddbDocClient.send(
     new UpdateCommand({
-      ExpressionAttributeNames,
+      ExpressionAttributeNames: ean,
       ExpressionAttributeValues: eav,
       Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
       ReturnConsumedCapacity: 'INDEXES',
@@ -687,13 +708,11 @@ export type MarshallAccountInput = Required<
 
 /** Marshalls a DynamoDB record into a Account object */
 export function marshallAccount(
-  input: MarshallAccountInput
+  input: MarshallAccountInput,
+  now = new Date()
 ): MarshallAccountOutput {
-  const now = new Date();
-
   const updateExpression: string[] = [
     '#entity = :entity',
-    '#createdAt = :createdAt',
     '#effectiveDate = :effectiveDate',
     '#externalId = :externalId',
     '#updatedAt = :updatedAt',
@@ -705,7 +724,6 @@ export function marshallAccount(
   const ean: Record<string, string> = {
     '#entity': '_et',
     '#pk': 'pk',
-    '#createdAt': '_ct',
     '#effectiveDate': 'effective_date',
     '#externalId': 'external_id',
     '#updatedAt': '_md',
@@ -719,10 +737,9 @@ export function marshallAccount(
     ':effectiveDate': input.effectiveDate.getTime(),
     ':externalId': input.externalId,
     ':vendor': input.vendor,
-    ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
-    ':lsi1sk': `INSTANCE#${now.getTime()}`,
+    ':lsi1sk': `INSTANCE#input.createdAt.getTime()`,
   };
 
   if ('cancelled' in input && typeof input.cancelled !== 'undefined') {
@@ -866,9 +883,9 @@ export interface ScheduledEmailPrimaryKey {
 
 export type CreateScheduledEmailInput = Omit<
   ScheduledEmail,
-  'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
+  'createdAt' | 'id' | 'sendAt' | 'updatedAt' | 'version'
 > &
-  Partial<Pick<ScheduledEmail, 'expires'>>;
+  Partial<Pick<ScheduledEmail, 'sendAt'>>;
 export type CreateScheduledEmailOutput = ResultType<ScheduledEmail>;
 /**  */
 export async function createScheduledEmail(
@@ -876,11 +893,14 @@ export async function createScheduledEmail(
 ): Promise<Readonly<CreateScheduledEmailOutput>> {
   const tableName = process.env.TABLE_EMAIL;
   assert(tableName, 'TABLE_EMAIL is not set');
+
+  const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallScheduledEmail(input);
+  } = marshallScheduledEmail(input, now);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -890,8 +910,14 @@ export async function createScheduledEmail(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames,
-      ExpressionAttributeValues,
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
       Key: {
         pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
         sk: `SCHEDULED_EMAIL#${input.template}`,
@@ -900,7 +926,7 @@ export async function createScheduledEmail(
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression,
+      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
     })
   );
 
@@ -927,9 +953,9 @@ export async function createScheduledEmail(
 
 export type BlindWriteScheduledEmailInput = Omit<
   ScheduledEmail,
-  'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
+  'createdAt' | 'id' | 'sendAt' | 'updatedAt' | 'version'
 > &
-  Partial<Pick<ScheduledEmail, 'expires'>>;
+  Partial<Pick<ScheduledEmail, 'sendAt'>>;
 export type BlindWriteScheduledEmailOutput = ResultType<ScheduledEmail>;
 /** */
 export async function blindWriteScheduledEmail(
@@ -937,19 +963,29 @@ export async function blindWriteScheduledEmail(
 ): Promise<Readonly<BlindWriteScheduledEmailOutput>> {
   const tableName = process.env.TABLE_EMAIL;
   assert(tableName, 'TABLE_EMAIL is not set');
+  const now = new Date();
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallScheduledEmail(input);
+  } = marshallScheduledEmail(input, now);
 
   delete ExpressionAttributeNames['#pk'];
   delete ExpressionAttributeValues[':version'];
 
-  const eav = {...ExpressionAttributeValues, ':one': 1};
-  const ue = `${UpdateExpression.split(', ')
-    .filter((e) => !e.startsWith('#version'))
-    .join(', ')} ADD #version :one`;
+  const ean = {
+    ...ExpressionAttributeNames,
+    '#createdAt': '_ct',
+  };
+  const eav = {
+    ...ExpressionAttributeValues,
+    ':one': 1,
+    ':createdAt': now.getTime(),
+  };
+  const ue = `${[
+    ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
+    '#createdAt = if_not_exists(#createdAt, :createdAt)',
+  ].join(', ')} ADD #version :one`;
 
   const {
     ConsumedCapacity: capacity,
@@ -957,7 +993,7 @@ export async function blindWriteScheduledEmail(
     Attributes: item,
   } = await ddbDocClient.send(
     new UpdateCommand({
-      ExpressionAttributeNames,
+      ExpressionAttributeNames: ean,
       ExpressionAttributeValues: eav,
       Key: {
         pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
@@ -1099,8 +1135,8 @@ export async function touchScheduledEmail(
         new UpdateCommand({
           ConditionExpression: 'attribute_exists(#pk)',
           ExpressionAttributeNames: {
-            '#expires': 'ttl',
             '#pk': 'pk',
+            '#sendAt': 'ttl',
             '#version': '_v',
           },
           ExpressionAttributeValues: {
@@ -1116,7 +1152,7 @@ export async function touchScheduledEmail(
           ReturnValues: 'ALL_NEW',
           TableName: tableName,
           UpdateExpression:
-            'SET #expires = #expires + :ttlInc, #version = #version + :versionInc',
+            'SET #sendAt = #sendAt + :ttlInc, #version = #version + :versionInc',
         })
       );
 
@@ -1143,9 +1179,9 @@ export async function touchScheduledEmail(
 
 export type UpdateScheduledEmailInput = Omit<
   ScheduledEmail,
-  'createdAt' | 'expires' | 'id' | 'updatedAt'
+  'createdAt' | 'id' | 'sendAt' | 'updatedAt'
 > &
-  Partial<Pick<ScheduledEmail, 'expires'>>;
+  Partial<Pick<ScheduledEmail, 'sendAt'>>;
 export type UpdateScheduledEmailOutput = ResultType<ScheduledEmail>;
 
 /**  */
@@ -1373,17 +1409,15 @@ export interface MarshallScheduledEmailOutput {
 export type MarshallScheduledEmailInput = Required<
   Pick<ScheduledEmail, 'externalId' | 'template' | 'vendor'>
 > &
-  Partial<Pick<ScheduledEmail, 'expires' | 'version'>>;
+  Partial<Pick<ScheduledEmail, 'sendAt' | 'version'>>;
 
 /** Marshalls a DynamoDB record into a ScheduledEmail object */
 export function marshallScheduledEmail(
-  input: MarshallScheduledEmailInput
+  input: MarshallScheduledEmailInput,
+  now = new Date()
 ): MarshallScheduledEmailOutput {
-  const now = new Date();
-
   const updateExpression: string[] = [
     '#entity = :entity',
-    '#createdAt = :createdAt',
     '#externalId = :externalId',
     '#template = :template',
     '#updatedAt = :updatedAt',
@@ -1394,7 +1428,6 @@ export function marshallScheduledEmail(
   const ean: Record<string, string> = {
     '#entity': '_et',
     '#pk': 'pk',
-    '#createdAt': '_ct',
     '#externalId': 'external_id',
     '#template': 'template',
     '#updatedAt': '_md',
@@ -1407,23 +1440,22 @@ export function marshallScheduledEmail(
     ':externalId': input.externalId,
     ':template': input.template,
     ':vendor': input.vendor,
-    ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
   };
 
-  if ('expires' in input && typeof input.expires !== 'undefined') {
+  if ('sendAt' in input && typeof input.sendAt !== 'undefined') {
     assert(
-      !Number.isNaN(input.expires?.getTime()),
-      'expires was passed but is not a valid date'
+      !Number.isNaN(input.sendAt?.getTime()),
+      'sendAt was passed but is not a valid date'
     );
-    ean['#expires'] = 'ttl';
-    eav[':expires'] = input.expires === null ? null : input.expires.getTime();
-    updateExpression.push('#expires = :expires');
+    ean['#sendAt'] = 'ttl';
+    eav[':sendAt'] = input.sendAt === null ? null : input.sendAt.getTime();
+    updateExpression.push('#sendAt = :sendAt');
   } else {
-    ean['#expires'] = 'ttl';
-    eav[':expires'] = now.getTime() + 86400000;
-    updateExpression.push('#expires = :expires');
+    ean['#sendAt'] = 'ttl';
+    eav[':sendAt'] = now.getTime() + 86400000;
+    updateExpression.push('#sendAt = :sendAt');
   }
 
   updateExpression.sort();
@@ -1523,7 +1555,7 @@ export function unmarshallScheduledEmail(
   if ('ttl' in item) {
     result = {
       ...result,
-      expires: item.ttl ? new Date(item.ttl) : null,
+      sendAt: item.ttl ? new Date(item.ttl) : null,
     };
   }
 
@@ -1548,11 +1580,14 @@ export async function createSentEmail(
 ): Promise<Readonly<CreateSentEmailOutput>> {
   const tableName = process.env.TABLE_EMAIL;
   assert(tableName, 'TABLE_EMAIL is not set');
+
+  const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallSentEmail(input);
+  } = marshallSentEmail(input, now);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -1562,8 +1597,14 @@ export async function createSentEmail(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames,
-      ExpressionAttributeValues,
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
       Key: {
         pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
         sk: `TEMPLATE#${input.template}#${now.getTime()}`,
@@ -1572,7 +1613,7 @@ export async function createSentEmail(
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression,
+      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
     })
   );
 
@@ -1608,19 +1649,29 @@ export async function blindWriteSentEmail(
 ): Promise<Readonly<BlindWriteSentEmailOutput>> {
   const tableName = process.env.TABLE_EMAIL;
   assert(tableName, 'TABLE_EMAIL is not set');
+  const now = new Date();
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallSentEmail(input);
+  } = marshallSentEmail(input, now);
 
   delete ExpressionAttributeNames['#pk'];
   delete ExpressionAttributeValues[':version'];
 
-  const eav = {...ExpressionAttributeValues, ':one': 1};
-  const ue = `${UpdateExpression.split(', ')
-    .filter((e) => !e.startsWith('#version'))
-    .join(', ')} ADD #version :one`;
+  const ean = {
+    ...ExpressionAttributeNames,
+    '#createdAt': '_ct',
+  };
+  const eav = {
+    ...ExpressionAttributeValues,
+    ':one': 1,
+    ':createdAt': now.getTime(),
+  };
+  const ue = `${[
+    ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
+    '#createdAt = if_not_exists(#createdAt, :createdAt)',
+  ].join(', ')} ADD #version :one`;
 
   const {
     ConsumedCapacity: capacity,
@@ -1628,11 +1679,11 @@ export async function blindWriteSentEmail(
     Attributes: item,
   } = await ddbDocClient.send(
     new UpdateCommand({
-      ExpressionAttributeNames,
+      ExpressionAttributeNames: ean,
       ExpressionAttributeValues: eav,
       Key: {
         pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-        sk: `TEMPLATE#${input.template}#${now.getTime()}`,
+        sk: `TEMPLATE#${input.template}#'createdAt' in input ? input.createdAt.getTime() : now.getTime()`,
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -1682,7 +1733,7 @@ export async function deleteSentEmail(
           },
           Key: {
             pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-            sk: `TEMPLATE#${input.template}#${now.getTime()}`,
+            sk: `TEMPLATE#${input.template}#input.createdAt.getTime()`,
           },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
@@ -1726,7 +1777,7 @@ export async function readSentEmail(
       ConsistentRead: false,
       Key: {
         pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-        sk: `TEMPLATE#${input.template}#${now.getTime()}`,
+        sk: `TEMPLATE#${input.template}#input.createdAt.getTime()`,
       },
       ReturnConsumedCapacity: 'INDEXES',
       TableName: tableName,
@@ -1778,7 +1829,7 @@ export async function touchSentEmail(
           },
           Key: {
             pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-            sk: `TEMPLATE#${input.template}#${now.getTime()}`,
+            sk: `TEMPLATE#${input.template}#'createdAt' in input ? input.createdAt.getTime() : now.getTime()`,
           },
           ReturnConsumedCapacity: 'INDEXES',
           ReturnItemCollectionMetrics: 'SIZE',
@@ -1809,10 +1860,7 @@ export async function touchSentEmail(
   }
 }
 
-export type UpdateSentEmailInput = Omit<
-  SentEmail,
-  'createdAt' | 'id' | 'updatedAt'
->;
+export type UpdateSentEmailInput = Omit<SentEmail, 'id' | 'updatedAt'>;
 export type UpdateSentEmailOutput = ResultType<SentEmail>;
 
 /**  */
@@ -1842,7 +1890,7 @@ export async function updateSentEmail(
         },
         Key: {
           pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-          sk: `TEMPLATE#${input.template}#${now.getTime()}`,
+          sk: `TEMPLATE#${input.template}#input.createdAt.getTime()`,
         },
         ReturnConsumedCapacity: 'INDEXES',
         ReturnItemCollectionMetrics: 'SIZE',
@@ -2047,13 +2095,11 @@ export type MarshallSentEmailInput = Required<
 
 /** Marshalls a DynamoDB record into a SentEmail object */
 export function marshallSentEmail(
-  input: MarshallSentEmailInput
+  input: MarshallSentEmailInput,
+  now = new Date()
 ): MarshallSentEmailOutput {
-  const now = new Date();
-
   const updateExpression: string[] = [
     '#entity = :entity',
-    '#createdAt = :createdAt',
     '#externalId = :externalId',
     '#messageId = :messageId',
     '#template = :template',
@@ -2065,7 +2111,6 @@ export function marshallSentEmail(
   const ean: Record<string, string> = {
     '#entity': '_et',
     '#pk': 'pk',
-    '#createdAt': '_ct',
     '#externalId': 'external_id',
     '#messageId': 'message_id',
     '#template': 'template',
@@ -2080,7 +2125,6 @@ export function marshallSentEmail(
     ':messageId': input.messageId,
     ':template': input.template,
     ':vendor': input.vendor,
-    ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
   };
@@ -2208,11 +2252,14 @@ export async function createSubscription(
 ): Promise<Readonly<CreateSubscriptionOutput>> {
   const tableName = process.env.TABLE_ACCOUNTS;
   assert(tableName, 'TABLE_ACCOUNTS is not set');
+
+  const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallSubscription(input);
+  } = marshallSubscription(input, now);
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const {
@@ -2222,8 +2269,14 @@ export async function createSubscription(
   } = await ddbDocClient.send(
     new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames,
-      ExpressionAttributeValues,
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
       Key: {
         pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
         sk: `SUBSCRIPTION#${input.effectiveDate.getTime()}`,
@@ -2232,7 +2285,7 @@ export async function createSubscription(
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression,
+      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
     })
   );
 
@@ -2268,19 +2321,29 @@ export async function blindWriteSubscription(
 ): Promise<Readonly<BlindWriteSubscriptionOutput>> {
   const tableName = process.env.TABLE_ACCOUNTS;
   assert(tableName, 'TABLE_ACCOUNTS is not set');
+  const now = new Date();
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     UpdateExpression,
-  } = marshallSubscription(input);
+  } = marshallSubscription(input, now);
 
   delete ExpressionAttributeNames['#pk'];
   delete ExpressionAttributeValues[':version'];
 
-  const eav = {...ExpressionAttributeValues, ':one': 1};
-  const ue = `${UpdateExpression.split(', ')
-    .filter((e) => !e.startsWith('#version'))
-    .join(', ')} ADD #version :one`;
+  const ean = {
+    ...ExpressionAttributeNames,
+    '#createdAt': '_ct',
+  };
+  const eav = {
+    ...ExpressionAttributeValues,
+    ':one': 1,
+    ':createdAt': now.getTime(),
+  };
+  const ue = `${[
+    ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
+    '#createdAt = if_not_exists(#createdAt, :createdAt)',
+  ].join(', ')} ADD #version :one`;
 
   const {
     ConsumedCapacity: capacity,
@@ -2288,7 +2351,7 @@ export async function blindWriteSubscription(
     Attributes: item,
   } = await ddbDocClient.send(
     new UpdateCommand({
-      ExpressionAttributeNames,
+      ExpressionAttributeNames: ean,
       ExpressionAttributeValues: eav,
       Key: {
         pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
@@ -2696,13 +2759,11 @@ export type MarshallSubscriptionInput = Required<
 
 /** Marshalls a DynamoDB record into a Subscription object */
 export function marshallSubscription(
-  input: MarshallSubscriptionInput
+  input: MarshallSubscriptionInput,
+  now = new Date()
 ): MarshallSubscriptionOutput {
-  const now = new Date();
-
   const updateExpression: string[] = [
     '#entity = :entity',
-    '#createdAt = :createdAt',
     '#effectiveDate = :effectiveDate',
     '#externalId = :externalId',
     '#updatedAt = :updatedAt',
@@ -2713,7 +2774,6 @@ export function marshallSubscription(
   const ean: Record<string, string> = {
     '#entity': '_et',
     '#pk': 'pk',
-    '#createdAt': '_ct',
     '#effectiveDate': 'effective_date',
     '#externalId': 'external_id',
     '#updatedAt': '_md',
@@ -2726,7 +2786,6 @@ export function marshallSubscription(
     ':effectiveDate': input.effectiveDate.getTime(),
     ':externalId': input.externalId,
     ':vendor': input.vendor,
-    ':createdAt': now.getTime(),
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
   };

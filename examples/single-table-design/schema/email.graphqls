@@ -1,3 +1,6 @@
+"""
+Represents an email that is schedule to be sent to a user.
+"""
 type ScheduledEmail implements Model & Timestamped & Versioned
   @compositeKey(
     pkFields: ["vendor", "externalId"]
@@ -7,7 +10,7 @@ type ScheduledEmail implements Model & Timestamped & Versioned
   )
   @table(name: "TableEmail") {
   createdAt: Date!
-  expires: Date @ttl(duration: "1d")
+  sendAt: Date @ttl(duration: "1d")
   externalId: String!
   id: ID!
   template: String!
@@ -16,6 +19,9 @@ type ScheduledEmail implements Model & Timestamped & Versioned
   vendor: Vendor!
 }
 
+"""
+Represents an email that has been sent to a user
+"""
 type SentEmail implements Model & Timestamped & Versioned
   @compositeKey(
     pkFields: ["vendor", "externalId"]
