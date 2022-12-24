@@ -9,6 +9,7 @@ import {ddbDocClient} from '../dependencies';
 import {
   createUserSession,
   deleteUserSession,
+  queryUserSessionByPublicId,
   readUserSession,
   updateUserSession,
 } from './__generated__/actions';
@@ -290,5 +291,26 @@ describe('@alias', () => {
 
     const readResult2 = await readUserSession(createResult.item);
     expect(readResult2.item.aliasedField).toBe('bar');
+
+    // cleanup, not part of test
+    await deleteUserSession(createResult.item);
+  });
+});
+
+describe('PublicModel', () => {
+  it('can be queried by public id', async () => {
+    const result = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
+
+    const queriedResult = await queryUserSessionByPublicId(
+      result.item.publicId
+    );
+
+    expect(queriedResult.item).toStrictEqual(result.item);
+
+    // cleanup, not part of test
+    await deleteUserSession(result.item);
   });
 });

@@ -79,6 +79,20 @@ export interface Node {
   id: Scalars['ID'];
 }
 
+/**
+ * Like Model, but includes a `publicId` field which, unline `id`, is semantically
+ * meaningless. Types implementing PublicModel will have an additional function,
+ * `queryByPublicId`, generated. If any of your models implement PublicModel, then
+ * the dependencies module must include an `idGenerator()`.
+ */
+export interface PublicModel {
+  createdAt: Scalars['Date'];
+  id: Scalars['ID'];
+  publicId: Scalars['String'];
+  updatedAt: Scalars['Date'];
+  version: Scalars['Int'];
+}
+
 /** The Query type */
 export interface Query {
   __typename?: 'Query';
