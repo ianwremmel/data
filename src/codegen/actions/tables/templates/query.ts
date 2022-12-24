@@ -1,10 +1,4 @@
-import type {
-  Field,
-  GSI,
-  LSI,
-  PrimaryKeyConfig,
-  SecondaryIndex,
-} from '../../../parser';
+import type {Field, PrimaryKeyConfig, SecondaryIndex} from '../../../parser';
 
 import {ensureTableTemplate} from './ensure-table';
 import {
@@ -33,13 +27,6 @@ export function queryTpl({
 
   const sortKeyFields = primaryKey.isComposite ? primaryKey.sortKeyFields : [];
 
-  const lsis: LSI[] = secondaryIndexes.filter(
-    ({type}) => type === 'lsi'
-  ) as LSI[];
-  const gsis: GSI[] = secondaryIndexes.filter(
-    ({type}) => type === 'gsi'
-  ) as GSI[];
-
   const inputTypeName = `Query${typeName}Input`;
   const outputTypeName = `Query${typeName}Output`;
 
@@ -50,47 +37,37 @@ export type ${inputTypeName} = ${makeTypeSignature(
   )};
 export type ${outputTypeName} = MultiResultType<${typeName}>;
 
-
 /** helper */
-function makePartitionKeyForQuery${typeName}(input: ${inputTypeName}): string {
-${makePartitionKeyForQuery(primaryKey, secondaryIndexes)}
-
-throw new Error('Could not construct partition key from input');
+function makeEanForQuery${typeName}(input: ${inputTypeName}): Record<string, string> {
+${eanForQuery(primaryKey, secondaryIndexes)}
 }
 
 /** helper */
-function makeSortKeyForQuery${typeName}(input: ${inputTypeName}): string | undefined {
-${makeSortKeyForQuery(primaryKey, secondaryIndexes)}
+function makeEavForQuery${typeName}(input: ${inputTypeName}): Record<string, any> {
+${eavForQuery(primaryKey, secondaryIndexes)}
 }
 
 /** helper */
-function makeEavPkForQuery${typeName}(input: ${inputTypeName}): string {
-${pkEavTemplate(gsis, lsis)}
-}
-
-/** helper */
-function makeEavSkForQuery${typeName}(input: ${inputTypeName}): string {
-${skEavTemplate(gsis, lsis)}
+function makeKceForQuery${typeName}(input: ${inputTypeName}, {operator}: Pick<QueryOptions, 'operator'>): string {
+${kceForQuery(primaryKey, secondaryIndexes)}
 }
 
 /** query${typeName} */
 export async function query${typeName}(input: Readonly<Query${typeName}Input>, {limit = undefined, operator = 'begins_with', reverse = false}: QueryOptions = {}): Promise<Readonly<${outputTypeName}>> {
   ${ensureTableTemplate(tableName)}
 
+  const ExpressionAttributeNames = makeEanForQuery${typeName}(input);
+  const ExpressionAttributeValues = makeEavForQuery${typeName}(input);
+  const KeyConditionExpression = makeKceForQuery${typeName}(input, {operator});
+
   const {ConsumedCapacity: capacity, Items: items = []} = await ddbDocClient.send(new QueryCommand({
     ConsistentRead: ${consistent ? `!('index' in input)` : 'false'},
-    ExpressionAttributeNames: {
-      '#pk': makeEavPkForQuery${typeName}(input),
-      '#sk': makeEavSkForQuery${typeName}(input),
-    },
-    ExpressionAttributeValues: {
-      ':pk': makePartitionKeyForQuery${typeName}(input),
-      ':sk': makeSortKeyForQuery${typeName}(input),
-    },
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
     IndexName: ${
       hasIndexes ? `'index' in input ? input.index : undefined` : 'undefined'
     },
-    KeyConditionExpression: \`#pk = :pk AND \${operator === 'begins_with' ? 'begins_with(#sk, :sk)' : \`#sk \${operator} :sk\`}\`,
+    KeyConditionExpression,
     Limit: limit,
     ReturnConsumedCapacity: 'INDEXES',
     ScanIndexForward: !reverse,
@@ -224,145 +201,154 @@ function fieldStringToFieldType(
 }
 
 /** helper */
-function indexToSortKey(index: PrimaryKeyConfig | SecondaryIndex): string {
-  if (!index.isComposite) {
-    return '';
-  }
-
-  if ('name' in index) {
-    return `
-if (input.index === '${index.name}') {
-  return ${makePartialKeyTemplate(index.sortKeyPrefix, index.sortKeyFields)};
-}`;
-  }
-  return `return ${makePartialKeyTemplate(
-    index.sortKeyPrefix,
-    index.sortKeyFields
-  )}`;
-}
-
-/** template */
-function makePartitionKeyForQuery(
+function eanForQuery(
   primaryKey: PrimaryKeyConfig,
-  secondaryIndex: readonly SecondaryIndex[]
+  secondaryIndexes: readonly SecondaryIndex[]
 ) {
-  return [primaryKey, ...secondaryIndex]
-    .map((index) => {
-      const partitionKeyFields =
-        index.type === 'lsi'
-          ? primaryKey.partitionKeyFields
-          : index.partitionKeyFields;
-
-      const partitionKeyPrefix =
-        index.type === 'lsi'
-          ? primaryKey.partitionKeyPrefix
-          : index.partitionKeyPrefix;
-
-      if (index.type === 'primary') {
-        return `if (!('index' in input)) {
-  return \`${makeKeyTemplate(partitionKeyPrefix, partitionKeyFields, 'read')}\`
-}`;
-      }
-
-      return `
-if ('index' in input && input.index === '${index.name}') {
-  return \`${makeKeyTemplate(partitionKeyPrefix, partitionKeyFields, 'read')}\`;
-}`;
-    })
-    .join('\n else ');
-}
-
-/** template */
-function makeSortKeyForQuery(
-  primaryKey: PrimaryKeyConfig,
-  secondaryIndex: readonly SecondaryIndex[]
-) {
-  if (secondaryIndex.length === 0) {
-    return indexToSortKey(primaryKey);
-  }
-
   return `
   if ('index' in input) {
-${secondaryIndex.map(indexToSortKey).join('\n else ')};
-  }
+${secondaryIndexes
+  .map(
+    (index) => `if (input.index === '${index.name}') {
+    return ${keyNames(index)}
+  }`
+  )
+  .join('else\n')}
+  throw new Error('Invalid index. If TypeScript did not catch this, then this is a bug in codegen.');
+}
   else {
-    ${indexToSortKey(primaryKey)};
+    return ${keyNames(primaryKey)}
   }
-  `;
+
+`;
 }
 
 /** helper */
-function makePartialKeyTemplate(
-  prefix: string | undefined,
-  fields: readonly Field[]
-): string {
-  return `['${prefix}', ${fields
+function keyNames(key: PrimaryKeyConfig | SecondaryIndex) {
+  if (key.type === 'primary') {
+    return key.isComposite ? `{'#pk': 'pk', '#sk': 'sk'}` : `{'#pk': 'pk'}`;
+  }
+
+  const pk = `${key.name}pk`;
+  const sk = `${key.name}sk`;
+
+  if (key.type === 'gsi') {
+    return key.isComposite
+      ? `{'#pk': '${pk}', '#sk': '${sk}'}`
+      : `{'#pk': '${pk}'}`;
+  }
+
+  return `{'#pk': 'pk', '#sk': 'sk'}`;
+}
+
+/** helper */
+function eavForQuery(
+  primaryKey: PrimaryKeyConfig,
+  secondaryIndexes: readonly SecondaryIndex[]
+) {
+  return `
+  if ('index' in input) {
+${secondaryIndexes
+  .map(
+    (index) => `if (input.index === '${index.name}') {
+    return ${keyValues(primaryKey, index)}
+  }`
+  )
+  .join('else\n')}
+  throw new Error('Invalid index. If TypeScript did not catch this, then this is a bug in codegen.');
+  }
+  else {
+    return ${keyValues(primaryKey, primaryKey)}
+  }
+
+`;
+}
+
+/** helper */
+function compositeKeyValues({
+  pkPrefix,
+  pkFields,
+  skPrefix,
+  skFields,
+}: {
+  pkPrefix: string | undefined;
+  pkFields: readonly Field[];
+  skPrefix: string | undefined;
+  skFields: readonly Field[];
+}) {
+  const pkFragment = makeKeyTemplate(pkPrefix, pkFields, 'read');
+  const skFragment = `['${skPrefix}', ${skFields
     .map(({fieldName}) => `'${fieldName}' in input && input.${fieldName}`)
     .join(', ')}].filter(Boolean).join('#')`;
+
+  return `{
+    ':pk': \`${pkFragment}\`,
+    ':sk': ${skFragment},
+  }`;
 }
 
-/** template */
-function pkEavTemplate(gsis: readonly GSI[], lsis: readonly LSI[]) {
-  if (gsis.length === 0) {
-    return "return 'pk'";
-  }
-
-  if (lsis.length === 0) {
-    return `
-if ('index' in input) {
-  return \`\${input.index}pk\`;
+/** helper */
+function simpleKeyValues(
+  keyPrefix: string | undefined,
+  keyFields: readonly Field[]
+) {
+  return `{':pk': \`${makeKeyTemplate(keyPrefix, keyFields, 'read')}\`}`;
 }
-return 'pk';
-    `;
+
+/** helper */
+function keyValues(
+  primaryKey: PrimaryKeyConfig,
+  key: PrimaryKeyConfig | SecondaryIndex
+) {
+  if (key.type === 'lsi') {
+    return compositeKeyValues({
+      pkFields: primaryKey.partitionKeyFields,
+      pkPrefix: primaryKey.partitionKeyPrefix,
+      skFields: key.sortKeyFields,
+      skPrefix: key.sortKeyPrefix,
+    });
   }
 
+  if (key.isComposite) {
+    return compositeKeyValues({
+      pkFields: key.partitionKeyFields,
+      pkPrefix: key.partitionKeyPrefix,
+      skFields: key.sortKeyFields,
+      skPrefix: key.sortKeyPrefix,
+    });
+  }
+
+  return simpleKeyValues(key.partitionKeyPrefix, key.partitionKeyFields);
+}
+
+/** helper */
+function kceForQuery(
+  primaryKey: PrimaryKeyConfig,
+  secondaryIndexes: readonly SecondaryIndex[]
+) {
   return `
-if ('index' in input) {
-  const lsis = [${lsis.map(({name}) => `'${name}'`).join(', ')}];
-  if (lsis.includes(input.index)) {
-    return 'pk';
+  if ('index' in input) {
+${secondaryIndexes
+  .map(
+    (index) => `if (input.index === '${index.name}') {
+    return ${kce(index)}
+  }`
+  )
+  .join('else\n')}
+  throw new Error('Invalid index. If TypeScript did not catch this, then this is a bug in codegen.');
   }
-  return \`\${input.index}pk\`;
-}
-return 'pk'
+  else {
+    return ${kce(primaryKey)}
+  }
 `;
 }
 
-/** template */
-function skEavTemplate(gsis: readonly GSI[], lsis: readonly LSI[]) {
-  if (gsis.length === 0 && lsis.length === 0) {
-    return "return 'sk'";
+/** helper */
+function kce(key: PrimaryKeyConfig | SecondaryIndex) {
+  if (key.isComposite) {
+    // eslint-disable-next-line no-template-curly-in-string
+    return "`#pk = :pk AND ${operator === 'begins_with' ? 'begins_with(#sk, :sk)' : `#sk ${operator} :sk`}`";
   }
 
-  if (lsis.length === 0) {
-    return `
-if ('index' in input) {
-  return \`\${input.index}sk\`;
-}
-return 'sk';
-    `;
-  }
-
-  if (gsis.length === 0) {
-    return `
-if ('index' in input) {
-  const lsis = [${lsis.map(({name}) => `'${name}'`).join(', ')}];
-  if (lsis.includes(input.index)) {
-    return input.index;
-  }
-}
-return 'sk'
-`;
-  }
-
-  return `
-if ('index' in input) {
-  const lsis = [${lsis.map(({name}) => `'${name}'`).join(', ')}];
-  if (lsis.includes(input.index)) {
-    return input.index;
-  }
-  return \`\${input.index}sk\`;
-}
-return 'sk'
-`;
+  return "'#pk = :pk'";
 }

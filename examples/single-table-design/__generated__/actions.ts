@@ -577,45 +577,66 @@ export type QueryAccountInput =
 export type QueryAccountOutput = MultiResultType<Account>;
 
 /** helper */
-function makePartitionKeyForQueryAccount(input: QueryAccountInput): string {
-  if (!('index' in input)) {
-    return `ACCOUNT#${input.vendor}#${input.externalId}`;
-  } else if ('index' in input && input.index === 'lsi1') {
-    return `ACCOUNT#${input.vendor}#${input.externalId}`;
-  }
-
-  throw new Error('Could not construct partition key from input');
-}
-
-/** helper */
-function makeSortKeyForQueryAccount(
+function makeEanForQueryAccount(
   input: QueryAccountInput
-): string | undefined {
+): Record<string, string> {
   if ('index' in input) {
     if (input.index === 'lsi1') {
-      return ['INSTANCE', 'createdAt' in input && input.createdAt]
-        .filter(Boolean)
-        .join('#');
+      return {'#pk': 'pk', '#sk': 'sk'};
     }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
   } else {
-    return ['SUMMARY'].filter(Boolean).join('#');
+    return {'#pk': 'pk', '#sk': 'sk'};
   }
 }
 
 /** helper */
-function makeEavPkForQueryAccount(input: QueryAccountInput): string {
-  return 'pk';
-}
-
-/** helper */
-function makeEavSkForQueryAccount(input: QueryAccountInput): string {
+function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
   if ('index' in input) {
-    const lsis = ['lsi1'];
-    if (lsis.includes(input.index)) {
-      return input.index;
+    if (input.index === 'lsi1') {
+      return {
+        ':pk': `ACCOUNT#${input.vendor}#${input.externalId}`,
+        ':sk': ['INSTANCE', 'createdAt' in input && input.createdAt]
+          .filter(Boolean)
+          .join('#'),
+      };
     }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {
+      ':pk': `ACCOUNT#${input.vendor}#${input.externalId}`,
+      ':sk': ['SUMMARY'].filter(Boolean).join('#'),
+    };
   }
-  return 'sk';
+}
+
+/** helper */
+function makeKceForQueryAccount(
+  input: QueryAccountInput,
+  {operator}: Pick<QueryOptions, 'operator'>
+): string {
+  if ('index' in input) {
+    if (input.index === 'lsi1') {
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return `#pk = :pk AND ${
+      operator === 'begins_with'
+        ? 'begins_with(#sk, :sk)'
+        : `#sk ${operator} :sk`
+    }`;
+  }
 }
 
 /** queryAccount */
@@ -630,24 +651,18 @@ export async function queryAccount(
   const tableName = process.env.TABLE_ACCOUNTS;
   assert(tableName, 'TABLE_ACCOUNTS is not set');
 
+  const ExpressionAttributeNames = makeEanForQueryAccount(input);
+  const ExpressionAttributeValues = makeEavForQueryAccount(input);
+  const KeyConditionExpression = makeKceForQueryAccount(input, {operator});
+
   const {ConsumedCapacity: capacity, Items: items = []} =
     await ddbDocClient.send(
       new QueryCommand({
         ConsistentRead: false,
-        ExpressionAttributeNames: {
-          '#pk': makeEavPkForQueryAccount(input),
-          '#sk': makeEavSkForQueryAccount(input),
-        },
-        ExpressionAttributeValues: {
-          ':pk': makePartitionKeyForQueryAccount(input),
-          ':sk': makeSortKeyForQueryAccount(input),
-        },
+        ExpressionAttributeNames,
+        ExpressionAttributeValues,
         IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression: `#pk = :pk AND ${
-          operator === 'begins_with'
-            ? 'begins_with(#sk, :sk)'
-            : `#sk ${operator} :sk`
-        }`,
+        KeyConditionExpression,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,
@@ -1261,37 +1276,52 @@ export type QueryScheduledEmailInput =
 export type QueryScheduledEmailOutput = MultiResultType<ScheduledEmail>;
 
 /** helper */
-function makePartitionKeyForQueryScheduledEmail(
+function makeEanForQueryScheduledEmail(
   input: QueryScheduledEmailInput
-): string {
-  if (!('index' in input)) {
-    return `ACCOUNT#${input.vendor}#${input.externalId}`;
+): Record<string, string> {
+  if ('index' in input) {
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {'#pk': 'pk', '#sk': 'sk'};
   }
-
-  throw new Error('Could not construct partition key from input');
 }
 
 /** helper */
-function makeSortKeyForQueryScheduledEmail(
+function makeEavForQueryScheduledEmail(
   input: QueryScheduledEmailInput
-): string | undefined {
-  return ['SCHEDULED_EMAIL', 'template' in input && input.template]
-    .filter(Boolean)
-    .join('#');
+): Record<string, any> {
+  if ('index' in input) {
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {
+      ':pk': `ACCOUNT#${input.vendor}#${input.externalId}`,
+      ':sk': ['SCHEDULED_EMAIL', 'template' in input && input.template]
+        .filter(Boolean)
+        .join('#'),
+    };
+  }
 }
 
 /** helper */
-function makeEavPkForQueryScheduledEmail(
-  input: QueryScheduledEmailInput
+function makeKceForQueryScheduledEmail(
+  input: QueryScheduledEmailInput,
+  {operator}: Pick<QueryOptions, 'operator'>
 ): string {
-  return 'pk';
-}
-
-/** helper */
-function makeEavSkForQueryScheduledEmail(
-  input: QueryScheduledEmailInput
-): string {
-  return 'sk';
+  if ('index' in input) {
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return `#pk = :pk AND ${
+      operator === 'begins_with'
+        ? 'begins_with(#sk, :sk)'
+        : `#sk ${operator} :sk`
+    }`;
+  }
 }
 
 /** queryScheduledEmail */
@@ -1306,24 +1336,20 @@ export async function queryScheduledEmail(
   const tableName = process.env.TABLE_EMAIL;
   assert(tableName, 'TABLE_EMAIL is not set');
 
+  const ExpressionAttributeNames = makeEanForQueryScheduledEmail(input);
+  const ExpressionAttributeValues = makeEavForQueryScheduledEmail(input);
+  const KeyConditionExpression = makeKceForQueryScheduledEmail(input, {
+    operator,
+  });
+
   const {ConsumedCapacity: capacity, Items: items = []} =
     await ddbDocClient.send(
       new QueryCommand({
         ConsistentRead: false,
-        ExpressionAttributeNames: {
-          '#pk': makeEavPkForQueryScheduledEmail(input),
-          '#sk': makeEavSkForQueryScheduledEmail(input),
-        },
-        ExpressionAttributeValues: {
-          ':pk': makePartitionKeyForQueryScheduledEmail(input),
-          ':sk': makeSortKeyForQueryScheduledEmail(input),
-        },
+        ExpressionAttributeNames,
+        ExpressionAttributeValues,
         IndexName: undefined,
-        KeyConditionExpression: `#pk = :pk AND ${
-          operator === 'begins_with'
-            ? 'begins_with(#sk, :sk)'
-            : `#sk ${operator} :sk`
-        }`,
+        KeyConditionExpression,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,
@@ -1928,35 +1954,56 @@ export type QuerySentEmailInput =
 export type QuerySentEmailOutput = MultiResultType<SentEmail>;
 
 /** helper */
-function makePartitionKeyForQuerySentEmail(input: QuerySentEmailInput): string {
-  if (!('index' in input)) {
-    return `ACCOUNT#${input.vendor}#${input.externalId}`;
-  }
-
-  throw new Error('Could not construct partition key from input');
-}
-
-/** helper */
-function makeSortKeyForQuerySentEmail(
+function makeEanForQuerySentEmail(
   input: QuerySentEmailInput
-): string | undefined {
-  return [
-    'TEMPLATE',
-    'template' in input && input.template,
-    'createdAt' in input && input.createdAt,
-  ]
-    .filter(Boolean)
-    .join('#');
+): Record<string, string> {
+  if ('index' in input) {
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {'#pk': 'pk', '#sk': 'sk'};
+  }
 }
 
 /** helper */
-function makeEavPkForQuerySentEmail(input: QuerySentEmailInput): string {
-  return 'pk';
+function makeEavForQuerySentEmail(
+  input: QuerySentEmailInput
+): Record<string, any> {
+  if ('index' in input) {
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {
+      ':pk': `ACCOUNT#${input.vendor}#${input.externalId}`,
+      ':sk': [
+        'TEMPLATE',
+        'template' in input && input.template,
+        'createdAt' in input && input.createdAt,
+      ]
+        .filter(Boolean)
+        .join('#'),
+    };
+  }
 }
 
 /** helper */
-function makeEavSkForQuerySentEmail(input: QuerySentEmailInput): string {
-  return 'sk';
+function makeKceForQuerySentEmail(
+  input: QuerySentEmailInput,
+  {operator}: Pick<QueryOptions, 'operator'>
+): string {
+  if ('index' in input) {
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return `#pk = :pk AND ${
+      operator === 'begins_with'
+        ? 'begins_with(#sk, :sk)'
+        : `#sk ${operator} :sk`
+    }`;
+  }
 }
 
 /** querySentEmail */
@@ -1971,24 +2018,18 @@ export async function querySentEmail(
   const tableName = process.env.TABLE_EMAIL;
   assert(tableName, 'TABLE_EMAIL is not set');
 
+  const ExpressionAttributeNames = makeEanForQuerySentEmail(input);
+  const ExpressionAttributeValues = makeEavForQuerySentEmail(input);
+  const KeyConditionExpression = makeKceForQuerySentEmail(input, {operator});
+
   const {ConsumedCapacity: capacity, Items: items = []} =
     await ddbDocClient.send(
       new QueryCommand({
         ConsistentRead: false,
-        ExpressionAttributeNames: {
-          '#pk': makeEavPkForQuerySentEmail(input),
-          '#sk': makeEavSkForQuerySentEmail(input),
-        },
-        ExpressionAttributeValues: {
-          ':pk': makePartitionKeyForQuerySentEmail(input),
-          ':sk': makeSortKeyForQuerySentEmail(input),
-        },
+        ExpressionAttributeNames,
+        ExpressionAttributeValues,
         IndexName: undefined,
-        KeyConditionExpression: `#pk = :pk AND ${
-          operator === 'begins_with'
-            ? 'begins_with(#sk, :sk)'
-            : `#sk ${operator} :sk`
-        }`,
+        KeyConditionExpression,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,
@@ -2580,33 +2621,52 @@ export type QuerySubscriptionInput =
 export type QuerySubscriptionOutput = MultiResultType<Subscription>;
 
 /** helper */
-function makePartitionKeyForQuerySubscription(
+function makeEanForQuerySubscription(
   input: QuerySubscriptionInput
-): string {
-  if (!('index' in input)) {
-    return `ACCOUNT#${input.vendor}#${input.externalId}`;
+): Record<string, string> {
+  if ('index' in input) {
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {'#pk': 'pk', '#sk': 'sk'};
   }
-
-  throw new Error('Could not construct partition key from input');
 }
 
 /** helper */
-function makeSortKeyForQuerySubscription(
+function makeEavForQuerySubscription(
   input: QuerySubscriptionInput
-): string | undefined {
-  return ['SUBSCRIPTION', 'effectiveDate' in input && input.effectiveDate]
-    .filter(Boolean)
-    .join('#');
+): Record<string, any> {
+  if ('index' in input) {
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {
+      ':pk': `ACCOUNT#${input.vendor}#${input.externalId}`,
+      ':sk': ['SUBSCRIPTION', 'effectiveDate' in input && input.effectiveDate]
+        .filter(Boolean)
+        .join('#'),
+    };
+  }
 }
 
 /** helper */
-function makeEavPkForQuerySubscription(input: QuerySubscriptionInput): string {
-  return 'pk';
-}
-
-/** helper */
-function makeEavSkForQuerySubscription(input: QuerySubscriptionInput): string {
-  return 'sk';
+function makeKceForQuerySubscription(
+  input: QuerySubscriptionInput,
+  {operator}: Pick<QueryOptions, 'operator'>
+): string {
+  if ('index' in input) {
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return `#pk = :pk AND ${
+      operator === 'begins_with'
+        ? 'begins_with(#sk, :sk)'
+        : `#sk ${operator} :sk`
+    }`;
+  }
 }
 
 /** querySubscription */
@@ -2621,24 +2681,18 @@ export async function querySubscription(
   const tableName = process.env.TABLE_ACCOUNTS;
   assert(tableName, 'TABLE_ACCOUNTS is not set');
 
+  const ExpressionAttributeNames = makeEanForQuerySubscription(input);
+  const ExpressionAttributeValues = makeEavForQuerySubscription(input);
+  const KeyConditionExpression = makeKceForQuerySubscription(input, {operator});
+
   const {ConsumedCapacity: capacity, Items: items = []} =
     await ddbDocClient.send(
       new QueryCommand({
         ConsistentRead: false,
-        ExpressionAttributeNames: {
-          '#pk': makeEavPkForQuerySubscription(input),
-          '#sk': makeEavSkForQuerySubscription(input),
-        },
-        ExpressionAttributeValues: {
-          ':pk': makePartitionKeyForQuerySubscription(input),
-          ':sk': makeSortKeyForQuerySubscription(input),
-        },
+        ExpressionAttributeNames,
+        ExpressionAttributeValues,
         IndexName: undefined,
-        KeyConditionExpression: `#pk = :pk AND ${
-          operator === 'begins_with'
-            ? 'begins_with(#sk, :sk)'
-            : `#sk ${operator} :sk`
-        }`,
+        KeyConditionExpression,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,

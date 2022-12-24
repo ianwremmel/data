@@ -540,45 +540,70 @@ export type QueryUserLoginInput =
 export type QueryUserLoginOutput = MultiResultType<UserLogin>;
 
 /** helper */
-function makePartitionKeyForQueryUserLogin(input: QueryUserLoginInput): string {
-  if (!('index' in input)) {
-    return `USER#${input.vendor}#${input.externalId}`;
-  } else if ('index' in input && input.index === 'gsi1') {
-    return `LOGIN#${input.vendor}#${input.login}`;
-  }
-
-  throw new Error('Could not construct partition key from input');
-}
-
-/** helper */
-function makeSortKeyForQueryUserLogin(
+function makeEanForQueryUserLogin(
   input: QueryUserLoginInput
-): string | undefined {
+): Record<string, string> {
   if ('index' in input) {
     if (input.index === 'gsi1') {
-      return ['MODIFIED', 'updatedAt' in input && input.updatedAt]
-        .filter(Boolean)
-        .join('#');
+      return {'#pk': 'gsi1pk', '#sk': 'gsi1sk'};
     }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
   } else {
-    return ['LOGIN', 'login' in input && input.login].filter(Boolean).join('#');
+    return {'#pk': 'pk', '#sk': 'sk'};
   }
 }
 
 /** helper */
-function makeEavPkForQueryUserLogin(input: QueryUserLoginInput): string {
+function makeEavForQueryUserLogin(
+  input: QueryUserLoginInput
+): Record<string, any> {
   if ('index' in input) {
-    return `${input.index}pk`;
+    if (input.index === 'gsi1') {
+      return {
+        ':pk': `LOGIN#${input.vendor}#${input.login}`,
+        ':sk': ['MODIFIED', 'updatedAt' in input && input.updatedAt]
+          .filter(Boolean)
+          .join('#'),
+      };
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {
+      ':pk': `USER#${input.vendor}#${input.externalId}`,
+      ':sk': ['LOGIN', 'login' in input && input.login]
+        .filter(Boolean)
+        .join('#'),
+    };
   }
-  return 'pk';
 }
 
 /** helper */
-function makeEavSkForQueryUserLogin(input: QueryUserLoginInput): string {
+function makeKceForQueryUserLogin(
+  input: QueryUserLoginInput,
+  {operator}: Pick<QueryOptions, 'operator'>
+): string {
   if ('index' in input) {
-    return `${input.index}sk`;
+    if (input.index === 'gsi1') {
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return `#pk = :pk AND ${
+      operator === 'begins_with'
+        ? 'begins_with(#sk, :sk)'
+        : `#sk ${operator} :sk`
+    }`;
   }
-  return 'sk';
 }
 
 /** queryUserLogin */
@@ -593,24 +618,18 @@ export async function queryUserLogin(
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
 
+  const ExpressionAttributeNames = makeEanForQueryUserLogin(input);
+  const ExpressionAttributeValues = makeEavForQueryUserLogin(input);
+  const KeyConditionExpression = makeKceForQueryUserLogin(input, {operator});
+
   const {ConsumedCapacity: capacity, Items: items = []} =
     await ddbDocClient.send(
       new QueryCommand({
         ConsistentRead: false,
-        ExpressionAttributeNames: {
-          '#pk': makeEavPkForQueryUserLogin(input),
-          '#sk': makeEavSkForQueryUserLogin(input),
-        },
-        ExpressionAttributeValues: {
-          ':pk': makePartitionKeyForQueryUserLogin(input),
-          ':sk': makeSortKeyForQueryUserLogin(input),
-        },
+        ExpressionAttributeNames,
+        ExpressionAttributeValues,
         IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression: `#pk = :pk AND ${
-          operator === 'begins_with'
-            ? 'begins_with(#sk, :sk)'
-            : `#sk ${operator} :sk`
-        }`,
+        KeyConditionExpression,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,
