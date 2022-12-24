@@ -48,7 +48,15 @@ export function deleteItemTemplate(model: Model) {
  * Generates the query function for a table
  */
 export function queryTemplate(model: Model) {
-  if (!model.primaryKey.isComposite) {
+  let isQueryable = false;
+  if (model.primaryKey.isComposite) {
+    isQueryable = true;
+  }
+  if (model.secondaryIndexes.length > 0) {
+    isQueryable = true;
+  }
+
+  if (!isQueryable) {
     return '';
   }
 

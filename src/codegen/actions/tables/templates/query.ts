@@ -176,9 +176,10 @@ function makeTypeSignature(
             );
           }
 
-          return Object.fromEntries(
-            index.partitionKeyFields.map(getTypeScriptTypeForField).sort()
-          );
+          return Object.fromEntries([
+            ...name,
+            ...index.partitionKeyFields.map(getTypeScriptTypeForField).sort(),
+          ]);
         }
 
         return [undefined, ...index.sortKeyFields].map((_, i) =>
