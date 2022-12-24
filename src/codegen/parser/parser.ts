@@ -31,6 +31,7 @@ import type {
   TTLConfig,
   Table,
   TableSecondaryIndex,
+  GSI,
 } from './types';
 
 export interface Info {
@@ -76,6 +77,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
           path.resolve(process.cwd(), config.dependenciesModuleId)
         ),
         fields,
+        isPublicModel: hasInterface('PublicModel', type),
         libImportPath: '@ianwremmel/data',
         primaryKey: extractPrimaryKey(type, fieldMap),
         secondaryIndexes: extractSecondaryIndexes(type, fieldMap),
@@ -120,6 +122,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
               acc.enablePointInTimeRecovery || model.enablePointInTimeRecovery,
             enableStreaming: acc.enableStreaming || model.enableStreaming,
             hasCdc: acc.hasCdc || !!model.changeDataCaptureConfig,
+            hasPublicModels: acc.hasPublicModels || model.isPublicModel,
             hasTtl: acc.hasTtl || !!model.ttlConfig,
             libImportPath: model.libImportPath,
             primaryKey: {
@@ -134,6 +137,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
           enablePointInTimeRecovery: firstModel.enablePointInTimeRecovery,
           enableStreaming: firstModel.enableStreaming,
           hasCdc: !!firstModel.changeDataCaptureConfig,
+          hasPublicModels: firstModel.isPublicModel,
           hasTtl: !!firstModel.ttlConfig,
           libImportPath: firstModel.libImportPath,
           primaryKey: {
@@ -273,7 +277,7 @@ function extractSecondaryIndexes(
   type: GraphQLObjectType<unknown, unknown>,
   fieldMap: Record<string, Field>
 ): SecondaryIndex[] {
-  return (
+  const indexes: SecondaryIndex[] =
     type.astNode?.directives
       ?.filter(
         (directive) =>
@@ -312,8 +316,19 @@ function extractSecondaryIndexes(
           sortKeyPrefix: getOptionalArgStringValue('prefix', directive),
           type: 'lsi',
         };
-      }) ?? []
-  );
+      }) ?? [];
+
+  if (hasInterface('PublicModel', type)) {
+    const publicIdIndex: GSI = {
+      isComposite: false,
+      name: 'publicId',
+      partitionKeyFields: [getFieldFromFieldMap(fieldMap, 'publicId')],
+      type: 'gsi',
+    };
+
+    indexes.push(publicIdIndex);
+  }
+  return indexes;
 }
 
 /**
