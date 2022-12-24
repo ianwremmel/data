@@ -1,6 +1,7 @@
 export interface Table {
   readonly dependenciesModuleId: string;
   readonly enablePointInTimeRecovery: boolean;
+  readonly enableStreaming: boolean;
   readonly hasCdc: boolean;
   readonly hasTtl: boolean;
   readonly libImportPath: string;
@@ -24,6 +25,7 @@ export interface Model {
   readonly consistent: boolean;
   readonly dependenciesModuleId: string;
   readonly enablePointInTimeRecovery: boolean;
+  readonly enableStreaming: boolean;
   readonly fields: readonly Field[];
   readonly libImportPath: string;
   readonly tableName: string;

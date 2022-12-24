@@ -4,7 +4,11 @@ A user session object.
 type UserSession implements Model & Node & Timestamped & Versioned
   @consistent
   @partitionKey(pkFields: ["sessionId"], pkPrefix: "USER_SESSION")
-  @table(enablePointInTimeRecovery: false, name: "TableUserSessions") {
+  @table(
+    enablePointInTimeRecovery: false
+    enableStreaming: true
+    name: "TableUserSessions"
+  ) {
   createdAt: Date!
   expires: Date @ttl
   id: ID!
