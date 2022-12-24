@@ -255,7 +255,7 @@ describe('optional ttl', () => {
 describe('@alias', () => {
   it("changes field's column name", async () => {
     async function loadRaw(sessionId: string) {
-      const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+      const {Item: item} = await ddbDocClient.send(
         new GetCommand({
           ConsistentRead: true,
           Key: {pk: `USER_SESSION#${sessionId}`},
