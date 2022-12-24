@@ -232,14 +232,11 @@ function indexToSortKey(index: PrimaryKeyConfig | SecondaryIndex): string {
   if ('name' in index) {
     return `
 if (input.index === '${index.name}') {
-  return ${makePartialKeyTemplate(
-    index.sortKeyPrefix ?? '',
-    index.sortKeyFields
-  )};
+  return ${makePartialKeyTemplate(index.sortKeyPrefix, index.sortKeyFields)};
 }`;
   }
   return `return ${makePartialKeyTemplate(
-    index.sortKeyPrefix ?? '',
+    index.sortKeyPrefix,
     index.sortKeyFields
   )}`;
 }
@@ -263,21 +260,13 @@ function makePartitionKeyForQuery(
 
       if (index.type === 'primary') {
         return `if (!('index' in input)) {
-  return \`${makeKeyTemplate(
-    partitionKeyPrefix ?? '',
-    partitionKeyFields,
-    'read'
-  )}\`
+  return \`${makeKeyTemplate(partitionKeyPrefix, partitionKeyFields, 'read')}\`
 }`;
       }
 
       return `
 if ('index' in input && input.index === '${index.name}') {
-  return \`${makeKeyTemplate(
-    partitionKeyPrefix ?? '',
-    partitionKeyFields,
-    'read'
-  )}\`;
+  return \`${makeKeyTemplate(partitionKeyPrefix, partitionKeyFields, 'read')}\`;
 }`;
     })
     .join('\n else ');
@@ -304,7 +293,7 @@ ${secondaryIndex.map(indexToSortKey).join('\n else ')};
 
 /** helper */
 function makePartialKeyTemplate(
-  prefix: string,
+  prefix: string | undefined,
   fields: readonly Field[]
 ): string {
   return `['${prefix}', ${fields
