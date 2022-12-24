@@ -725,76 +725,59 @@ export function marshallUserLogin(
 
 /** Unmarshalls a DynamoDB record into a UserLogin object */
 export function unmarshallUserLogin(item: Record<string, any>): UserLogin {
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('external_id' in item) {
-    assert(
-      item.external_id !== null,
-      () => new DataIntegrityError('Expected externalId to be non-null')
-    );
-    assert(
-      typeof item.external_id !== 'undefined',
-      () => new DataIntegrityError('Expected externalId to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('login' in item) {
-    assert(
-      item.login !== null,
-      () => new DataIntegrityError('Expected login to be non-null')
-    );
-    assert(
-      typeof item.login !== 'undefined',
-      () => new DataIntegrityError('Expected login to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('vendor' in item) {
-    assert(
-      item.vendor !== null,
-      () => new DataIntegrityError('Expected vendor to be non-null')
-    );
-    assert(
-      typeof item.vendor !== 'undefined',
-      () => new DataIntegrityError('Expected vendor to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.external_id !== null,
+    () => new DataIntegrityError('Expected externalId to be non-null')
+  );
+  assert(
+    typeof item.external_id !== 'undefined',
+    () => new DataIntegrityError('Expected externalId to be defined')
+  );
+
+  assert(
+    item.login !== null,
+    () => new DataIntegrityError('Expected login to be non-null')
+  );
+  assert(
+    typeof item.login !== 'undefined',
+    () => new DataIntegrityError('Expected login to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   const result: UserLogin = {
     createdAt: new Date(item._ct),

@@ -770,76 +770,59 @@ export function marshallAccount(
 
 /** Unmarshalls a DynamoDB record into a Account object */
 export function unmarshallAccount(item: Record<string, any>): Account {
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('effective_date' in item) {
-    assert(
-      item.effective_date !== null,
-      () => new DataIntegrityError('Expected effectiveDate to be non-null')
-    );
-    assert(
-      typeof item.effective_date !== 'undefined',
-      () => new DataIntegrityError('Expected effectiveDate to be defined')
-    );
-  }
-  if ('external_id' in item) {
-    assert(
-      item.external_id !== null,
-      () => new DataIntegrityError('Expected externalId to be non-null')
-    );
-    assert(
-      typeof item.external_id !== 'undefined',
-      () => new DataIntegrityError('Expected externalId to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('vendor' in item) {
-    assert(
-      item.vendor !== null,
-      () => new DataIntegrityError('Expected vendor to be non-null')
-    );
-    assert(
-      typeof item.vendor !== 'undefined',
-      () => new DataIntegrityError('Expected vendor to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.effective_date !== null,
+    () => new DataIntegrityError('Expected effectiveDate to be non-null')
+  );
+  assert(
+    typeof item.effective_date !== 'undefined',
+    () => new DataIntegrityError('Expected effectiveDate to be defined')
+  );
+
+  assert(
+    item.external_id !== null,
+    () => new DataIntegrityError('Expected externalId to be non-null')
+  );
+  assert(
+    typeof item.external_id !== 'undefined',
+    () => new DataIntegrityError('Expected externalId to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   let result: Account = {
     createdAt: new Date(item._ct),
@@ -1471,76 +1454,59 @@ export function marshallScheduledEmail(
 export function unmarshallScheduledEmail(
   item: Record<string, any>
 ): ScheduledEmail {
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('external_id' in item) {
-    assert(
-      item.external_id !== null,
-      () => new DataIntegrityError('Expected externalId to be non-null')
-    );
-    assert(
-      typeof item.external_id !== 'undefined',
-      () => new DataIntegrityError('Expected externalId to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('template' in item) {
-    assert(
-      item.template !== null,
-      () => new DataIntegrityError('Expected template to be non-null')
-    );
-    assert(
-      typeof item.template !== 'undefined',
-      () => new DataIntegrityError('Expected template to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('vendor' in item) {
-    assert(
-      item.vendor !== null,
-      () => new DataIntegrityError('Expected vendor to be non-null')
-    );
-    assert(
-      typeof item.vendor !== 'undefined',
-      () => new DataIntegrityError('Expected vendor to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.external_id !== null,
+    () => new DataIntegrityError('Expected externalId to be non-null')
+  );
+  assert(
+    typeof item.external_id !== 'undefined',
+    () => new DataIntegrityError('Expected externalId to be defined')
+  );
+
+  assert(
+    item.template !== null,
+    () => new DataIntegrityError('Expected template to be non-null')
+  );
+  assert(
+    typeof item.template !== 'undefined',
+    () => new DataIntegrityError('Expected template to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   let result: ScheduledEmail = {
     createdAt: new Date(item._ct),
@@ -2140,86 +2106,68 @@ export function marshallSentEmail(
 
 /** Unmarshalls a DynamoDB record into a SentEmail object */
 export function unmarshallSentEmail(item: Record<string, any>): SentEmail {
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('external_id' in item) {
-    assert(
-      item.external_id !== null,
-      () => new DataIntegrityError('Expected externalId to be non-null')
-    );
-    assert(
-      typeof item.external_id !== 'undefined',
-      () => new DataIntegrityError('Expected externalId to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('message_id' in item) {
-    assert(
-      item.message_id !== null,
-      () => new DataIntegrityError('Expected messageId to be non-null')
-    );
-    assert(
-      typeof item.message_id !== 'undefined',
-      () => new DataIntegrityError('Expected messageId to be defined')
-    );
-  }
-  if ('template' in item) {
-    assert(
-      item.template !== null,
-      () => new DataIntegrityError('Expected template to be non-null')
-    );
-    assert(
-      typeof item.template !== 'undefined',
-      () => new DataIntegrityError('Expected template to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('vendor' in item) {
-    assert(
-      item.vendor !== null,
-      () => new DataIntegrityError('Expected vendor to be non-null')
-    );
-    assert(
-      typeof item.vendor !== 'undefined',
-      () => new DataIntegrityError('Expected vendor to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.external_id !== null,
+    () => new DataIntegrityError('Expected externalId to be non-null')
+  );
+  assert(
+    typeof item.external_id !== 'undefined',
+    () => new DataIntegrityError('Expected externalId to be defined')
+  );
+
+  assert(
+    item.message_id !== null,
+    () => new DataIntegrityError('Expected messageId to be non-null')
+  );
+  assert(
+    typeof item.message_id !== 'undefined',
+    () => new DataIntegrityError('Expected messageId to be defined')
+  );
+
+  assert(
+    item.template !== null,
+    () => new DataIntegrityError('Expected template to be non-null')
+  );
+  assert(
+    typeof item.template !== 'undefined',
+    () => new DataIntegrityError('Expected template to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   const result: SentEmail = {
     createdAt: new Date(item._ct),
@@ -2820,76 +2768,59 @@ export function marshallSubscription(
 export function unmarshallSubscription(
   item: Record<string, any>
 ): Subscription {
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('effective_date' in item) {
-    assert(
-      item.effective_date !== null,
-      () => new DataIntegrityError('Expected effectiveDate to be non-null')
-    );
-    assert(
-      typeof item.effective_date !== 'undefined',
-      () => new DataIntegrityError('Expected effectiveDate to be defined')
-    );
-  }
-  if ('external_id' in item) {
-    assert(
-      item.external_id !== null,
-      () => new DataIntegrityError('Expected externalId to be non-null')
-    );
-    assert(
-      typeof item.external_id !== 'undefined',
-      () => new DataIntegrityError('Expected externalId to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('vendor' in item) {
-    assert(
-      item.vendor !== null,
-      () => new DataIntegrityError('Expected vendor to be non-null')
-    );
-    assert(
-      typeof item.vendor !== 'undefined',
-      () => new DataIntegrityError('Expected vendor to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.effective_date !== null,
+    () => new DataIntegrityError('Expected effectiveDate to be non-null')
+  );
+  assert(
+    typeof item.effective_date !== 'undefined',
+    () => new DataIntegrityError('Expected effectiveDate to be defined')
+  );
+
+  assert(
+    item.external_id !== null,
+    () => new DataIntegrityError('Expected externalId to be non-null')
+  );
+  assert(
+    typeof item.external_id !== 'undefined',
+    () => new DataIntegrityError('Expected externalId to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   let result: Subscription = {
     createdAt: new Date(item._ct),

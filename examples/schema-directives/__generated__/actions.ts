@@ -585,66 +585,50 @@ export function marshallUserSession(
 
 /** Unmarshalls a DynamoDB record into a UserSession object */
 export function unmarshallUserSession(item: Record<string, any>): UserSession {
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('session' in item) {
-    assert(
-      item.session !== null,
-      () => new DataIntegrityError('Expected session to be non-null')
-    );
-    assert(
-      typeof item.session !== 'undefined',
-      () => new DataIntegrityError('Expected session to be defined')
-    );
-  }
-  if ('session_id' in item) {
-    assert(
-      item.session_id !== null,
-      () => new DataIntegrityError('Expected sessionId to be non-null')
-    );
-    assert(
-      typeof item.session_id !== 'undefined',
-      () => new DataIntegrityError('Expected sessionId to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.session !== null,
+    () => new DataIntegrityError('Expected session to be non-null')
+  );
+  assert(
+    typeof item.session !== 'undefined',
+    () => new DataIntegrityError('Expected session to be defined')
+  );
+
+  assert(
+    item.session_id !== null,
+    () => new DataIntegrityError('Expected sessionId to be non-null')
+  );
+  assert(
+    typeof item.session_id !== 'undefined',
+    () => new DataIntegrityError('Expected sessionId to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   let result: UserSession = {
     createdAt: new Date(item._ct),

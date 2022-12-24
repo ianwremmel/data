@@ -1005,116 +1005,95 @@ export function marshallCaseInstance(
 export function unmarshallCaseInstance(
   item: Record<string, any>
 ): CaseInstance {
-  if ('branch_name' in item) {
-    assert(
-      item.branch_name !== null,
-      () => new DataIntegrityError('Expected branchName to be non-null')
-    );
-    assert(
-      typeof item.branch_name !== 'undefined',
-      () => new DataIntegrityError('Expected branchName to be defined')
-    );
-  }
-  if ('conclusion' in item) {
-    assert(
-      item.conclusion !== null,
-      () => new DataIntegrityError('Expected conclusion to be non-null')
-    );
-    assert(
-      typeof item.conclusion !== 'undefined',
-      () => new DataIntegrityError('Expected conclusion to be defined')
-    );
-  }
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('lineage' in item) {
-    assert(
-      item.lineage !== null,
-      () => new DataIntegrityError('Expected lineage to be non-null')
-    );
-    assert(
-      typeof item.lineage !== 'undefined',
-      () => new DataIntegrityError('Expected lineage to be defined')
-    );
-  }
-  if ('repo_id' in item) {
-    assert(
-      item.repo_id !== null,
-      () => new DataIntegrityError('Expected repoId to be non-null')
-    );
-    assert(
-      typeof item.repo_id !== 'undefined',
-      () => new DataIntegrityError('Expected repoId to be defined')
-    );
-  }
-  if ('retry' in item) {
-    assert(
-      item.retry !== null,
-      () => new DataIntegrityError('Expected retry to be non-null')
-    );
-    assert(
-      typeof item.retry !== 'undefined',
-      () => new DataIntegrityError('Expected retry to be defined')
-    );
-  }
-  if ('sha' in item) {
-    assert(
-      item.sha !== null,
-      () => new DataIntegrityError('Expected sha to be non-null')
-    );
-    assert(
-      typeof item.sha !== 'undefined',
-      () => new DataIntegrityError('Expected sha to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('vendor' in item) {
-    assert(
-      item.vendor !== null,
-      () => new DataIntegrityError('Expected vendor to be non-null')
-    );
-    assert(
-      typeof item.vendor !== 'undefined',
-      () => new DataIntegrityError('Expected vendor to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item.branch_name !== null,
+    () => new DataIntegrityError('Expected branchName to be non-null')
+  );
+  assert(
+    typeof item.branch_name !== 'undefined',
+    () => new DataIntegrityError('Expected branchName to be defined')
+  );
+
+  assert(
+    item.conclusion !== null,
+    () => new DataIntegrityError('Expected conclusion to be non-null')
+  );
+  assert(
+    typeof item.conclusion !== 'undefined',
+    () => new DataIntegrityError('Expected conclusion to be defined')
+  );
+
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.lineage !== null,
+    () => new DataIntegrityError('Expected lineage to be non-null')
+  );
+  assert(
+    typeof item.lineage !== 'undefined',
+    () => new DataIntegrityError('Expected lineage to be defined')
+  );
+
+  assert(
+    item.repo_id !== null,
+    () => new DataIntegrityError('Expected repoId to be non-null')
+  );
+  assert(
+    typeof item.repo_id !== 'undefined',
+    () => new DataIntegrityError('Expected repoId to be defined')
+  );
+
+  assert(
+    item.retry !== null,
+    () => new DataIntegrityError('Expected retry to be non-null')
+  );
+  assert(
+    typeof item.retry !== 'undefined',
+    () => new DataIntegrityError('Expected retry to be defined')
+  );
+
+  assert(
+    item.sha !== null,
+    () => new DataIntegrityError('Expected sha to be non-null')
+  );
+  assert(
+    typeof item.sha !== 'undefined',
+    () => new DataIntegrityError('Expected sha to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   let result: CaseInstance = {
     branchName: item.branch_name,
@@ -1810,106 +1789,86 @@ export function marshallCaseSummary(
 
 /** Unmarshalls a DynamoDB record into a CaseSummary object */
 export function unmarshallCaseSummary(item: Record<string, any>): CaseSummary {
-  if ('branch_name' in item) {
-    assert(
-      item.branch_name !== null,
-      () => new DataIntegrityError('Expected branchName to be non-null')
-    );
-    assert(
-      typeof item.branch_name !== 'undefined',
-      () => new DataIntegrityError('Expected branchName to be defined')
-    );
-  }
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('duration' in item) {
-    assert(
-      item.duration !== null,
-      () => new DataIntegrityError('Expected duration to be non-null')
-    );
-    assert(
-      typeof item.duration !== 'undefined',
-      () => new DataIntegrityError('Expected duration to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('lineage' in item) {
-    assert(
-      item.lineage !== null,
-      () => new DataIntegrityError('Expected lineage to be non-null')
-    );
-    assert(
-      typeof item.lineage !== 'undefined',
-      () => new DataIntegrityError('Expected lineage to be defined')
-    );
-  }
-  if ('repo_id' in item) {
-    assert(
-      item.repo_id !== null,
-      () => new DataIntegrityError('Expected repoId to be non-null')
-    );
-    assert(
-      typeof item.repo_id !== 'undefined',
-      () => new DataIntegrityError('Expected repoId to be defined')
-    );
-  }
-  if ('stability' in item) {
-    assert(
-      item.stability !== null,
-      () => new DataIntegrityError('Expected stability to be non-null')
-    );
-    assert(
-      typeof item.stability !== 'undefined',
-      () => new DataIntegrityError('Expected stability to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('vendor' in item) {
-    assert(
-      item.vendor !== null,
-      () => new DataIntegrityError('Expected vendor to be non-null')
-    );
-    assert(
-      typeof item.vendor !== 'undefined',
-      () => new DataIntegrityError('Expected vendor to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item.branch_name !== null,
+    () => new DataIntegrityError('Expected branchName to be non-null')
+  );
+  assert(
+    typeof item.branch_name !== 'undefined',
+    () => new DataIntegrityError('Expected branchName to be defined')
+  );
+
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.duration !== null,
+    () => new DataIntegrityError('Expected duration to be non-null')
+  );
+  assert(
+    typeof item.duration !== 'undefined',
+    () => new DataIntegrityError('Expected duration to be defined')
+  );
+
+  assert(
+    item.lineage !== null,
+    () => new DataIntegrityError('Expected lineage to be non-null')
+  );
+  assert(
+    typeof item.lineage !== 'undefined',
+    () => new DataIntegrityError('Expected lineage to be defined')
+  );
+
+  assert(
+    item.repo_id !== null,
+    () => new DataIntegrityError('Expected repoId to be non-null')
+  );
+  assert(
+    typeof item.repo_id !== 'undefined',
+    () => new DataIntegrityError('Expected repoId to be defined')
+  );
+
+  assert(
+    item.stability !== null,
+    () => new DataIntegrityError('Expected stability to be non-null')
+  );
+  assert(
+    typeof item.stability !== 'undefined',
+    () => new DataIntegrityError('Expected stability to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   let result: CaseSummary = {
     branchName: item.branch_name,
@@ -2584,96 +2543,77 @@ export function marshallFileTiming(
 
 /** Unmarshalls a DynamoDB record into a FileTiming object */
 export function unmarshallFileTiming(item: Record<string, any>): FileTiming {
-  if ('branch_name' in item) {
-    assert(
-      item.branch_name !== null,
-      () => new DataIntegrityError('Expected branchName to be non-null')
-    );
-    assert(
-      typeof item.branch_name !== 'undefined',
-      () => new DataIntegrityError('Expected branchName to be defined')
-    );
-  }
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('duration' in item) {
-    assert(
-      item.duration !== null,
-      () => new DataIntegrityError('Expected duration to be non-null')
-    );
-    assert(
-      typeof item.duration !== 'undefined',
-      () => new DataIntegrityError('Expected duration to be defined')
-    );
-  }
-  if ('filename' in item) {
-    assert(
-      item.filename !== null,
-      () => new DataIntegrityError('Expected filename to be non-null')
-    );
-    assert(
-      typeof item.filename !== 'undefined',
-      () => new DataIntegrityError('Expected filename to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('repo_id' in item) {
-    assert(
-      item.repo_id !== null,
-      () => new DataIntegrityError('Expected repoId to be non-null')
-    );
-    assert(
-      typeof item.repo_id !== 'undefined',
-      () => new DataIntegrityError('Expected repoId to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('vendor' in item) {
-    assert(
-      item.vendor !== null,
-      () => new DataIntegrityError('Expected vendor to be non-null')
-    );
-    assert(
-      typeof item.vendor !== 'undefined',
-      () => new DataIntegrityError('Expected vendor to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item.branch_name !== null,
+    () => new DataIntegrityError('Expected branchName to be non-null')
+  );
+  assert(
+    typeof item.branch_name !== 'undefined',
+    () => new DataIntegrityError('Expected branchName to be defined')
+  );
+
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.duration !== null,
+    () => new DataIntegrityError('Expected duration to be non-null')
+  );
+  assert(
+    typeof item.duration !== 'undefined',
+    () => new DataIntegrityError('Expected duration to be defined')
+  );
+
+  assert(
+    item.filename !== null,
+    () => new DataIntegrityError('Expected filename to be non-null')
+  );
+  assert(
+    typeof item.filename !== 'undefined',
+    () => new DataIntegrityError('Expected filename to be defined')
+  );
+
+  assert(
+    item.repo_id !== null,
+    () => new DataIntegrityError('Expected repoId to be non-null')
+  );
+  assert(
+    typeof item.repo_id !== 'undefined',
+    () => new DataIntegrityError('Expected repoId to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   let result: FileTiming = {
     branchName: item.branch_name,

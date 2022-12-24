@@ -20,8 +20,10 @@ export function unmarshallTpl({
 export function unmarshall${typeName}(item: Record<string, any>): ${typeName} {
 
 ${requiredFields
+  // id is a computed field and therefore never present in the DynamoDB record
+  .filter(({fieldName}) => fieldName !== 'id')
   .map(({columnName, fieldName}) => {
-    return `if ('${columnName}' in item) {
+    return `
   assert(
     item.${columnName} !== null,
     () => new DataIntegrityError('Expected ${fieldName} to be non-null')
@@ -30,7 +32,7 @@ ${requiredFields
     typeof item.${columnName} !== 'undefined',
     () => new DataIntegrityError('Expected ${fieldName} to be defined')
   );
-}`;
+`;
   })
   .join('\n')}
 
