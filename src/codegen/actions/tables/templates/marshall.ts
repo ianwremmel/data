@@ -17,9 +17,11 @@ export function marshallTpl({
   table: {fields, secondaryIndexes, ttlConfig, typeName},
 }: MarshallTplInput): string {
   const requiredFields = fields
-    .filter((f) => f.isRequired)
+    .filter((f) => f.isRequired && f.fieldName !== 'publicId')
     .filter(({fieldName}) => fieldName !== 'id');
-  const optionalFields = fields.filter((f) => !f.isRequired);
+  const optionalFields = fields.filter(
+    (f) => !f.isRequired && f.fieldName !== 'publicId'
+  );
 
   // These are fields that are required on the object but have overridable
   // default behaviors
@@ -74,6 +76,7 @@ export function marshall${typeName}(input: ${inputTypeName}, now = new Date()): 
     .map(({fieldName}) => `'#${fieldName} = :${fieldName}',`)
     .join('\n')}
   ${secondaryIndexes
+    .filter(({name}) => name !== 'publicId')
     .map(({name, type}) =>
       type === 'gsi'
         ? [`'#${name}pk = :${name}pk',`, `'#${name}sk = :${name}sk',`]
@@ -94,6 +97,7 @@ ${requiredFields
   .map(({columnName, fieldName}) => `'#${fieldName}': '${columnName}',`)
   .join('\n')}
 ${secondaryIndexes
+  .filter(({name}) => name !== 'publicId')
   .map(({name, type}) =>
     type === 'gsi'
       ? [`'#${name}pk': '${name}pk',`, `'#${name}sk': '${name}sk',`]
@@ -128,6 +132,7 @@ ${secondaryIndexes
       .filter(Boolean)
       .join('\n')}
 ${secondaryIndexes
+  .filter(({name}) => name !== 'publicId')
   .map((index) =>
     index.type === 'gsi'
       ? [

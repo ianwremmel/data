@@ -4,6 +4,7 @@ import {ensureTableTemplate} from './ensure-table';
 import {objectToString} from './helpers';
 
 export interface CreateItemTplInput {
+  readonly hasPublicId: boolean;
   readonly key: Record<string, string>;
   readonly tableName: string;
   readonly ttlConfig: TTLConfig | undefined;
@@ -12,6 +13,7 @@ export interface CreateItemTplInput {
 
 /** template */
 export function createItemTpl({
+  hasPublicId,
   ttlConfig,
   key,
   tableName,
@@ -23,6 +25,7 @@ export function createItemTpl({
     'id',
     'updatedAt',
     'version',
+    hasPublicId && 'publicId',
     ttlConfig?.fieldName,
   ]
     .filter(Boolean)
@@ -46,14 +49,24 @@ ${ensureTableTemplate(tableName)}
   // cannot return the newly written values.
   const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand({
       ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames: {...ExpressionAttributeNames, '#createdAt': '_ct'},
-      ExpressionAttributeValues: {...ExpressionAttributeValues, ':createdAt': now.getTime()},
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+        ${hasPublicId ? "'#publicId': 'publicId'," : ''}
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+        ${hasPublicId ? "':publicId': idGenerator()," : ''}
+      },
       Key: ${objectToString(key)},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression: UpdateExpression + ', #createdAt = :createdAt',
+      UpdateExpression: UpdateExpression + ', #createdAt = :createdAt${
+        hasPublicId ? ', #publicId = :publicId' : ''
+      }',
   }));
 
   assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');

@@ -79,6 +79,20 @@ export interface Node {
   id: Scalars['ID'];
 }
 
+/**
+ * Like Model, but includes a `publicId` field which, unline `id`, is semantically
+ * meaningless. Types implementing PublicModel will have an additional function,
+ * `queryByPublicId`, generated. If any of your models implement PublicModel, then
+ * the dependencies module must include an `idGenerator()`.
+ */
+export interface PublicModel {
+  createdAt: Scalars['Date'];
+  id: Scalars['ID'];
+  publicId: Scalars['String'];
+  updatedAt: Scalars['Date'];
+  version: Scalars['Int'];
+}
+
 /** The Query type */
 export interface Query {
   __typename?: 'Query';
@@ -572,76 +586,59 @@ export function marshallUserSession(
 
 /** Unmarshalls a DynamoDB record into a UserSession object */
 export function unmarshallUserSession(item: Record<string, any>): UserSession {
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('ttl' in item) {
-    assert(
-      item.ttl !== null,
-      () => new DataIntegrityError('Expected expires to be non-null')
-    );
-    assert(
-      typeof item.ttl !== 'undefined',
-      () => new DataIntegrityError('Expected expires to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('session' in item) {
-    assert(
-      item.session !== null,
-      () => new DataIntegrityError('Expected session to be non-null')
-    );
-    assert(
-      typeof item.session !== 'undefined',
-      () => new DataIntegrityError('Expected session to be defined')
-    );
-  }
-  if ('session_id' in item) {
-    assert(
-      item.session_id !== null,
-      () => new DataIntegrityError('Expected sessionId to be non-null')
-    );
-    assert(
-      typeof item.session_id !== 'undefined',
-      () => new DataIntegrityError('Expected sessionId to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.ttl !== null,
+    () => new DataIntegrityError('Expected expires to be non-null')
+  );
+  assert(
+    typeof item.ttl !== 'undefined',
+    () => new DataIntegrityError('Expected expires to be defined')
+  );
+
+  assert(
+    item.session !== null,
+    () => new DataIntegrityError('Expected session to be non-null')
+  );
+  assert(
+    typeof item.session !== 'undefined',
+    () => new DataIntegrityError('Expected session to be defined')
+  );
+
+  assert(
+    item.session_id !== null,
+    () => new DataIntegrityError('Expected sessionId to be non-null')
+  );
+  assert(
+    typeof item.session_id !== 'undefined',
+    () => new DataIntegrityError('Expected sessionId to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   const result: UserSession = {
     createdAt: new Date(item._ct),

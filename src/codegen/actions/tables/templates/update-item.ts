@@ -4,6 +4,7 @@ import {ensureTableTemplate} from './ensure-table';
 import {objectToString} from './helpers';
 
 export interface UpdateItemTplInput {
+  readonly hasPublicId: boolean;
   readonly key: Record<string, string>;
   readonly marshallPrimaryKey: string;
   readonly primaryKeyFields: string[];
@@ -14,6 +15,7 @@ export interface UpdateItemTplInput {
 
 /** template */
 export function updateItemTpl({
+  hasPublicId,
   marshallPrimaryKey,
   key,
   primaryKeyFields,
@@ -26,9 +28,11 @@ export function updateItemTpl({
     'id',
     'createdAt',
     'updatedAt',
-    ...(ttlConfig ? [ttlConfig.fieldName] : []),
+    hasPublicId && 'publicId',
+    ttlConfig?.fieldName,
   ]
-    .filter((fieldName) => !primaryKeyFields.includes(fieldName))
+    .filter(Boolean)
+    .filter((fieldName) => !primaryKeyFields.includes(fieldName as string))
     .map((f) => `'${f}'`)
     .sort();
   const outputTypeName = `Update${typeName}Output`;

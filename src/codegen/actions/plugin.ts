@@ -39,7 +39,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   info
 ) => {
   try {
-    const {models} = parse(schema, documents, config, info);
+    const {tables, models} = parse(schema, documents, config, info);
     const content = `export interface ResultType<T> {
   capacity: ConsumedCapacity;
   item: T;
@@ -86,6 +86,15 @@ ${models
 
     const runtimeModuleId = '@ianwremmel/data';
 
+    const hasPublicModels = tables.some((table) => table.hasPublicModels);
+
+    const importFromDependencies = [
+      'ddbDocClient',
+      hasPublicModels && 'idGenerator',
+    ]
+      .filter(Boolean)
+      .join(', ');
+
     return {
       content,
       prepend: [
@@ -95,7 +104,7 @@ ${models
         `import Base64 from 'base64url';`,
         `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError, UnexpectedAwsError, UnexpectedError} from '${runtimeModuleId}';`,
         `import {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';`,
-        `import {ddbDocClient} from "${resolveDependenciesPath(
+        `import {${importFromDependencies}} from "${resolveDependenciesPath(
           info.outputFile,
           config.dependenciesModuleId
         )}";`,

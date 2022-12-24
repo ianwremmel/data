@@ -9,12 +9,14 @@ import {ddbDocClient} from '../dependencies';
 import {
   createUserSession,
   deleteUserSession,
+  queryUserSessionByPublicId,
   readUserSession,
   updateUserSession,
 } from './__generated__/actions';
 
 const userSessionMatcher = {
   createdAt: expect.any(Date),
+  publicId: expect.any(String),
   updatedAt: expect.any(Date),
 };
 
@@ -40,8 +42,14 @@ describe('optionalFields', () => {
         `
         {
           "capacity": {
-            "CapacityUnits": 1,
-            "GlobalSecondaryIndexes": undefined,
+            "CapacityUnits": 2,
+            "GlobalSecondaryIndexes": {
+              "publicId": {
+                "CapacityUnits": 1,
+                "ReadCapacityUnits": undefined,
+                "WriteCapacityUnits": undefined,
+              },
+            },
             "LocalSecondaryIndexes": undefined,
             "ReadCapacityUnits": undefined,
             "Table": {
@@ -55,6 +63,7 @@ describe('optionalFields', () => {
           "item": {
             "createdAt": Any<Date>,
             "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
+            "publicId": Any<String>,
             "session": {
               "foo": "foo",
             },
@@ -77,8 +86,14 @@ describe('optionalFields', () => {
         `
         {
           "capacity": {
-            "CapacityUnits": 1,
-            "GlobalSecondaryIndexes": undefined,
+            "CapacityUnits": 2,
+            "GlobalSecondaryIndexes": {
+              "publicId": {
+                "CapacityUnits": 1,
+                "ReadCapacityUnits": undefined,
+                "WriteCapacityUnits": undefined,
+              },
+            },
             "LocalSecondaryIndexes": undefined,
             "ReadCapacityUnits": undefined,
             "Table": {
@@ -92,6 +107,7 @@ describe('optionalFields', () => {
           "item": {
             "createdAt": Any<Date>,
             "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
+            "publicId": Any<String>,
             "session": {
               "foo": "bar",
             },
@@ -126,6 +142,7 @@ describe('optionalFields', () => {
           "item": {
             "createdAt": Any<Date>,
             "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
+            "publicId": Any<String>,
             "session": {
               "foo": "bar",
             },
@@ -160,8 +177,14 @@ describe('optional ttl', () => {
       `
       {
         "capacity": {
-          "CapacityUnits": 1,
-          "GlobalSecondaryIndexes": undefined,
+          "CapacityUnits": 2,
+          "GlobalSecondaryIndexes": {
+            "publicId": {
+              "CapacityUnits": 1,
+              "ReadCapacityUnits": undefined,
+              "WriteCapacityUnits": undefined,
+            },
+          },
           "LocalSecondaryIndexes": undefined,
           "ReadCapacityUnits": undefined,
           "Table": {
@@ -175,6 +198,7 @@ describe('optional ttl', () => {
         "item": {
           "createdAt": Any<Date>,
           "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
+          "publicId": Any<String>,
           "session": {
             "foo": "foo",
           },
@@ -211,8 +235,14 @@ describe('optional ttl', () => {
       `
       {
         "capacity": {
-          "CapacityUnits": 1,
-          "GlobalSecondaryIndexes": undefined,
+          "CapacityUnits": 2,
+          "GlobalSecondaryIndexes": {
+            "publicId": {
+              "CapacityUnits": 1,
+              "ReadCapacityUnits": undefined,
+              "WriteCapacityUnits": undefined,
+            },
+          },
           "LocalSecondaryIndexes": undefined,
           "ReadCapacityUnits": undefined,
           "Table": {
@@ -227,6 +257,7 @@ describe('optional ttl', () => {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
           "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
+          "publicId": Any<String>,
           "session": {
             "foo": "foo",
           },
@@ -255,7 +286,7 @@ describe('optional ttl', () => {
 describe('@alias', () => {
   it("changes field's column name", async () => {
     async function loadRaw(sessionId: string) {
-      const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+      const {Item: item} = await ddbDocClient.send(
         new GetCommand({
           ConsistentRead: true,
           Key: {pk: `USER_SESSION#${sessionId}`},
@@ -290,5 +321,26 @@ describe('@alias', () => {
 
     const readResult2 = await readUserSession(createResult.item);
     expect(readResult2.item.aliasedField).toBe('bar');
+
+    // cleanup, not part of test
+    await deleteUserSession(createResult.item);
+  });
+});
+
+describe('PublicModel', () => {
+  it('can be queried by public id', async () => {
+    const result = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
+
+    const queriedResult = await queryUserSessionByPublicId(
+      result.item.publicId
+    );
+
+    expect(queriedResult.item).toStrictEqual(result.item);
+
+    // cleanup, not part of test
+    await deleteUserSession(result.item);
   });
 });

@@ -135,6 +135,20 @@ export interface Node {
   id: Scalars['ID'];
 }
 
+/**
+ * Like Model, but includes a `publicId` field which, unline `id`, is semantically
+ * meaningless. Types implementing PublicModel will have an additional function,
+ * `queryByPublicId`, generated. If any of your models implement PublicModel, then
+ * the dependencies module must include an `idGenerator()`.
+ */
+export interface PublicModel {
+  createdAt: Scalars['Date'];
+  id: Scalars['ID'];
+  publicId: Scalars['String'];
+  updatedAt: Scalars['Date'];
+  version: Scalars['Int'];
+}
+
 /** Not used. Just here to satisfy ESLint. */
 export interface Query {
   __typename?: 'Query';
@@ -713,91 +727,131 @@ export type QueryCaseInstanceInput =
 export type QueryCaseInstanceOutput = MultiResultType<CaseInstance>;
 
 /** helper */
-function makePartitionKeyForQueryCaseInstance(
+function makeEanForQueryCaseInstance(
   input: QueryCaseInstanceInput
-): string {
-  if (!('index' in input)) {
-    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`;
-  } else if ('index' in input && input.index === 'gsi1') {
-    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.sha}`;
-  } else if ('index' in input && input.index === 'gsi2') {
-    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}`;
-  } else if ('index' in input && input.index === 'lsi1') {
-    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`;
-  } else if ('index' in input && input.index === 'lsi2') {
-    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`;
+): Record<string, string> {
+  if ('index' in input) {
+    if (input.index === 'gsi1') {
+      return {'#pk': 'gsi1pk', '#sk': 'gsi1sk'};
+    } else if (input.index === 'gsi2') {
+      return {'#pk': 'gsi2pk', '#sk': 'gsi2sk'};
+    } else if (input.index === 'lsi1') {
+      return {'#pk': 'pk', '#sk': 'sk'};
+    } else if (input.index === 'lsi2') {
+      return {'#pk': 'pk', '#sk': 'sk'};
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {'#pk': 'pk', '#sk': 'sk'};
   }
-
-  throw new Error('Could not construct partition key from input');
 }
 
 /** helper */
-function makeSortKeyForQueryCaseInstance(
+function makeEavForQueryCaseInstance(
   input: QueryCaseInstanceInput
-): string | undefined {
+): Record<string, any> {
   if ('index' in input) {
     if (input.index === 'gsi1') {
-      return [
+      return {
+        ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.sha}`,
+        ':sk': [
+          'INSTANCE',
+          'lineage' in input && input.lineage,
+          'retry' in input && input.retry,
+        ]
+          .filter(Boolean)
+          .join('#'),
+      };
+    } else if (input.index === 'gsi2') {
+      return {
+        ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}`,
+        ':sk': [
+          'INSTANCE',
+          'label' in input && input.label,
+          'sha' in input && input.sha,
+        ]
+          .filter(Boolean)
+          .join('#'),
+      };
+    } else if (input.index === 'lsi1') {
+      return {
+        ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+        ':sk': ['INSTANCE', 'createdAt' in input && input.createdAt]
+          .filter(Boolean)
+          .join('#'),
+      };
+    } else if (input.index === 'lsi2') {
+      return {
+        ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+        ':sk': [
+          'INSTANCE',
+          'conclusion' in input && input.conclusion,
+          'createdAt' in input && input.createdAt,
+        ]
+          .filter(Boolean)
+          .join('#'),
+      };
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {
+      ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+      ':sk': [
         'INSTANCE',
-        'lineage' in input && input.lineage,
+        'sha' in input && input.sha,
         'retry' in input && input.retry,
       ]
         .filter(Boolean)
-        .join('#');
+        .join('#'),
+    };
+  }
+}
+
+/** helper */
+function makeKceForQueryCaseInstance(
+  input: QueryCaseInstanceInput,
+  {operator}: Pick<QueryOptions, 'operator'>
+): string {
+  if ('index' in input) {
+    if (input.index === 'gsi1') {
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
     } else if (input.index === 'gsi2') {
-      return [
-        'INSTANCE',
-        'label' in input && input.label,
-        'sha' in input && input.sha,
-      ]
-        .filter(Boolean)
-        .join('#');
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
     } else if (input.index === 'lsi1') {
-      return ['INSTANCE', 'createdAt' in input && input.createdAt]
-        .filter(Boolean)
-        .join('#');
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
     } else if (input.index === 'lsi2') {
-      return [
-        'INSTANCE',
-        'conclusion' in input && input.conclusion,
-        'createdAt' in input && input.createdAt,
-      ]
-        .filter(Boolean)
-        .join('#');
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
     }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
   } else {
-    return [
-      'INSTANCE',
-      'sha' in input && input.sha,
-      'retry' in input && input.retry,
-    ]
-      .filter(Boolean)
-      .join('#');
+    return `#pk = :pk AND ${
+      operator === 'begins_with'
+        ? 'begins_with(#sk, :sk)'
+        : `#sk ${operator} :sk`
+    }`;
   }
-}
-
-/** helper */
-function makeEavPkForQueryCaseInstance(input: QueryCaseInstanceInput): string {
-  if ('index' in input) {
-    const lsis = ['lsi1', 'lsi2'];
-    if (lsis.includes(input.index)) {
-      return 'pk';
-    }
-    return `${input.index}pk`;
-  }
-  return 'pk';
-}
-
-/** helper */
-function makeEavSkForQueryCaseInstance(input: QueryCaseInstanceInput): string {
-  if ('index' in input) {
-    const lsis = ['lsi1', 'lsi2'];
-    if (lsis.includes(input.index)) {
-      return input.index;
-    }
-    return `${input.index}sk`;
-  }
-  return 'sk';
 }
 
 /** queryCaseInstance */
@@ -812,24 +866,18 @@ export async function queryCaseInstance(
   const tableName = process.env.TABLE_CASE_INSTANCE;
   assert(tableName, 'TABLE_CASE_INSTANCE is not set');
 
+  const ExpressionAttributeNames = makeEanForQueryCaseInstance(input);
+  const ExpressionAttributeValues = makeEavForQueryCaseInstance(input);
+  const KeyConditionExpression = makeKceForQueryCaseInstance(input, {operator});
+
   const {ConsumedCapacity: capacity, Items: items = []} =
     await ddbDocClient.send(
       new QueryCommand({
         ConsistentRead: false,
-        ExpressionAttributeNames: {
-          '#pk': makeEavPkForQueryCaseInstance(input),
-          '#sk': makeEavSkForQueryCaseInstance(input),
-        },
-        ExpressionAttributeValues: {
-          ':pk': makePartitionKeyForQueryCaseInstance(input),
-          ':sk': makeSortKeyForQueryCaseInstance(input),
-        },
+        ExpressionAttributeNames,
+        ExpressionAttributeValues,
         IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression: `#pk = :pk AND ${
-          operator === 'begins_with'
-            ? 'begins_with(#sk, :sk)'
-            : `#sk ${operator} :sk`
-        }`,
+        KeyConditionExpression,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,
@@ -1005,116 +1053,95 @@ export function marshallCaseInstance(
 export function unmarshallCaseInstance(
   item: Record<string, any>
 ): CaseInstance {
-  if ('branch_name' in item) {
-    assert(
-      item.branch_name !== null,
-      () => new DataIntegrityError('Expected branchName to be non-null')
-    );
-    assert(
-      typeof item.branch_name !== 'undefined',
-      () => new DataIntegrityError('Expected branchName to be defined')
-    );
-  }
-  if ('conclusion' in item) {
-    assert(
-      item.conclusion !== null,
-      () => new DataIntegrityError('Expected conclusion to be non-null')
-    );
-    assert(
-      typeof item.conclusion !== 'undefined',
-      () => new DataIntegrityError('Expected conclusion to be defined')
-    );
-  }
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('lineage' in item) {
-    assert(
-      item.lineage !== null,
-      () => new DataIntegrityError('Expected lineage to be non-null')
-    );
-    assert(
-      typeof item.lineage !== 'undefined',
-      () => new DataIntegrityError('Expected lineage to be defined')
-    );
-  }
-  if ('repo_id' in item) {
-    assert(
-      item.repo_id !== null,
-      () => new DataIntegrityError('Expected repoId to be non-null')
-    );
-    assert(
-      typeof item.repo_id !== 'undefined',
-      () => new DataIntegrityError('Expected repoId to be defined')
-    );
-  }
-  if ('retry' in item) {
-    assert(
-      item.retry !== null,
-      () => new DataIntegrityError('Expected retry to be non-null')
-    );
-    assert(
-      typeof item.retry !== 'undefined',
-      () => new DataIntegrityError('Expected retry to be defined')
-    );
-  }
-  if ('sha' in item) {
-    assert(
-      item.sha !== null,
-      () => new DataIntegrityError('Expected sha to be non-null')
-    );
-    assert(
-      typeof item.sha !== 'undefined',
-      () => new DataIntegrityError('Expected sha to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('vendor' in item) {
-    assert(
-      item.vendor !== null,
-      () => new DataIntegrityError('Expected vendor to be non-null')
-    );
-    assert(
-      typeof item.vendor !== 'undefined',
-      () => new DataIntegrityError('Expected vendor to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item.branch_name !== null,
+    () => new DataIntegrityError('Expected branchName to be non-null')
+  );
+  assert(
+    typeof item.branch_name !== 'undefined',
+    () => new DataIntegrityError('Expected branchName to be defined')
+  );
+
+  assert(
+    item.conclusion !== null,
+    () => new DataIntegrityError('Expected conclusion to be non-null')
+  );
+  assert(
+    typeof item.conclusion !== 'undefined',
+    () => new DataIntegrityError('Expected conclusion to be defined')
+  );
+
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.lineage !== null,
+    () => new DataIntegrityError('Expected lineage to be non-null')
+  );
+  assert(
+    typeof item.lineage !== 'undefined',
+    () => new DataIntegrityError('Expected lineage to be defined')
+  );
+
+  assert(
+    item.repo_id !== null,
+    () => new DataIntegrityError('Expected repoId to be non-null')
+  );
+  assert(
+    typeof item.repo_id !== 'undefined',
+    () => new DataIntegrityError('Expected repoId to be defined')
+  );
+
+  assert(
+    item.retry !== null,
+    () => new DataIntegrityError('Expected retry to be non-null')
+  );
+  assert(
+    typeof item.retry !== 'undefined',
+    () => new DataIntegrityError('Expected retry to be defined')
+  );
+
+  assert(
+    item.sha !== null,
+    () => new DataIntegrityError('Expected sha to be non-null')
+  );
+  assert(
+    typeof item.sha !== 'undefined',
+    () => new DataIntegrityError('Expected sha to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   let result: CaseInstance = {
     branchName: item.branch_name,
@@ -1596,55 +1623,85 @@ export type QueryCaseSummaryInput =
 export type QueryCaseSummaryOutput = MultiResultType<CaseSummary>;
 
 /** helper */
-function makePartitionKeyForQueryCaseSummary(
+function makeEanForQueryCaseSummary(
   input: QueryCaseSummaryInput
-): string {
-  if (!('index' in input)) {
-    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`;
-  } else if ('index' in input && input.index === 'lsi1') {
-    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`;
-  } else if ('index' in input && input.index === 'lsi2') {
-    return `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`;
-  }
-
-  throw new Error('Could not construct partition key from input');
-}
-
-/** helper */
-function makeSortKeyForQueryCaseSummary(
-  input: QueryCaseSummaryInput
-): string | undefined {
+): Record<string, string> {
   if ('index' in input) {
     if (input.index === 'lsi1') {
-      return ['SUMMARY', 'stability' in input && input.stability]
-        .filter(Boolean)
-        .join('#');
+      return {'#pk': 'pk', '#sk': 'sk'};
     } else if (input.index === 'lsi2') {
-      return ['SUMMARY', 'duration' in input && input.duration]
-        .filter(Boolean)
-        .join('#');
+      return {'#pk': 'pk', '#sk': 'sk'};
     }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
   } else {
-    return ['SUMMARY', 'lineage' in input && input.lineage]
-      .filter(Boolean)
-      .join('#');
+    return {'#pk': 'pk', '#sk': 'sk'};
   }
 }
 
 /** helper */
-function makeEavPkForQueryCaseSummary(input: QueryCaseSummaryInput): string {
-  return 'pk';
-}
-
-/** helper */
-function makeEavSkForQueryCaseSummary(input: QueryCaseSummaryInput): string {
+function makeEavForQueryCaseSummary(
+  input: QueryCaseSummaryInput
+): Record<string, any> {
   if ('index' in input) {
-    const lsis = ['lsi1', 'lsi2'];
-    if (lsis.includes(input.index)) {
-      return input.index;
+    if (input.index === 'lsi1') {
+      return {
+        ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        ':sk': ['SUMMARY', 'stability' in input && input.stability]
+          .filter(Boolean)
+          .join('#'),
+      };
+    } else if (input.index === 'lsi2') {
+      return {
+        ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        ':sk': ['SUMMARY', 'duration' in input && input.duration]
+          .filter(Boolean)
+          .join('#'),
+      };
     }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {
+      ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+      ':sk': ['SUMMARY', 'lineage' in input && input.lineage]
+        .filter(Boolean)
+        .join('#'),
+    };
   }
-  return 'sk';
+}
+
+/** helper */
+function makeKceForQueryCaseSummary(
+  input: QueryCaseSummaryInput,
+  {operator}: Pick<QueryOptions, 'operator'>
+): string {
+  if ('index' in input) {
+    if (input.index === 'lsi1') {
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
+    } else if (input.index === 'lsi2') {
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return `#pk = :pk AND ${
+      operator === 'begins_with'
+        ? 'begins_with(#sk, :sk)'
+        : `#sk ${operator} :sk`
+    }`;
+  }
 }
 
 /** queryCaseSummary */
@@ -1659,24 +1716,18 @@ export async function queryCaseSummary(
   const tableName = process.env.TABLE_CASE_SUMMARY;
   assert(tableName, 'TABLE_CASE_SUMMARY is not set');
 
+  const ExpressionAttributeNames = makeEanForQueryCaseSummary(input);
+  const ExpressionAttributeValues = makeEavForQueryCaseSummary(input);
+  const KeyConditionExpression = makeKceForQueryCaseSummary(input, {operator});
+
   const {ConsumedCapacity: capacity, Items: items = []} =
     await ddbDocClient.send(
       new QueryCommand({
         ConsistentRead: false,
-        ExpressionAttributeNames: {
-          '#pk': makeEavPkForQueryCaseSummary(input),
-          '#sk': makeEavSkForQueryCaseSummary(input),
-        },
-        ExpressionAttributeValues: {
-          ':pk': makePartitionKeyForQueryCaseSummary(input),
-          ':sk': makeSortKeyForQueryCaseSummary(input),
-        },
+        ExpressionAttributeNames,
+        ExpressionAttributeValues,
         IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression: `#pk = :pk AND ${
-          operator === 'begins_with'
-            ? 'begins_with(#sk, :sk)'
-            : `#sk ${operator} :sk`
-        }`,
+        KeyConditionExpression,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,
@@ -1810,106 +1861,86 @@ export function marshallCaseSummary(
 
 /** Unmarshalls a DynamoDB record into a CaseSummary object */
 export function unmarshallCaseSummary(item: Record<string, any>): CaseSummary {
-  if ('branch_name' in item) {
-    assert(
-      item.branch_name !== null,
-      () => new DataIntegrityError('Expected branchName to be non-null')
-    );
-    assert(
-      typeof item.branch_name !== 'undefined',
-      () => new DataIntegrityError('Expected branchName to be defined')
-    );
-  }
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('duration' in item) {
-    assert(
-      item.duration !== null,
-      () => new DataIntegrityError('Expected duration to be non-null')
-    );
-    assert(
-      typeof item.duration !== 'undefined',
-      () => new DataIntegrityError('Expected duration to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('lineage' in item) {
-    assert(
-      item.lineage !== null,
-      () => new DataIntegrityError('Expected lineage to be non-null')
-    );
-    assert(
-      typeof item.lineage !== 'undefined',
-      () => new DataIntegrityError('Expected lineage to be defined')
-    );
-  }
-  if ('repo_id' in item) {
-    assert(
-      item.repo_id !== null,
-      () => new DataIntegrityError('Expected repoId to be non-null')
-    );
-    assert(
-      typeof item.repo_id !== 'undefined',
-      () => new DataIntegrityError('Expected repoId to be defined')
-    );
-  }
-  if ('stability' in item) {
-    assert(
-      item.stability !== null,
-      () => new DataIntegrityError('Expected stability to be non-null')
-    );
-    assert(
-      typeof item.stability !== 'undefined',
-      () => new DataIntegrityError('Expected stability to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('vendor' in item) {
-    assert(
-      item.vendor !== null,
-      () => new DataIntegrityError('Expected vendor to be non-null')
-    );
-    assert(
-      typeof item.vendor !== 'undefined',
-      () => new DataIntegrityError('Expected vendor to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item.branch_name !== null,
+    () => new DataIntegrityError('Expected branchName to be non-null')
+  );
+  assert(
+    typeof item.branch_name !== 'undefined',
+    () => new DataIntegrityError('Expected branchName to be defined')
+  );
+
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.duration !== null,
+    () => new DataIntegrityError('Expected duration to be non-null')
+  );
+  assert(
+    typeof item.duration !== 'undefined',
+    () => new DataIntegrityError('Expected duration to be defined')
+  );
+
+  assert(
+    item.lineage !== null,
+    () => new DataIntegrityError('Expected lineage to be non-null')
+  );
+  assert(
+    typeof item.lineage !== 'undefined',
+    () => new DataIntegrityError('Expected lineage to be defined')
+  );
+
+  assert(
+    item.repo_id !== null,
+    () => new DataIntegrityError('Expected repoId to be non-null')
+  );
+  assert(
+    typeof item.repo_id !== 'undefined',
+    () => new DataIntegrityError('Expected repoId to be defined')
+  );
+
+  assert(
+    item.stability !== null,
+    () => new DataIntegrityError('Expected stability to be non-null')
+  );
+  assert(
+    typeof item.stability !== 'undefined',
+    () => new DataIntegrityError('Expected stability to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   let result: CaseSummary = {
     branchName: item.branch_name,
@@ -2367,61 +2398,83 @@ export type QueryFileTimingInput =
 export type QueryFileTimingOutput = MultiResultType<FileTiming>;
 
 /** helper */
-function makePartitionKeyForQueryFileTiming(
+function makeEanForQueryFileTiming(
   input: QueryFileTimingInput
-): string {
-  if (!('index' in input)) {
-    return `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`;
-  } else if ('index' in input && input.index === 'gsi2') {
-    return `BRANCH#${input.vendor}#${input.repoId}#${input.branchName}`;
-  } else if ('index' in input && input.index === 'lsi1') {
-    return `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`;
-  }
-
-  throw new Error('Could not construct partition key from input');
-}
-
-/** helper */
-function makeSortKeyForQueryFileTiming(
-  input: QueryFileTimingInput
-): string | undefined {
+): Record<string, string> {
   if ('index' in input) {
     if (input.index === 'gsi2') {
-      return ['FILE'].filter(Boolean).join('#');
+      return {'#pk': 'gsi2pk', '#sk': 'gsi2sk'};
     } else if (input.index === 'lsi1') {
-      return ['FILE', 'duration' in input && input.duration]
-        .filter(Boolean)
-        .join('#');
+      return {'#pk': 'pk', '#sk': 'sk'};
     }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
   } else {
-    return ['FILE', 'filename' in input && input.filename]
-      .filter(Boolean)
-      .join('#');
+    return {'#pk': 'pk', '#sk': 'sk'};
   }
 }
 
 /** helper */
-function makeEavPkForQueryFileTiming(input: QueryFileTimingInput): string {
+function makeEavForQueryFileTiming(
+  input: QueryFileTimingInput
+): Record<string, any> {
   if ('index' in input) {
-    const lsis = ['lsi1'];
-    if (lsis.includes(input.index)) {
-      return 'pk';
+    if (input.index === 'gsi2') {
+      return {
+        ':pk': `BRANCH#${input.vendor}#${input.repoId}#${input.branchName}`,
+        ':sk': ['FILE'].filter(Boolean).join('#'),
+      };
+    } else if (input.index === 'lsi1') {
+      return {
+        ':pk': `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        ':sk': ['FILE', 'duration' in input && input.duration]
+          .filter(Boolean)
+          .join('#'),
+      };
     }
-    return `${input.index}pk`;
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {
+      ':pk': `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+      ':sk': ['FILE', 'filename' in input && input.filename]
+        .filter(Boolean)
+        .join('#'),
+    };
   }
-  return 'pk';
 }
 
 /** helper */
-function makeEavSkForQueryFileTiming(input: QueryFileTimingInput): string {
+function makeKceForQueryFileTiming(
+  input: QueryFileTimingInput,
+  {operator}: Pick<QueryOptions, 'operator'>
+): string {
   if ('index' in input) {
-    const lsis = ['lsi1'];
-    if (lsis.includes(input.index)) {
-      return input.index;
+    if (input.index === 'gsi2') {
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
+    } else if (input.index === 'lsi1') {
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
     }
-    return `${input.index}sk`;
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return `#pk = :pk AND ${
+      operator === 'begins_with'
+        ? 'begins_with(#sk, :sk)'
+        : `#sk ${operator} :sk`
+    }`;
   }
-  return 'sk';
 }
 
 /** queryFileTiming */
@@ -2436,24 +2489,18 @@ export async function queryFileTiming(
   const tableName = process.env.TABLE_FILE_TIMING;
   assert(tableName, 'TABLE_FILE_TIMING is not set');
 
+  const ExpressionAttributeNames = makeEanForQueryFileTiming(input);
+  const ExpressionAttributeValues = makeEavForQueryFileTiming(input);
+  const KeyConditionExpression = makeKceForQueryFileTiming(input, {operator});
+
   const {ConsumedCapacity: capacity, Items: items = []} =
     await ddbDocClient.send(
       new QueryCommand({
         ConsistentRead: false,
-        ExpressionAttributeNames: {
-          '#pk': makeEavPkForQueryFileTiming(input),
-          '#sk': makeEavSkForQueryFileTiming(input),
-        },
-        ExpressionAttributeValues: {
-          ':pk': makePartitionKeyForQueryFileTiming(input),
-          ':sk': makeSortKeyForQueryFileTiming(input),
-        },
+        ExpressionAttributeNames,
+        ExpressionAttributeValues,
         IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression: `#pk = :pk AND ${
-          operator === 'begins_with'
-            ? 'begins_with(#sk, :sk)'
-            : `#sk ${operator} :sk`
-        }`,
+        KeyConditionExpression,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,
@@ -2584,96 +2631,77 @@ export function marshallFileTiming(
 
 /** Unmarshalls a DynamoDB record into a FileTiming object */
 export function unmarshallFileTiming(item: Record<string, any>): FileTiming {
-  if ('branch_name' in item) {
-    assert(
-      item.branch_name !== null,
-      () => new DataIntegrityError('Expected branchName to be non-null')
-    );
-    assert(
-      typeof item.branch_name !== 'undefined',
-      () => new DataIntegrityError('Expected branchName to be defined')
-    );
-  }
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('duration' in item) {
-    assert(
-      item.duration !== null,
-      () => new DataIntegrityError('Expected duration to be non-null')
-    );
-    assert(
-      typeof item.duration !== 'undefined',
-      () => new DataIntegrityError('Expected duration to be defined')
-    );
-  }
-  if ('filename' in item) {
-    assert(
-      item.filename !== null,
-      () => new DataIntegrityError('Expected filename to be non-null')
-    );
-    assert(
-      typeof item.filename !== 'undefined',
-      () => new DataIntegrityError('Expected filename to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('repo_id' in item) {
-    assert(
-      item.repo_id !== null,
-      () => new DataIntegrityError('Expected repoId to be non-null')
-    );
-    assert(
-      typeof item.repo_id !== 'undefined',
-      () => new DataIntegrityError('Expected repoId to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('vendor' in item) {
-    assert(
-      item.vendor !== null,
-      () => new DataIntegrityError('Expected vendor to be non-null')
-    );
-    assert(
-      typeof item.vendor !== 'undefined',
-      () => new DataIntegrityError('Expected vendor to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item.branch_name !== null,
+    () => new DataIntegrityError('Expected branchName to be non-null')
+  );
+  assert(
+    typeof item.branch_name !== 'undefined',
+    () => new DataIntegrityError('Expected branchName to be defined')
+  );
+
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.duration !== null,
+    () => new DataIntegrityError('Expected duration to be non-null')
+  );
+  assert(
+    typeof item.duration !== 'undefined',
+    () => new DataIntegrityError('Expected duration to be defined')
+  );
+
+  assert(
+    item.filename !== null,
+    () => new DataIntegrityError('Expected filename to be non-null')
+  );
+  assert(
+    typeof item.filename !== 'undefined',
+    () => new DataIntegrityError('Expected filename to be defined')
+  );
+
+  assert(
+    item.repo_id !== null,
+    () => new DataIntegrityError('Expected repoId to be non-null')
+  );
+  assert(
+    typeof item.repo_id !== 'undefined',
+    () => new DataIntegrityError('Expected repoId to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   let result: FileTiming = {
     branchName: item.branch_name,

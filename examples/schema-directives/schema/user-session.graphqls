@@ -1,7 +1,7 @@
 """
 A user session object.
 """
-type UserSession implements Model & Node & Timestamped & Versioned
+type UserSession implements PublicModel & Model & Node & Timestamped & Versioned
   @consistent
   @partitionKey(pkFields: ["sessionId"], pkPrefix: "USER_SESSION")
   @table(
@@ -12,6 +12,7 @@ type UserSession implements Model & Node & Timestamped & Versioned
   createdAt: Date!
   expires: Date @ttl
   id: ID!
+  publicId: String!
   """
   Since `id` is a reserved field, sessionId is the field we'll use to inject a
   random uuid, which the underlying system will use as the basis for `id`.

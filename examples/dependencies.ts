@@ -11,6 +11,7 @@ import {
   captureAsyncFunc,
   getSegment,
 } from 'aws-xray-sdk-core';
+import cuid from 'cuid';
 
 /** Figure out the correct URL for lambda to lambda calls. */
 function getEndpointUrl() {
@@ -90,4 +91,9 @@ export async function captureAsyncFunction<R>(
       subsegment?.close();
     }
   });
+}
+
+/** Generates unique, random ids */
+export function idGenerator() {
+  return cuid();
 }

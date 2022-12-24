@@ -21,7 +21,7 @@ import {
 } from '@ianwremmel/data';
 import Base64 from 'base64url';
 
-import {ddbDocClient} from '../../dependencies';
+import {ddbDocClient, idGenerator} from '../../dependencies';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends {[key: string]: unknown}> = {[K in keyof T]: T[K]};
@@ -79,6 +79,20 @@ export interface Node {
   id: Scalars['ID'];
 }
 
+/**
+ * Like Model, but includes a `publicId` field which, unline `id`, is semantically
+ * meaningless. Types implementing PublicModel will have an additional function,
+ * `queryByPublicId`, generated. If any of your models implement PublicModel, then
+ * the dependencies module must include an `idGenerator()`.
+ */
+export interface PublicModel {
+  createdAt: Scalars['Date'];
+  id: Scalars['ID'];
+  publicId: Scalars['String'];
+  updatedAt: Scalars['Date'];
+  version: Scalars['Int'];
+}
+
 /** The Query type */
 export interface Query {
   __typename?: 'Query';
@@ -105,6 +119,7 @@ export interface Timestamped {
 /** A user session object. */
 export type UserSession = Model &
   Node &
+  PublicModel &
   Timestamped &
   Versioned & {
     __typename?: 'UserSession';
@@ -118,6 +133,7 @@ export type UserSession = Model &
      * when an optional field is absent from the payload.
      */
     optionalField?: Maybe<Scalars['String']>;
+    publicId: Scalars['String'];
     session: Scalars['JSONObject'];
     /**
      * Since `id` is a reserved field, sessionId is the field we'll use to inject a
@@ -154,7 +170,7 @@ export interface UserSessionPrimaryKey {
 
 export type CreateUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
+  'createdAt' | 'expires' | 'id' | 'publicId' | 'updatedAt' | 'version'
 > &
   Partial<Pick<UserSession, 'expires'>>;
 export type CreateUserSessionOutput = ResultType<UserSession>;
@@ -184,17 +200,19 @@ export async function createUserSession(
       ExpressionAttributeNames: {
         ...ExpressionAttributeNames,
         '#createdAt': '_ct',
+        '#publicId': 'publicId',
       },
       ExpressionAttributeValues: {
         ...ExpressionAttributeValues,
         ':createdAt': now.getTime(),
+        ':publicId': idGenerator(),
       },
       Key: {pk: `USER_SESSION#${input.sessionId}`},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt, #publicId = :publicId`,
     })
   );
 
@@ -221,7 +239,7 @@ export async function createUserSession(
 
 export type BlindWriteUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
+  'createdAt' | 'expires' | 'id' | 'publicId' | 'updatedAt' | 'version'
 > &
   Partial<Pick<UserSession, 'expires'>>;
 export type BlindWriteUserSessionOutput = ResultType<UserSession>;
@@ -244,15 +262,18 @@ export async function blindWriteUserSession(
   const ean = {
     ...ExpressionAttributeNames,
     '#createdAt': '_ct',
+    '#publicId': 'publicId',
   };
   const eav = {
     ...ExpressionAttributeValues,
     ':one': 1,
     ':createdAt': now.getTime(),
+    ':publicId': idGenerator(),
   };
   const ue = `${[
     ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
     '#createdAt = if_not_exists(#createdAt, :createdAt)',
+    '#publicId = if_not_exists(#publicId, :publicId)',
   ].join(', ')} ADD #version :one`;
 
   const {
@@ -432,7 +453,7 @@ export async function touchUserSession(
 
 export type UpdateUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'expires' | 'id' | 'updatedAt'
+  'createdAt' | 'expires' | 'id' | 'publicId' | 'updatedAt'
 > &
   Partial<Pick<UserSession, 'expires'>>;
 export type UpdateUserSessionOutput = ResultType<UserSession>;
@@ -510,6 +531,151 @@ export async function updateUserSession(
   }
 }
 
+export type QueryUserSessionInput =
+  | {sessionId: Scalars['String']}
+  | {index: 'publicId'; publicId: Scalars['String']};
+export type QueryUserSessionOutput = MultiResultType<UserSession>;
+
+/** helper */
+function makeEanForQueryUserSession(
+  input: QueryUserSessionInput
+): Record<string, string> {
+  if ('index' in input) {
+    if (input.index === 'publicId') {
+      return {'#pk': 'publicId'};
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {'#pk': 'pk'};
+  }
+}
+
+/** helper */
+function makeEavForQueryUserSession(
+  input: QueryUserSessionInput
+): Record<string, any> {
+  if ('index' in input) {
+    if (input.index === 'publicId') {
+      return {':pk': `${input.publicId}`};
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {':pk': `USER_SESSION#${input.sessionId}`};
+  }
+}
+
+/** helper */
+function makeKceForQueryUserSession(
+  input: QueryUserSessionInput,
+  {operator}: Pick<QueryOptions, 'operator'>
+): string {
+  if ('index' in input) {
+    if (input.index === 'publicId') {
+      return '#pk = :pk';
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return '#pk = :pk';
+  }
+}
+
+/** queryUserSession */
+export async function queryUserSession(
+  input: Readonly<QueryUserSessionInput>,
+  {
+    limit = undefined,
+    operator = 'begins_with',
+    reverse = false,
+  }: QueryOptions = {}
+): Promise<Readonly<QueryUserSessionOutput>> {
+  const tableName = process.env.TABLE_USER_SESSIONS;
+  assert(tableName, 'TABLE_USER_SESSIONS is not set');
+
+  const ExpressionAttributeNames = makeEanForQueryUserSession(input);
+  const ExpressionAttributeValues = makeEavForQueryUserSession(input);
+  const KeyConditionExpression = makeKceForQueryUserSession(input, {operator});
+
+  const {ConsumedCapacity: capacity, Items: items = []} =
+    await ddbDocClient.send(
+      new QueryCommand({
+        ConsistentRead: !('index' in input),
+        ExpressionAttributeNames,
+        ExpressionAttributeValues,
+        IndexName: 'index' in input ? input.index : undefined,
+        KeyConditionExpression,
+        Limit: limit,
+        ReturnConsumedCapacity: 'INDEXES',
+        ScanIndexForward: !reverse,
+        TableName: tableName,
+      })
+    );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  return {
+    capacity,
+    items: items.map((item) => {
+      assert(item._et === 'UserSession', () => new DataIntegrityError('TODO'));
+      return unmarshallUserSession(item);
+    }),
+  };
+}
+
+/** queries the UserSession table by primary key using a node id */
+export async function queryUserSessionByNodeId(
+  id: Scalars['ID']
+): Promise<Readonly<Omit<ResultType<UserSession>, 'metrics'>>> {
+  const primaryKeyValues = Base64.decode(id)
+    .split(':')
+    .slice(1)
+    .join(':')
+    .split('#');
+
+  const primaryKey: QueryUserSessionInput = {
+    sessionId: primaryKeyValues[1],
+  };
+
+  const {capacity, items} = await queryUserSession(primaryKey);
+
+  assert(items.length > 0, () => new NotFoundError('UserSession', primaryKey));
+  assert(
+    items.length < 2,
+    () => new DataIntegrityError(`Found multiple UserSession with id ${id}`)
+  );
+
+  return {capacity, item: items[0]};
+}
+
+/** queries the UserSession table by primary key using a node id */
+export async function queryUserSessionByPublicId(
+  publicId: Scalars['String']
+): Promise<Readonly<Omit<ResultType<UserSession>, 'metrics'>>> {
+  const {capacity, items} = await queryUserSession({
+    index: 'publicId',
+    publicId,
+  });
+
+  assert(items.length > 0, () => new NotFoundError('UserSession', {publicId}));
+  assert(
+    items.length < 2,
+    () =>
+      new DataIntegrityError(
+        `Found multiple UserSession with publicId ${publicId}`
+      )
+  );
+
+  return {capacity, item: items[0]};
+}
+
 export interface MarshallUserSessionOutput {
   ExpressionAttributeNames: Record<string, string>;
   ExpressionAttributeValues: Record<string, NativeAttributeValue>;
@@ -585,70 +751,64 @@ export function marshallUserSession(
 
 /** Unmarshalls a DynamoDB record into a UserSession object */
 export function unmarshallUserSession(item: Record<string, any>): UserSession {
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('session' in item) {
-    assert(
-      item.session !== null,
-      () => new DataIntegrityError('Expected session to be non-null')
-    );
-    assert(
-      typeof item.session !== 'undefined',
-      () => new DataIntegrityError('Expected session to be defined')
-    );
-  }
-  if ('session_id' in item) {
-    assert(
-      item.session_id !== null,
-      () => new DataIntegrityError('Expected sessionId to be non-null')
-    );
-    assert(
-      typeof item.session_id !== 'undefined',
-      () => new DataIntegrityError('Expected sessionId to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.publicId !== null,
+    () => new DataIntegrityError('Expected publicId to be non-null')
+  );
+  assert(
+    typeof item.publicId !== 'undefined',
+    () => new DataIntegrityError('Expected publicId to be defined')
+  );
+
+  assert(
+    item.session !== null,
+    () => new DataIntegrityError('Expected session to be non-null')
+  );
+  assert(
+    typeof item.session !== 'undefined',
+    () => new DataIntegrityError('Expected session to be defined')
+  );
+
+  assert(
+    item.session_id !== null,
+    () => new DataIntegrityError('Expected sessionId to be non-null')
+  );
+  assert(
+    typeof item.session_id !== 'undefined',
+    () => new DataIntegrityError('Expected sessionId to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   let result: UserSession = {
     createdAt: new Date(item._ct),
     id: Base64.encode(`UserSession:${item.pk}`),
+    publicId: item.publicId,
     session: item.session,
     sessionId: item.session_id,
     updatedAt: new Date(item._md),

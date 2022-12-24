@@ -34,7 +34,7 @@ export function marshallField(fieldName: string, isDate: boolean): string {
 
 /** Generates the template for producing the desired primary key or index column */
 export function makeKeyTemplate(
-  prefix: string,
+  prefix: string | undefined,
   fields: readonly GraphQLField<unknown, unknown>[] | readonly Field[],
   mode: 'blind' | 'create' | 'read'
 ): string {
@@ -64,7 +64,9 @@ export function makeKeyTemplate(
       }
       return `\${${marshallField(fieldName, isDateType)}}`;
     }),
-  ].join('#');
+  ]
+    .filter(Boolean)
+    .join('#');
 }
 
 /** Converts a compile time object to a runtime object */

@@ -3,6 +3,7 @@ export interface Table {
   readonly enablePointInTimeRecovery: boolean;
   readonly enableStreaming: boolean;
   readonly hasCdc: boolean;
+  readonly hasPublicModels: boolean;
   readonly hasTtl: boolean;
   readonly libImportPath: string;
   readonly primaryKey: TablePrimaryKeyConfig;
@@ -27,6 +28,7 @@ export interface Model {
   readonly enablePointInTimeRecovery: boolean;
   readonly enableStreaming: boolean;
   readonly fields: readonly Field[];
+  readonly isPublicModel: boolean;
   readonly libImportPath: string;
   readonly tableName: string;
   readonly typeName: string;
@@ -65,7 +67,7 @@ export interface LSI {
   readonly name: string;
   readonly type: 'lsi';
   readonly sortKeyFields: readonly Field[];
-  readonly sortKeyPrefix: string;
+  readonly sortKeyPrefix?: string;
 }
 
 export type SecondaryIndex = GSI | LSI;
@@ -73,14 +75,14 @@ export type SecondaryIndex = GSI | LSI;
 export interface PartitionKey {
   readonly isComposite: false;
   readonly partitionKeyFields: readonly Field[];
-  readonly partitionKeyPrefix: string;
+  readonly partitionKeyPrefix?: string;
 }
 
 export interface CompositeKey {
   readonly isComposite: true;
-  readonly partitionKeyPrefix: string;
+  readonly partitionKeyPrefix?: string;
   readonly partitionKeyFields: Field[];
-  readonly sortKeyPrefix: string;
+  readonly sortKeyPrefix?: string;
   readonly sortKeyFields: Field[];
 }
 

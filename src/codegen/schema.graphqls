@@ -148,6 +148,20 @@ interface Model implements Timestamped & Versioned {
 }
 
 """
+Like Model, but includes a `publicId` field which, unline `id`, is semantically
+meaningless. Types implementing PublicModel will have an additional function,
+`queryByPublicId`, generated. If any of your models implement PublicModel, then
+the dependencies module must include an `idGenerator()`.
+"""
+interface PublicModel implements Model & Timestamped & Versioned {
+  createdAt: Date!
+  id: ID!
+  publicId: String!
+  updatedAt: Date!
+  version: Int!
+}
+
+"""
 Automatically adds a createdAt and updatedAt timestamp to the entity and sets
 them appropriately. The createdAt timestamp is only set on create, while the
 updatedAt timestamp is set on create and update.

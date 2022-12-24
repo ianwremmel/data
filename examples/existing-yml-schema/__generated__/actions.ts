@@ -79,6 +79,20 @@ export interface Node {
   id: Scalars['ID'];
 }
 
+/**
+ * Like Model, but includes a `publicId` field which, unline `id`, is semantically
+ * meaningless. Types implementing PublicModel will have an additional function,
+ * `queryByPublicId`, generated. If any of your models implement PublicModel, then
+ * the dependencies module must include an `idGenerator()`.
+ */
+export interface PublicModel {
+  createdAt: Scalars['Date'];
+  id: Scalars['ID'];
+  publicId: Scalars['String'];
+  updatedAt: Scalars['Date'];
+  version: Scalars['Int'];
+}
+
 /** The Query type */
 export interface Query {
   __typename?: 'Query';
@@ -540,45 +554,70 @@ export type QueryUserLoginInput =
 export type QueryUserLoginOutput = MultiResultType<UserLogin>;
 
 /** helper */
-function makePartitionKeyForQueryUserLogin(input: QueryUserLoginInput): string {
-  if (!('index' in input)) {
-    return `USER#${input.vendor}#${input.externalId}`;
-  } else if ('index' in input && input.index === 'gsi1') {
-    return `LOGIN#${input.vendor}#${input.login}`;
-  }
-
-  throw new Error('Could not construct partition key from input');
-}
-
-/** helper */
-function makeSortKeyForQueryUserLogin(
+function makeEanForQueryUserLogin(
   input: QueryUserLoginInput
-): string | undefined {
+): Record<string, string> {
   if ('index' in input) {
     if (input.index === 'gsi1') {
-      return ['MODIFIED', 'updatedAt' in input && input.updatedAt]
-        .filter(Boolean)
-        .join('#');
+      return {'#pk': 'gsi1pk', '#sk': 'gsi1sk'};
     }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
   } else {
-    return ['LOGIN', 'login' in input && input.login].filter(Boolean).join('#');
+    return {'#pk': 'pk', '#sk': 'sk'};
   }
 }
 
 /** helper */
-function makeEavPkForQueryUserLogin(input: QueryUserLoginInput): string {
+function makeEavForQueryUserLogin(
+  input: QueryUserLoginInput
+): Record<string, any> {
   if ('index' in input) {
-    return `${input.index}pk`;
+    if (input.index === 'gsi1') {
+      return {
+        ':pk': `LOGIN#${input.vendor}#${input.login}`,
+        ':sk': ['MODIFIED', 'updatedAt' in input && input.updatedAt]
+          .filter(Boolean)
+          .join('#'),
+      };
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {
+      ':pk': `USER#${input.vendor}#${input.externalId}`,
+      ':sk': ['LOGIN', 'login' in input && input.login]
+        .filter(Boolean)
+        .join('#'),
+    };
   }
-  return 'pk';
 }
 
 /** helper */
-function makeEavSkForQueryUserLogin(input: QueryUserLoginInput): string {
+function makeKceForQueryUserLogin(
+  input: QueryUserLoginInput,
+  {operator}: Pick<QueryOptions, 'operator'>
+): string {
   if ('index' in input) {
-    return `${input.index}sk`;
+    if (input.index === 'gsi1') {
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return `#pk = :pk AND ${
+      operator === 'begins_with'
+        ? 'begins_with(#sk, :sk)'
+        : `#sk ${operator} :sk`
+    }`;
   }
-  return 'sk';
 }
 
 /** queryUserLogin */
@@ -593,24 +632,18 @@ export async function queryUserLogin(
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
 
+  const ExpressionAttributeNames = makeEanForQueryUserLogin(input);
+  const ExpressionAttributeValues = makeEavForQueryUserLogin(input);
+  const KeyConditionExpression = makeKceForQueryUserLogin(input, {operator});
+
   const {ConsumedCapacity: capacity, Items: items = []} =
     await ddbDocClient.send(
       new QueryCommand({
         ConsistentRead: false,
-        ExpressionAttributeNames: {
-          '#pk': makeEavPkForQueryUserLogin(input),
-          '#sk': makeEavSkForQueryUserLogin(input),
-        },
-        ExpressionAttributeValues: {
-          ':pk': makePartitionKeyForQueryUserLogin(input),
-          ':sk': makeSortKeyForQueryUserLogin(input),
-        },
+        ExpressionAttributeNames,
+        ExpressionAttributeValues,
         IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression: `#pk = :pk AND ${
-          operator === 'begins_with'
-            ? 'begins_with(#sk, :sk)'
-            : `#sk ${operator} :sk`
-        }`,
+        KeyConditionExpression,
         Limit: limit,
         ReturnConsumedCapacity: 'INDEXES',
         ScanIndexForward: !reverse,
@@ -725,76 +758,59 @@ export function marshallUserLogin(
 
 /** Unmarshalls a DynamoDB record into a UserLogin object */
 export function unmarshallUserLogin(item: Record<string, any>): UserLogin {
-  if ('_ct' in item) {
-    assert(
-      item._ct !== null,
-      () => new DataIntegrityError('Expected createdAt to be non-null')
-    );
-    assert(
-      typeof item._ct !== 'undefined',
-      () => new DataIntegrityError('Expected createdAt to be defined')
-    );
-  }
-  if ('external_id' in item) {
-    assert(
-      item.external_id !== null,
-      () => new DataIntegrityError('Expected externalId to be non-null')
-    );
-    assert(
-      typeof item.external_id !== 'undefined',
-      () => new DataIntegrityError('Expected externalId to be defined')
-    );
-  }
-  if ('id' in item) {
-    assert(
-      item.id !== null,
-      () => new DataIntegrityError('Expected id to be non-null')
-    );
-    assert(
-      typeof item.id !== 'undefined',
-      () => new DataIntegrityError('Expected id to be defined')
-    );
-  }
-  if ('login' in item) {
-    assert(
-      item.login !== null,
-      () => new DataIntegrityError('Expected login to be non-null')
-    );
-    assert(
-      typeof item.login !== 'undefined',
-      () => new DataIntegrityError('Expected login to be defined')
-    );
-  }
-  if ('_md' in item) {
-    assert(
-      item._md !== null,
-      () => new DataIntegrityError('Expected updatedAt to be non-null')
-    );
-    assert(
-      typeof item._md !== 'undefined',
-      () => new DataIntegrityError('Expected updatedAt to be defined')
-    );
-  }
-  if ('vendor' in item) {
-    assert(
-      item.vendor !== null,
-      () => new DataIntegrityError('Expected vendor to be non-null')
-    );
-    assert(
-      typeof item.vendor !== 'undefined',
-      () => new DataIntegrityError('Expected vendor to be defined')
-    );
-  }
-  if ('_v' in item) {
-    assert(
-      item._v !== null,
-      () => new DataIntegrityError('Expected version to be non-null')
-    );
-    assert(
-      typeof item._v !== 'undefined',
-      () => new DataIntegrityError('Expected version to be defined')
-    );
-  }
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.external_id !== null,
+    () => new DataIntegrityError('Expected externalId to be non-null')
+  );
+  assert(
+    typeof item.external_id !== 'undefined',
+    () => new DataIntegrityError('Expected externalId to be defined')
+  );
+
+  assert(
+    item.login !== null,
+    () => new DataIntegrityError('Expected login to be non-null')
+  );
+  assert(
+    typeof item.login !== 'undefined',
+    () => new DataIntegrityError('Expected login to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
 
   const result: UserLogin = {
     createdAt: new Date(item._ct),

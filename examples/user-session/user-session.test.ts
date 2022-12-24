@@ -367,7 +367,7 @@ describe('blindWriteUserSession()', () => {
 
     expect(updateResult.item.version).toBe(2);
 
-    const readResult = await readUserSession(createResult.item);
+    readUserSession(createResult.item);
 
     // cleanup, not part of test
     await deleteUserSession(createResult.item);
@@ -714,13 +714,13 @@ describe('updateUserSession()', () => {
       sessionId: faker.datatype.uuid(),
     });
 
-    const updateResult = await updateUserSession({
+    await updateUserSession({
       ...createResult.item,
       expires,
       session: {foo: 'bar'},
     });
 
-    const readResult = await readUserSession(createResult.item);
+    await readUserSession(createResult.item);
 
     // cleanup, not part of test
     await deleteUserSession(createResult.item);
