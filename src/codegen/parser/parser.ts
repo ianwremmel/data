@@ -118,6 +118,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
             dependenciesModuleId: model.dependenciesModuleId,
             enablePointInTimeRecovery:
               acc.enablePointInTimeRecovery || model.enablePointInTimeRecovery,
+            enableStreaming: acc.enableStreaming || model.enableStreaming,
             hasCdc: acc.hasCdc || !!model.changeDataCaptureConfig,
             hasTtl: acc.hasTtl || !!model.ttlConfig,
             libImportPath: model.libImportPath,
@@ -131,6 +132,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
         {
           dependenciesModuleId: firstModel.dependenciesModuleId,
           enablePointInTimeRecovery: firstModel.enablePointInTimeRecovery,
+          enableStreaming: firstModel.enableStreaming,
           hasCdc: !!firstModel.changeDataCaptureConfig,
           hasTtl: !!firstModel.ttlConfig,
           libImportPath: firstModel.libImportPath,
@@ -339,6 +341,11 @@ function extractTableInfo(type: GraphQLObjectType<unknown, unknown>) {
           tableDirective
         ) !== false
       : true,
+    enableStreaming:
+      hasDirective('cdc', type) ||
+      (!!tableDirective &&
+        (getOptionalArgBooleanValue('enableStreaming', tableDirective) ??
+          false)),
   };
 }
 

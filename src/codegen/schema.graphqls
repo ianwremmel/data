@@ -109,6 +109,13 @@ directive @table(
   """
   enablePointInTimeRecovery: Boolean
   """
+  Defaults to false. If true, enables stream events for the table. Note that
+  you don't need to set this if you're using @cdc. This is mostly here for
+  incremenally adopting the library; you can define you schema with graphql and
+  continue emitting stream events and follow up later with @cdc.
+  """
+  enableStreaming: Boolean
+  """
   Allows overriding the generated table name for a Model. Generally, this is not
   recommended, but you might want to use this if you're migrating an existing
   set of tables to use this library.

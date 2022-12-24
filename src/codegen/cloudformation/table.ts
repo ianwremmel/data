@@ -8,7 +8,7 @@ import type {CloudFormationFragment} from './types';
 /** cloudformation generator */
 export function defineTable({
   enablePointInTimeRecovery,
-  hasCdc,
+  enableStreaming,
   hasTtl,
   tableName,
   primaryKey: {isComposite},
@@ -131,7 +131,7 @@ export function defineTable({
     SSESpecification: {
       SSEEnabled: {'Fn::If': ['IsProd', true, false]},
     },
-    StreamSpecification: hasCdc
+    StreamSpecification: enableStreaming
       ? {
           StreamViewType: 'NEW_AND_OLD_IMAGES',
         }
