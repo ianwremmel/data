@@ -40,13 +40,13 @@ Resources:
       AttributeDefinitions:
         - AttributeName: pk
           AttributeType: S
-        - AttributeName: publicIdpk
+        - AttributeName: publicId
           AttributeType: S
       BillingMode: PAY_PER_REQUEST
       GlobalSecondaryIndexes:
         - IndexName: publicId
           KeySchema:
-            - AttributeName: publicIdpk
+            - AttributeName: publicId
               KeyType: HASH
           Projection:
             ProjectionType: ALL

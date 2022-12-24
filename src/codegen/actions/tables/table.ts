@@ -14,6 +14,7 @@ import {updateItemTpl} from './templates/update-item';
  */
 export function createItemTemplate(model: Model) {
   return createItemTpl({
+    hasPublicId: model.isPublicModel,
     key: makeKey(model.primaryKey),
     tableName: model.tableName,
     ttlConfig: model.ttlConfig,
@@ -26,6 +27,7 @@ export function createItemTemplate(model: Model) {
  */
 export function blindWriteTemplate(model: Model) {
   return blindWriteTpl({
+    hasPublicId: model.isPublicModel,
     key: makeKeyForBlind(model.primaryKey),
     tableName: model.tableName,
     ttlConfig: model.ttlConfig,
@@ -62,6 +64,7 @@ export function queryTemplate(model: Model) {
 
   return queryTpl({
     consistent: model.consistent,
+    isPublicModel: model.isPublicModel,
     primaryKey: model.primaryKey,
     secondaryIndexes: model.secondaryIndexes,
     tableName: model.tableName,
@@ -127,6 +130,7 @@ export function touchItemTemplate(model: Model) {
  */
 export function updateItemTemplate(model: Model) {
   return updateItemTpl({
+    hasPublicId: model.isPublicModel,
     key: makeKeyForRead(model.primaryKey),
     marshallPrimaryKey: objectToString(
       Object.fromEntries(

@@ -1,3 +1,5 @@
+import {snakeCase} from 'lodash';
+
 import type {Field, PrimaryKeyConfig, SecondaryIndex} from '../../../parser';
 
 import {ensureTableTemplate} from './ensure-table';
@@ -9,6 +11,7 @@ import {
 
 export interface QueryTplInput {
   readonly consistent: boolean;
+  readonly isPublicModel: boolean;
   readonly primaryKey: PrimaryKeyConfig;
   readonly secondaryIndexes: readonly SecondaryIndex[];
   readonly tableName: string;
@@ -18,6 +21,7 @@ export interface QueryTplInput {
 /** template */
 export function queryTpl({
   consistent,
+  isPublicModel,
   primaryKey,
   secondaryIndexes,
   tableName,
@@ -112,7 +116,7 @@ export async function query${typeName}ByNodeId(id: Scalars['ID']): Promise<Reado
         `primaryKeyValues[${primaryKey.partitionKeyFields.length + index + 3}]`
       )};
   }
-  `
+ `
     )
     .join('\n')}
 
@@ -123,6 +127,22 @@ export async function query${typeName}ByNodeId(id: Scalars['ID']): Promise<Reado
 
   return {capacity, item: items[0]};
 }
+
+${
+  isPublicModel
+    ? `
+/** queries the ${typeName} table by primary key using a node id */
+export async function query${typeName}ByPublicId(publicId: Scalars['String']): Promise<Readonly<Omit<ResultType<${typeName}>, 'metrics'>>> {
+  const {capacity, items} = await query${typeName}({index: 'publicId', publicId});
+
+  assert(items.length > 0, () => new NotFoundError('${typeName}', {publicId}));
+  assert(items.length < 2, () => new DataIntegrityError(\`Found multiple ${typeName} with publicId \${publicId}\`));
+
+  return {capacity, item: items[0]};
+}`
+    : ''
+}
+
 `;
 }
 
@@ -229,10 +249,13 @@ function keyNames(key: PrimaryKeyConfig | SecondaryIndex) {
     return key.isComposite ? `{'#pk': 'pk', '#sk': 'sk'}` : `{'#pk': 'pk'}`;
   }
 
-  const pk = `${key.name}pk`;
-  const sk = `${key.name}sk`;
-
   if (key.type === 'gsi') {
+    if (key.name === 'publicId') {
+      return `{'#pk': 'publicId'}`;
+    }
+
+    const pk = `${key.name}pk`;
+    const sk = `${key.name}sk`;
     return key.isComposite
       ? `{'#pk': '${pk}', '#sk': '${sk}'}`
       : `{'#pk': '${pk}'}`;

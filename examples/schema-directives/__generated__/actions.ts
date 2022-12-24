@@ -21,7 +21,7 @@ import {
 } from '@ianwremmel/data';
 import Base64 from 'base64url';
 
-import {ddbDocClient} from '../../dependencies';
+import {ddbDocClient, idGenerator} from '../../dependencies';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends {[key: string]: unknown}> = {[K in keyof T]: T[K]};
@@ -170,7 +170,7 @@ export interface UserSessionPrimaryKey {
 
 export type CreateUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
+  'createdAt' | 'expires' | 'id' | 'publicId' | 'updatedAt' | 'version'
 > &
   Partial<Pick<UserSession, 'expires'>>;
 export type CreateUserSessionOutput = ResultType<UserSession>;
@@ -200,17 +200,19 @@ export async function createUserSession(
       ExpressionAttributeNames: {
         ...ExpressionAttributeNames,
         '#createdAt': '_ct',
+        '#publicId': 'publicId',
       },
       ExpressionAttributeValues: {
         ...ExpressionAttributeValues,
         ':createdAt': now.getTime(),
+        ':publicId': idGenerator(),
       },
       Key: {pk: `USER_SESSION#${input.sessionId}`},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
-      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt, #publicId = :publicId`,
     })
   );
 
@@ -237,7 +239,7 @@ export async function createUserSession(
 
 export type BlindWriteUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
+  'createdAt' | 'expires' | 'id' | 'publicId' | 'updatedAt' | 'version'
 > &
   Partial<Pick<UserSession, 'expires'>>;
 export type BlindWriteUserSessionOutput = ResultType<UserSession>;
@@ -260,15 +262,18 @@ export async function blindWriteUserSession(
   const ean = {
     ...ExpressionAttributeNames,
     '#createdAt': '_ct',
+    '#publicId': 'publicId',
   };
   const eav = {
     ...ExpressionAttributeValues,
     ':one': 1,
     ':createdAt': now.getTime(),
+    ':publicId': idGenerator(),
   };
   const ue = `${[
     ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
     '#createdAt = if_not_exists(#createdAt, :createdAt)',
+    '#publicId = if_not_exists(#publicId, :publicId)',
   ].join(', ')} ADD #version :one`;
 
   const {
@@ -448,7 +453,7 @@ export async function touchUserSession(
 
 export type UpdateUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'expires' | 'id' | 'updatedAt'
+  'createdAt' | 'expires' | 'id' | 'publicId' | 'updatedAt'
 > &
   Partial<Pick<UserSession, 'expires'>>;
 export type UpdateUserSessionOutput = ResultType<UserSession>;
@@ -537,7 +542,7 @@ function makeEanForQueryUserSession(
 ): Record<string, string> {
   if ('index' in input) {
     if (input.index === 'publicId') {
-      return {'#pk': 'publicIdpk'};
+      return {'#pk': 'publicId'};
     }
     throw new Error(
       'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
@@ -650,6 +655,27 @@ export async function queryUserSessionByNodeId(
   return {capacity, item: items[0]};
 }
 
+/** queries the UserSession table by primary key using a node id */
+export async function queryUserSessionByPublicId(
+  publicId: Scalars['String']
+): Promise<Readonly<Omit<ResultType<UserSession>, 'metrics'>>> {
+  const {capacity, items} = await queryUserSession({
+    index: 'publicId',
+    publicId,
+  });
+
+  assert(items.length > 0, () => new NotFoundError('UserSession', {publicId}));
+  assert(
+    items.length < 2,
+    () =>
+      new DataIntegrityError(
+        `Found multiple UserSession with publicId ${publicId}`
+      )
+  );
+
+  return {capacity, item: items[0]};
+}
+
 export interface MarshallUserSessionOutput {
   ExpressionAttributeNames: Record<string, string>;
   ExpressionAttributeValues: Record<string, NativeAttributeValue>;
@@ -657,7 +683,7 @@ export interface MarshallUserSessionOutput {
 }
 
 export type MarshallUserSessionInput = Required<
-  Pick<UserSession, 'publicId' | 'session' | 'sessionId'>
+  Pick<UserSession, 'session' | 'sessionId'>
 > &
   Partial<
     Pick<UserSession, 'aliasedField' | 'expires' | 'optionalField' | 'version'>
@@ -670,35 +696,27 @@ export function marshallUserSession(
 ): MarshallUserSessionOutput {
   const updateExpression: string[] = [
     '#entity = :entity',
-    '#publicId = :publicId',
     '#session = :session',
     '#sessionId = :sessionId',
     '#updatedAt = :updatedAt',
     '#version = :version',
-    '#publicIdpk = :publicIdpk',
-    '#publicIdsk = :publicIdsk',
   ];
 
   const ean: Record<string, string> = {
     '#entity': '_et',
     '#pk': 'pk',
-    '#publicId': 'public_id',
     '#session': 'session',
     '#sessionId': 'session_id',
     '#updatedAt': '_md',
     '#version': '_v',
-    '#publicIdpk': 'publicIdpk',
-    '#publicIdsk': 'publicIdsk',
   };
 
   const eav: Record<string, unknown> = {
     ':entity': 'UserSession',
-    ':publicId': input.publicId,
     ':session': input.session,
     ':sessionId': input.sessionId,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
-    ':publicIdpk': `${input.publicId}`,
   };
 
   if ('aliasedField' in input && typeof input.aliasedField !== 'undefined') {
@@ -743,11 +761,11 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
   );
 
   assert(
-    item.public_id !== null,
+    item.publicId !== null,
     () => new DataIntegrityError('Expected publicId to be non-null')
   );
   assert(
-    typeof item.public_id !== 'undefined',
+    typeof item.publicId !== 'undefined',
     () => new DataIntegrityError('Expected publicId to be defined')
   );
 
@@ -790,7 +808,7 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
   let result: UserSession = {
     createdAt: new Date(item._ct),
     id: Base64.encode(`UserSession:${item.pk}`),
-    publicId: item.public_id,
+    publicId: item.publicId,
     session: item.session,
     sessionId: item.session_id,
     updatedAt: new Date(item._md),

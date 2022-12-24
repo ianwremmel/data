@@ -183,13 +183,13 @@ function compareIndexes(
       assert.equal(
         index.isComposite,
         longIndex.isComposite,
-        `Please check the secondary index ${name} for the table ${tableName}. All indees of the same name must be of the same type (either partition or composite).`
+        `Please check the secondary index ${name} for the table ${tableName}. All indexes of the same name must be of the same type (either partition or composite).`
       );
 
       assert.equal(
         index.type,
         longIndex.type,
-        `Please check the secondary index ${name} for the table ${tableName}. All indees of the same name must be of the same type (either gsi or lsi).`
+        `Please check the secondary index ${name} for the table ${tableName}. All indexes of the same name must be of the same type (either gsi or lsi).`
       );
     } else {
       long.set(name, index);
@@ -433,6 +433,11 @@ export function getAliasForField(field: GraphQLField<unknown, unknown>) {
       return '_ct';
     case 'updatedAt':
       return '_md';
+    // do not snakeCase publicId (to support a legacy project). At some future
+    // point, this and the general index column issue of camel-not-snake needs
+    //
+    case 'publicId':
+      return 'publicId';
     default:
       return undefined;
   }

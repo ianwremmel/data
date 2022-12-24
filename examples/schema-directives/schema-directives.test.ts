@@ -16,6 +16,7 @@ import {
 
 const userSessionMatcher = {
   createdAt: expect.any(Date),
+  publicId: expect.any(String),
   updatedAt: expect.any(Date),
 };
 
@@ -41,8 +42,14 @@ describe('optionalFields', () => {
         `
         {
           "capacity": {
-            "CapacityUnits": 1,
-            "GlobalSecondaryIndexes": undefined,
+            "CapacityUnits": 2,
+            "GlobalSecondaryIndexes": {
+              "publicId": {
+                "CapacityUnits": 1,
+                "ReadCapacityUnits": undefined,
+                "WriteCapacityUnits": undefined,
+              },
+            },
             "LocalSecondaryIndexes": undefined,
             "ReadCapacityUnits": undefined,
             "Table": {
@@ -56,6 +63,7 @@ describe('optionalFields', () => {
           "item": {
             "createdAt": Any<Date>,
             "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
+            "publicId": Any<String>,
             "session": {
               "foo": "foo",
             },
@@ -78,8 +86,14 @@ describe('optionalFields', () => {
         `
         {
           "capacity": {
-            "CapacityUnits": 1,
-            "GlobalSecondaryIndexes": undefined,
+            "CapacityUnits": 2,
+            "GlobalSecondaryIndexes": {
+              "publicId": {
+                "CapacityUnits": 1,
+                "ReadCapacityUnits": undefined,
+                "WriteCapacityUnits": undefined,
+              },
+            },
             "LocalSecondaryIndexes": undefined,
             "ReadCapacityUnits": undefined,
             "Table": {
@@ -93,6 +107,7 @@ describe('optionalFields', () => {
           "item": {
             "createdAt": Any<Date>,
             "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
+            "publicId": Any<String>,
             "session": {
               "foo": "bar",
             },
@@ -127,6 +142,7 @@ describe('optionalFields', () => {
           "item": {
             "createdAt": Any<Date>,
             "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
+            "publicId": Any<String>,
             "session": {
               "foo": "bar",
             },
@@ -161,8 +177,14 @@ describe('optional ttl', () => {
       `
       {
         "capacity": {
-          "CapacityUnits": 1,
-          "GlobalSecondaryIndexes": undefined,
+          "CapacityUnits": 2,
+          "GlobalSecondaryIndexes": {
+            "publicId": {
+              "CapacityUnits": 1,
+              "ReadCapacityUnits": undefined,
+              "WriteCapacityUnits": undefined,
+            },
+          },
           "LocalSecondaryIndexes": undefined,
           "ReadCapacityUnits": undefined,
           "Table": {
@@ -176,6 +198,7 @@ describe('optional ttl', () => {
         "item": {
           "createdAt": Any<Date>,
           "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
+          "publicId": Any<String>,
           "session": {
             "foo": "foo",
           },
@@ -212,8 +235,14 @@ describe('optional ttl', () => {
       `
       {
         "capacity": {
-          "CapacityUnits": 1,
-          "GlobalSecondaryIndexes": undefined,
+          "CapacityUnits": 2,
+          "GlobalSecondaryIndexes": {
+            "publicId": {
+              "CapacityUnits": 1,
+              "ReadCapacityUnits": undefined,
+              "WriteCapacityUnits": undefined,
+            },
+          },
           "LocalSecondaryIndexes": undefined,
           "ReadCapacityUnits": undefined,
           "Table": {
@@ -228,6 +257,7 @@ describe('optional ttl', () => {
           "createdAt": Any<Date>,
           "expires": Any<Date>,
           "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
+          "publicId": Any<String>,
           "session": {
             "foo": "foo",
           },

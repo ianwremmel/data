@@ -62,7 +62,13 @@ export function defineTable({
                 AttributeType: 'S',
               },
             ]
-          : [{AttributeName: `${index.name}pk`, AttributeType: 'S'}])
+          : [
+              {
+                AttributeName:
+                  index.name === 'publicId' ? 'publicId' : `${index.name}pk`,
+                AttributeType: 'S',
+              },
+            ])
       );
       const gsiKeySchema = index.isComposite
         ? [
@@ -77,7 +83,8 @@ export function defineTable({
           ]
         : [
             {
-              AttributeName: `${index.name}pk`,
+              AttributeName:
+                index.name === 'publicId' ? 'publicId' : `${index.name}pk`,
               KeyType: 'HASH',
             },
           ];

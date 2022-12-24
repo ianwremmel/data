@@ -4,6 +4,7 @@ import {ensureTableTemplate} from './ensure-table';
 import {objectToString} from './helpers';
 
 export interface BlindWriteTplInput {
+  readonly hasPublicId: boolean;
   readonly key: Record<string, string>;
   readonly tableName: string;
   readonly ttlConfig: TTLConfig | undefined;
@@ -12,6 +13,7 @@ export interface BlindWriteTplInput {
 
 /** template */
 export function blindWriteTpl({
+  hasPublicId,
   key,
   tableName,
   ttlConfig,
@@ -19,12 +21,14 @@ export function blindWriteTpl({
 }: BlindWriteTplInput) {
   const inputTypeName = `BlindWrite${typeName}Input`;
   const omitInputFields = [
-    'id',
     'createdAt',
+    'id',
     'updatedAt',
     'version',
-    ...(ttlConfig ? [ttlConfig.fieldName] : []),
+    hasPublicId && 'publicId',
+    ttlConfig?.fieldName,
   ]
+    .filter(Boolean)
     .map((f) => `'${f}'`)
     .sort();
   const outputTypeName = `BlindWrite${typeName}Output`;
@@ -47,17 +51,20 @@ ${ensureTableTemplate(tableName)}
 
   const ean ={
     ...ExpressionAttributeNames,
-    '#createdAt': '_ct'
+    '#createdAt': '_ct',
+    ${hasPublicId ? "'#publicId': 'publicId'," : ''}
   }
   const eav = {
     ...ExpressionAttributeValues, ':one': 1,
-    ':createdAt': now.getTime()
+    ':createdAt': now.getTime(),
+    ${hasPublicId ? "':publicId': idGenerator()," : ''}
   };
   const ue = [
     ...UpdateExpression
       .split(', ')
       .filter((e) => !e.startsWith('#version')),
-    '#createdAt = if_not_exists(#createdAt, :createdAt)'
+    '#createdAt = if_not_exists(#createdAt, :createdAt)',
+    ${hasPublicId ? "'#publicId = if_not_exists(#publicId, :publicId)'" : ''}
   ].join(', ') + ' ADD #version :one';
 
   const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand({
