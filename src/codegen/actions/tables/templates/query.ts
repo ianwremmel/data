@@ -261,7 +261,7 @@ function keyNames(key: PrimaryKeyConfig | SecondaryIndex) {
       : `{'#pk': '${pk}'}`;
   }
 
-  return `{'#pk': 'pk', '#sk': 'sk'}`;
+  return `{'#pk': 'pk', '#sk': '${key.name}sk'}`;
 }
 
 /** helper */

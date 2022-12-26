@@ -745,9 +745,9 @@ function makeEanForQueryCaseInstance(
     } else if (input.index === 'gsi2') {
       return {'#pk': 'gsi2pk', '#sk': 'gsi2sk'};
     } else if (input.index === 'lsi1') {
-      return {'#pk': 'pk', '#sk': 'sk'};
+      return {'#pk': 'pk', '#sk': 'lsi1sk'};
     } else if (input.index === 'lsi2') {
-      return {'#pk': 'pk', '#sk': 'sk'};
+      return {'#pk': 'pk', '#sk': 'lsi2sk'};
     }
     throw new Error(
       'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
@@ -1640,9 +1640,9 @@ function makeEanForQueryCaseSummary(
 ): Record<string, string> {
   if ('index' in input) {
     if (input.index === 'lsi1') {
-      return {'#pk': 'pk', '#sk': 'sk'};
+      return {'#pk': 'pk', '#sk': 'lsi1sk'};
     } else if (input.index === 'lsi2') {
-      return {'#pk': 'pk', '#sk': 'sk'};
+      return {'#pk': 'pk', '#sk': 'lsi2sk'};
     }
     throw new Error(
       'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
@@ -2420,7 +2420,7 @@ function makeEanForQueryFileTiming(
     if (input.index === 'gsi2') {
       return {'#pk': 'gsi2pk', '#sk': 'gsi2sk'};
     } else if (input.index === 'lsi1') {
-      return {'#pk': 'pk', '#sk': 'sk'};
+      return {'#pk': 'pk', '#sk': 'lsi1sk'};
     }
     throw new Error(
       'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'

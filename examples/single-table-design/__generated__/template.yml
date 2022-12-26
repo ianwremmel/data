@@ -129,7 +129,7 @@ Resources:
           AttributeType: S
         - AttributeName: sk
           AttributeType: S
-        - AttributeName: lsi1
+        - AttributeName: lsi1sk
           AttributeType: S
       BillingMode: PAY_PER_REQUEST
       KeySchema:
@@ -142,7 +142,7 @@ Resources:
           KeySchema:
             - AttributeName: pk
               KeyType: HASH
-            - AttributeName: lsi1
+            - AttributeName: lsi1sk
               KeyType: RANGE
           Projection:
             ProjectionType: ALL

@@ -569,7 +569,7 @@ function makeEanForQueryAccount(
 ): Record<string, string> {
   if ('index' in input) {
     if (input.index === 'lsi1') {
-      return {'#pk': 'pk', '#sk': 'sk'};
+      return {'#pk': 'pk', '#sk': 'lsi1sk'};
     }
     throw new Error(
       'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
