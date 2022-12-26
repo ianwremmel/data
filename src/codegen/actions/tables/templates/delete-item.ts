@@ -20,7 +20,7 @@ export async function delete${typeName}(input: ${primaryKeyType}): Promise<${out
 ${ensureTableTemplate(tableName)}
 
   try {
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new DeleteCommand({
+    const commandInput: DeleteCommandInput = {
       ConditionExpression: 'attribute_exists(#pk)',
       ExpressionAttributeNames: {
         "#pk": "pk",
@@ -30,7 +30,9 @@ ${ensureTableTemplate(tableName)}
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'NONE',
       TableName: tableName,
-    }));
+    };
+
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new DeleteCommand(commandInput));
 
     assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 

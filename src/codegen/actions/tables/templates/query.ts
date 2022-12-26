@@ -1,5 +1,3 @@
-import {snakeCase} from 'lodash';
-
 import type {Field, PrimaryKeyConfig, SecondaryIndex} from '../../../parser';
 
 import {ensureTableTemplate} from './ensure-table';
@@ -64,7 +62,7 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>, {
   const ExpressionAttributeValues = makeEavForQuery${typeName}(input);
   const KeyConditionExpression = makeKceForQuery${typeName}(input, {operator});
 
-  const {ConsumedCapacity: capacity, Items: items = []} = await ddbDocClient.send(new QueryCommand({
+  const commandInput: QueryCommandInput = {
     ConsistentRead: ${consistent ? `!('index' in input)` : 'false'},
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -76,7 +74,9 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>, {
     ReturnConsumedCapacity: 'INDEXES',
     ScanIndexForward: !reverse,
     TableName: tableName,
-  }));
+  };
+
+  const {ConsumedCapacity: capacity, Items: items = []} = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
@@ -261,7 +261,7 @@ function keyNames(key: PrimaryKeyConfig | SecondaryIndex) {
       : `{'#pk': '${pk}'}`;
   }
 
-  return `{'#pk': 'pk', '#sk': 'sk'}`;
+  return `{'#pk': 'pk', '#sk': '${key.name}sk'}`;
 }
 
 /** helper */

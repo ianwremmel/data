@@ -67,7 +67,7 @@ ${ensureTableTemplate(tableName)}
     ${hasPublicId ? "'#publicId = if_not_exists(#publicId, :publicId)'" : ''}
   ].join(', ') + ' ADD #version :one';
 
-  const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand({
+  const commandInput: UpdateCommandInput = {
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
     Key: ${objectToString(key)},
@@ -76,7 +76,9 @@ ${ensureTableTemplate(tableName)}
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
     UpdateExpression: ue,
-  }));
+  }
+
+  const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand(commandInput));
 
   assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 

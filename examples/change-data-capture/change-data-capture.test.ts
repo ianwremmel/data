@@ -4,9 +4,11 @@ import {NotFoundError} from '@ianwremmel/data';
 import {waitFor} from '../test-helpers';
 
 import {
+  createAccount,
   createSubscription,
   deleteAccount,
   deleteSubscription,
+  queryAccount,
   readAccount,
 } from './__generated__/actions';
 
@@ -107,4 +109,32 @@ describe('Change Date Capture', () => {
     },
     5 * 60 * 1000
   );
+});
+
+describe('@secondaryIndex', () => {
+  it('allows loading a record by an lsi', async () => {
+    const result = await createAccount({
+      cancelled: false,
+      effectiveDate: faker.date.past(3),
+      externalId: String(faker.datatype.number()),
+      onFreeTrial: true,
+      planName: 'ENTERPRISE',
+      vendor: 'GITHUB',
+    });
+
+    const {item: account} = result;
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const {items: accounts} = await queryAccount({
+      externalId: account.externalId,
+      index: 'lsi1',
+      vendor: account.vendor,
+    });
+
+    expect(accounts).toHaveLength(1);
+    expect(accounts[0]).toStrictEqual(account);
+
+    await deleteAccount(account);
+  });
 });

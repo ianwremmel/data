@@ -100,7 +100,16 @@ ${models
       prepend: [
         `import {ConditionalCheckFailedException, ConsumedCapacity, ItemCollectionMetrics} from '@aws-sdk/client-dynamodb';`,
         `import {ServiceException} from '@aws-sdk/smithy-client';`,
-        `import {DeleteCommand, GetCommand, QueryCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';`,
+        `import {
+          DeleteCommand,
+          DeleteCommandInput,
+          GetCommand,
+          GetCommandInput,
+          QueryCommand,
+          QueryCommandInput,
+          UpdateCommand,
+          UpdateCommandInput
+        } from '@aws-sdk/lib-dynamodb';`,
         `import Base64 from 'base64url';`,
         `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError, UnexpectedAwsError, UnexpectedError} from '${runtimeModuleId}';`,
         `import {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';`,

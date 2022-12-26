@@ -97,7 +97,7 @@ export function defineTable({
       });
     } else if (index.type === 'lsi') {
       attributeDefinitions.push({
-        AttributeName: `${index.name}`,
+        AttributeName: `${index.name}sk`,
         AttributeType: 'S',
       });
       const lsiKeySchema = [
@@ -106,7 +106,7 @@ export function defineTable({
           KeyType: 'HASH',
         },
         {
-          AttributeName: index.name,
+          AttributeName: `${index.name}sk`,
           KeyType: 'RANGE',
         },
       ];

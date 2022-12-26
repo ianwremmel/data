@@ -3,6 +3,12 @@ import type {
   ItemCollectionMetrics,
 } from '@aws-sdk/client-dynamodb';
 import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
+import type {
+  DeleteCommandInput,
+  GetCommandInput,
+  QueryCommandInput,
+  UpdateCommandInput,
+} from '@aws-sdk/lib-dynamodb';
 import {
   DeleteCommand,
   GetCommand,
@@ -179,34 +185,35 @@ export async function createUserLogin(
     ExpressionAttributeValues,
     UpdateExpression,
   } = marshallUserLogin(input, now);
+
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
+  const commandInput: UpdateCommandInput = {
+    ConditionExpression: 'attribute_not_exists(#pk)',
+    ExpressionAttributeNames: {
+      ...ExpressionAttributeNames,
+      '#createdAt': '_ct',
+    },
+    ExpressionAttributeValues: {
+      ...ExpressionAttributeValues,
+      ':createdAt': now.getTime(),
+    },
+    Key: {
+      pk: `USER#${input.vendor}#${input.externalId}`,
+      sk: `LOGIN#${input.login}`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+  };
+
   const {
     ConsumedCapacity: capacity,
     ItemCollectionMetrics: metrics,
     Attributes: item,
-  } = await ddbDocClient.send(
-    new UpdateCommand({
-      ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames: {
-        ...ExpressionAttributeNames,
-        '#createdAt': '_ct',
-      },
-      ExpressionAttributeValues: {
-        ...ExpressionAttributeValues,
-        ':createdAt': now.getTime(),
-      },
-      Key: {
-        pk: `USER#${input.vendor}#${input.externalId}`,
-        sk: `LOGIN#${input.login}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
-    })
-  );
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
   assert(
     capacity,
@@ -264,25 +271,25 @@ export async function blindWriteUserLogin(
     '#createdAt = if_not_exists(#createdAt, :createdAt)',
   ].join(', ')} ADD #version :one`;
 
+  const commandInput: UpdateCommandInput = {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    Key: {
+      pk: `USER#${input.vendor}#${input.externalId}`,
+      sk: `LOGIN#${input.login}`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: ue,
+  };
+
   const {
     ConsumedCapacity: capacity,
     ItemCollectionMetrics: metrics,
     Attributes: item,
-  } = await ddbDocClient.send(
-    new UpdateCommand({
-      ExpressionAttributeNames: ean,
-      ExpressionAttributeValues: eav,
-      Key: {
-        pk: `USER#${input.vendor}#${input.externalId}`,
-        sk: `LOGIN#${input.login}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: ue,
-    })
-  );
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
   assert(
     capacity,
@@ -315,23 +322,23 @@ export async function deleteUserLogin(
   assert(tableName, 'TABLE_USER_LOGIN is not set');
 
   try {
+    const commandInput: DeleteCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+      },
+      Key: {
+        pk: `USER#${input.vendor}#${input.externalId}`,
+        sk: `LOGIN#${input.login}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'NONE',
+      TableName: tableName,
+    };
+
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(
-        new DeleteCommand({
-          ConditionExpression: 'attribute_exists(#pk)',
-          ExpressionAttributeNames: {
-            '#pk': 'pk',
-          },
-          Key: {
-            pk: `USER#${input.vendor}#${input.externalId}`,
-            sk: `LOGIN#${input.login}`,
-          },
-          ReturnConsumedCapacity: 'INDEXES',
-          ReturnItemCollectionMetrics: 'SIZE',
-          ReturnValues: 'NONE',
-          TableName: tableName,
-        })
-      );
+      await ddbDocClient.send(new DeleteCommand(commandInput));
 
     assert(
       capacity,
@@ -363,16 +370,18 @@ export async function readUserLogin(
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
 
+  const commandInput: GetCommandInput = {
+    ConsistentRead: false,
+    Key: {
+      pk: `USER#${input.vendor}#${input.externalId}`,
+      sk: `LOGIN#${input.login}`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    TableName: tableName,
+  };
+
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand({
-      ConsistentRead: false,
-      Key: {
-        pk: `USER#${input.vendor}#${input.externalId}`,
-        sk: `LOGIN#${input.login}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      TableName: tableName,
-    })
+    new GetCommand(commandInput)
   );
 
   assert(
@@ -407,28 +416,28 @@ export async function touchUserLogin(
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
   try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+        '#version': '_v',
+      },
+      ExpressionAttributeValues: {
+        ':versionInc': 1,
+      },
+      Key: {
+        pk: `USER#${input.vendor}#${input.externalId}`,
+        sk: `LOGIN#${input.login}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: 'SET #version = #version + :versionInc',
+    };
+
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(
-        new UpdateCommand({
-          ConditionExpression: 'attribute_exists(#pk)',
-          ExpressionAttributeNames: {
-            '#pk': 'pk',
-            '#version': '_v',
-          },
-          ExpressionAttributeValues: {
-            ':versionInc': 1,
-          },
-          Key: {
-            pk: `USER#${input.vendor}#${input.externalId}`,
-            sk: `LOGIN#${input.login}`,
-          },
-          ReturnConsumedCapacity: 'INDEXES',
-          ReturnItemCollectionMetrics: 'SIZE',
-          ReturnValues: 'ALL_NEW',
-          TableName: tableName,
-          UpdateExpression: 'SET #version = #version + :versionInc',
-        })
-      );
+      await ddbDocClient.send(new UpdateCommand(commandInput));
 
     assert(
       capacity,
@@ -469,30 +478,30 @@ export async function updateUserLogin(
     UpdateExpression,
   } = marshallUserLogin(input);
   try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression:
+        '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':previousVersion': input.version,
+      },
+      Key: {
+        pk: `USER#${input.vendor}#${input.externalId}`,
+        sk: `LOGIN#${input.login}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression,
+    };
+
     const {
       Attributes: item,
       ConsumedCapacity: capacity,
       ItemCollectionMetrics: metrics,
-    } = await ddbDocClient.send(
-      new UpdateCommand({
-        ConditionExpression:
-          '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
-        ExpressionAttributeNames,
-        ExpressionAttributeValues: {
-          ...ExpressionAttributeValues,
-          ':previousVersion': input.version,
-        },
-        Key: {
-          pk: `USER#${input.vendor}#${input.externalId}`,
-          sk: `LOGIN#${input.login}`,
-        },
-        ReturnConsumedCapacity: 'INDEXES',
-        ReturnItemCollectionMetrics: 'SIZE',
-        ReturnValues: 'ALL_NEW',
-        TableName: tableName,
-        UpdateExpression,
-      })
-    );
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
     assert(
       capacity,
@@ -636,20 +645,20 @@ export async function queryUserLogin(
   const ExpressionAttributeValues = makeEavForQueryUserLogin(input);
   const KeyConditionExpression = makeKceForQueryUserLogin(input, {operator});
 
+  const commandInput: QueryCommandInput = {
+    ConsistentRead: false,
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    IndexName: 'index' in input ? input.index : undefined,
+    KeyConditionExpression,
+    Limit: limit,
+    ReturnConsumedCapacity: 'INDEXES',
+    ScanIndexForward: !reverse,
+    TableName: tableName,
+  };
+
   const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(
-      new QueryCommand({
-        ConsistentRead: false,
-        ExpressionAttributeNames,
-        ExpressionAttributeValues,
-        IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression,
-        Limit: limit,
-        ReturnConsumedCapacity: 'INDEXES',
-        ScanIndexForward: !reverse,
-        TableName: tableName,
-      })
-    );
+    await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,

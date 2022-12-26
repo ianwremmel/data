@@ -3,6 +3,12 @@ import type {
   ItemCollectionMetrics,
 } from '@aws-sdk/client-dynamodb';
 import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
+import type {
+  DeleteCommandInput,
+  GetCommandInput,
+  QueryCommandInput,
+  UpdateCommandInput,
+} from '@aws-sdk/lib-dynamodb';
 import {
   DeleteCommand,
   GetCommand,
@@ -188,33 +194,34 @@ export async function createUserSession(
     ExpressionAttributeValues,
     UpdateExpression,
   } = marshallUserSession(input, now);
+
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
+  const commandInput: UpdateCommandInput = {
+    ConditionExpression: 'attribute_not_exists(#pk)',
+    ExpressionAttributeNames: {
+      ...ExpressionAttributeNames,
+      '#createdAt': '_ct',
+      '#publicId': 'publicId',
+    },
+    ExpressionAttributeValues: {
+      ...ExpressionAttributeValues,
+      ':createdAt': now.getTime(),
+      ':publicId': idGenerator(),
+    },
+    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt, #publicId = :publicId`,
+  };
+
   const {
     ConsumedCapacity: capacity,
     ItemCollectionMetrics: metrics,
     Attributes: item,
-  } = await ddbDocClient.send(
-    new UpdateCommand({
-      ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames: {
-        ...ExpressionAttributeNames,
-        '#createdAt': '_ct',
-        '#publicId': 'publicId',
-      },
-      ExpressionAttributeValues: {
-        ...ExpressionAttributeValues,
-        ':createdAt': now.getTime(),
-        ':publicId': idGenerator(),
-      },
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt, #publicId = :publicId`,
-    })
-  );
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
   assert(
     capacity,
@@ -276,22 +283,22 @@ export async function blindWriteUserSession(
     '#publicId = if_not_exists(#publicId, :publicId)',
   ].join(', ')} ADD #version :one`;
 
+  const commandInput: UpdateCommandInput = {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: ue,
+  };
+
   const {
     ConsumedCapacity: capacity,
     ItemCollectionMetrics: metrics,
     Attributes: item,
-  } = await ddbDocClient.send(
-    new UpdateCommand({
-      ExpressionAttributeNames: ean,
-      ExpressionAttributeValues: eav,
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: ue,
-    })
-  );
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
   assert(
     capacity,
@@ -324,20 +331,20 @@ export async function deleteUserSession(
   assert(tableName, 'TABLE_USER_SESSIONS is not set');
 
   try {
+    const commandInput: DeleteCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+      },
+      Key: {pk: `USER_SESSION#${input.sessionId}`},
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'NONE',
+      TableName: tableName,
+    };
+
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(
-        new DeleteCommand({
-          ConditionExpression: 'attribute_exists(#pk)',
-          ExpressionAttributeNames: {
-            '#pk': 'pk',
-          },
-          Key: {pk: `USER_SESSION#${input.sessionId}`},
-          ReturnConsumedCapacity: 'INDEXES',
-          ReturnItemCollectionMetrics: 'SIZE',
-          ReturnValues: 'NONE',
-          TableName: tableName,
-        })
-      );
+      await ddbDocClient.send(new DeleteCommand(commandInput));
 
     assert(
       capacity,
@@ -369,13 +376,15 @@ export async function readUserSession(
   const tableName = process.env.TABLE_USER_SESSIONS;
   assert(tableName, 'TABLE_USER_SESSIONS is not set');
 
+  const commandInput: GetCommandInput = {
+    ConsistentRead: true,
+    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    ReturnConsumedCapacity: 'INDEXES',
+    TableName: tableName,
+  };
+
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand({
-      ConsistentRead: true,
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
-      ReturnConsumedCapacity: 'INDEXES',
-      TableName: tableName,
-    })
+    new GetCommand(commandInput)
   );
 
   assert(
@@ -410,25 +419,25 @@ export async function touchUserSession(
   const tableName = process.env.TABLE_USER_SESSIONS;
   assert(tableName, 'TABLE_USER_SESSIONS is not set');
   try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+        '#version': '_v',
+      },
+      ExpressionAttributeValues: {
+        ':versionInc': 1,
+      },
+      Key: {pk: `USER_SESSION#${input.sessionId}`},
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: 'SET #version = #version + :versionInc',
+    };
+
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(
-        new UpdateCommand({
-          ConditionExpression: 'attribute_exists(#pk)',
-          ExpressionAttributeNames: {
-            '#pk': 'pk',
-            '#version': '_v',
-          },
-          ExpressionAttributeValues: {
-            ':versionInc': 1,
-          },
-          Key: {pk: `USER_SESSION#${input.sessionId}`},
-          ReturnConsumedCapacity: 'INDEXES',
-          ReturnItemCollectionMetrics: 'SIZE',
-          ReturnValues: 'ALL_NEW',
-          TableName: tableName,
-          UpdateExpression: 'SET #version = #version + :versionInc',
-        })
-      );
+      await ddbDocClient.send(new UpdateCommand(commandInput));
 
     assert(
       capacity,
@@ -470,27 +479,27 @@ export async function updateUserSession(
     UpdateExpression,
   } = marshallUserSession(input);
   try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression:
+        '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':previousVersion': input.version,
+      },
+      Key: {pk: `USER_SESSION#${input.sessionId}`},
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression,
+    };
+
     const {
       Attributes: item,
       ConsumedCapacity: capacity,
       ItemCollectionMetrics: metrics,
-    } = await ddbDocClient.send(
-      new UpdateCommand({
-        ConditionExpression:
-          '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
-        ExpressionAttributeNames,
-        ExpressionAttributeValues: {
-          ...ExpressionAttributeValues,
-          ':previousVersion': input.version,
-        },
-        Key: {pk: `USER_SESSION#${input.sessionId}`},
-        ReturnConsumedCapacity: 'INDEXES',
-        ReturnItemCollectionMetrics: 'SIZE',
-        ReturnValues: 'ALL_NEW',
-        TableName: tableName,
-        UpdateExpression,
-      })
-    );
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
     assert(
       capacity,
@@ -601,20 +610,20 @@ export async function queryUserSession(
   const ExpressionAttributeValues = makeEavForQueryUserSession(input);
   const KeyConditionExpression = makeKceForQueryUserSession(input, {operator});
 
+  const commandInput: QueryCommandInput = {
+    ConsistentRead: !('index' in input),
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    IndexName: 'index' in input ? input.index : undefined,
+    KeyConditionExpression,
+    Limit: limit,
+    ReturnConsumedCapacity: 'INDEXES',
+    ScanIndexForward: !reverse,
+    TableName: tableName,
+  };
+
   const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(
-      new QueryCommand({
-        ConsistentRead: !('index' in input),
-        ExpressionAttributeNames,
-        ExpressionAttributeValues,
-        IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression,
-        Limit: limit,
-        ReturnConsumedCapacity: 'INDEXES',
-        ScanIndexForward: !reverse,
-        TableName: tableName,
-      })
-    );
+    await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
