@@ -3,6 +3,12 @@ import type {
   ItemCollectionMetrics,
 } from '@aws-sdk/client-dynamodb';
 import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
+import type {
+  DeleteCommandInput,
+  GetCommandInput,
+  QueryCommandInput,
+  UpdateCommandInput,
+} from '@aws-sdk/lib-dynamodb';
 import {
   DeleteCommand,
   GetCommand,
@@ -233,34 +239,35 @@ export async function createCaseInstance(
     ExpressionAttributeValues,
     UpdateExpression,
   } = marshallCaseInstance(input, now);
+
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
+  const commandInput: UpdateCommandInput = {
+    ConditionExpression: 'attribute_not_exists(#pk)',
+    ExpressionAttributeNames: {
+      ...ExpressionAttributeNames,
+      '#createdAt': '_ct',
+    },
+    ExpressionAttributeValues: {
+      ...ExpressionAttributeValues,
+      ':createdAt': now.getTime(),
+    },
+    Key: {
+      pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+      sk: `INSTANCE#${input.sha}#${input.retry}`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+  };
+
   const {
     ConsumedCapacity: capacity,
     ItemCollectionMetrics: metrics,
     Attributes: item,
-  } = await ddbDocClient.send(
-    new UpdateCommand({
-      ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames: {
-        ...ExpressionAttributeNames,
-        '#createdAt': '_ct',
-      },
-      ExpressionAttributeValues: {
-        ...ExpressionAttributeValues,
-        ':createdAt': now.getTime(),
-      },
-      Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-        sk: `INSTANCE#${input.sha}#${input.retry}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
-    })
-  );
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
   assert(
     capacity,
@@ -318,25 +325,25 @@ export async function blindWriteCaseInstance(
     '#createdAt = if_not_exists(#createdAt, :createdAt)',
   ].join(', ')} ADD #version :one`;
 
+  const commandInput: UpdateCommandInput = {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    Key: {
+      pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+      sk: `INSTANCE#${input.sha}#${input.retry}`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: ue,
+  };
+
   const {
     ConsumedCapacity: capacity,
     ItemCollectionMetrics: metrics,
     Attributes: item,
-  } = await ddbDocClient.send(
-    new UpdateCommand({
-      ExpressionAttributeNames: ean,
-      ExpressionAttributeValues: eav,
-      Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-        sk: `INSTANCE#${input.sha}#${input.retry}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: ue,
-    })
-  );
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
   assert(
     capacity,
@@ -369,23 +376,23 @@ export async function deleteCaseInstance(
   assert(tableName, 'TABLE_CASE_INSTANCE is not set');
 
   try {
+    const commandInput: DeleteCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+      },
+      Key: {
+        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+        sk: `INSTANCE#${input.sha}#${input.retry}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'NONE',
+      TableName: tableName,
+    };
+
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(
-        new DeleteCommand({
-          ConditionExpression: 'attribute_exists(#pk)',
-          ExpressionAttributeNames: {
-            '#pk': 'pk',
-          },
-          Key: {
-            pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-            sk: `INSTANCE#${input.sha}#${input.retry}`,
-          },
-          ReturnConsumedCapacity: 'INDEXES',
-          ReturnItemCollectionMetrics: 'SIZE',
-          ReturnValues: 'NONE',
-          TableName: tableName,
-        })
-      );
+      await ddbDocClient.send(new DeleteCommand(commandInput));
 
     assert(
       capacity,
@@ -417,16 +424,18 @@ export async function readCaseInstance(
   const tableName = process.env.TABLE_CASE_INSTANCE;
   assert(tableName, 'TABLE_CASE_INSTANCE is not set');
 
+  const commandInput: GetCommandInput = {
+    ConsistentRead: false,
+    Key: {
+      pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+      sk: `INSTANCE#${input.sha}#${input.retry}`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    TableName: tableName,
+  };
+
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand({
-      ConsistentRead: false,
-      Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-        sk: `INSTANCE#${input.sha}#${input.retry}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      TableName: tableName,
-    })
+    new GetCommand(commandInput)
   );
 
   assert(
@@ -461,28 +470,28 @@ export async function touchCaseInstance(
   const tableName = process.env.TABLE_CASE_INSTANCE;
   assert(tableName, 'TABLE_CASE_INSTANCE is not set');
   try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+        '#version': '_v',
+      },
+      ExpressionAttributeValues: {
+        ':versionInc': 1,
+      },
+      Key: {
+        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+        sk: `INSTANCE#${input.sha}#${input.retry}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: 'SET #version = #version + :versionInc',
+    };
+
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(
-        new UpdateCommand({
-          ConditionExpression: 'attribute_exists(#pk)',
-          ExpressionAttributeNames: {
-            '#pk': 'pk',
-            '#version': '_v',
-          },
-          ExpressionAttributeValues: {
-            ':versionInc': 1,
-          },
-          Key: {
-            pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-            sk: `INSTANCE#${input.sha}#${input.retry}`,
-          },
-          ReturnConsumedCapacity: 'INDEXES',
-          ReturnItemCollectionMetrics: 'SIZE',
-          ReturnValues: 'ALL_NEW',
-          TableName: tableName,
-          UpdateExpression: 'SET #version = #version + :versionInc',
-        })
-      );
+      await ddbDocClient.send(new UpdateCommand(commandInput));
 
     assert(
       capacity,
@@ -523,30 +532,30 @@ export async function updateCaseInstance(
     UpdateExpression,
   } = marshallCaseInstance(input);
   try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression:
+        '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':previousVersion': input.version,
+      },
+      Key: {
+        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+        sk: `INSTANCE#${input.sha}#${input.retry}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression,
+    };
+
     const {
       Attributes: item,
       ConsumedCapacity: capacity,
       ItemCollectionMetrics: metrics,
-    } = await ddbDocClient.send(
-      new UpdateCommand({
-        ConditionExpression:
-          '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
-        ExpressionAttributeNames,
-        ExpressionAttributeValues: {
-          ...ExpressionAttributeValues,
-          ':previousVersion': input.version,
-        },
-        Key: {
-          pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-          sk: `INSTANCE#${input.sha}#${input.retry}`,
-        },
-        ReturnConsumedCapacity: 'INDEXES',
-        ReturnItemCollectionMetrics: 'SIZE',
-        ReturnValues: 'ALL_NEW',
-        TableName: tableName,
-        UpdateExpression,
-      })
-    );
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
     assert(
       capacity,
@@ -870,20 +879,20 @@ export async function queryCaseInstance(
   const ExpressionAttributeValues = makeEavForQueryCaseInstance(input);
   const KeyConditionExpression = makeKceForQueryCaseInstance(input, {operator});
 
+  const commandInput: QueryCommandInput = {
+    ConsistentRead: false,
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    IndexName: 'index' in input ? input.index : undefined,
+    KeyConditionExpression,
+    Limit: limit,
+    ReturnConsumedCapacity: 'INDEXES',
+    ScanIndexForward: !reverse,
+    TableName: tableName,
+  };
+
   const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(
-      new QueryCommand({
-        ConsistentRead: false,
-        ExpressionAttributeNames,
-        ExpressionAttributeValues,
-        IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression,
-        Limit: limit,
-        ReturnConsumedCapacity: 'INDEXES',
-        ScanIndexForward: !reverse,
-        TableName: tableName,
-      })
-    );
+    await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -1208,34 +1217,35 @@ export async function createCaseSummary(
     ExpressionAttributeValues,
     UpdateExpression,
   } = marshallCaseSummary(input, now);
+
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
+  const commandInput: UpdateCommandInput = {
+    ConditionExpression: 'attribute_not_exists(#pk)',
+    ExpressionAttributeNames: {
+      ...ExpressionAttributeNames,
+      '#createdAt': '_ct',
+    },
+    ExpressionAttributeValues: {
+      ...ExpressionAttributeValues,
+      ':createdAt': now.getTime(),
+    },
+    Key: {
+      pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+      sk: `SUMMARY#${input.lineage}`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+  };
+
   const {
     ConsumedCapacity: capacity,
     ItemCollectionMetrics: metrics,
     Attributes: item,
-  } = await ddbDocClient.send(
-    new UpdateCommand({
-      ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames: {
-        ...ExpressionAttributeNames,
-        '#createdAt': '_ct',
-      },
-      ExpressionAttributeValues: {
-        ...ExpressionAttributeValues,
-        ':createdAt': now.getTime(),
-      },
-      Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-        sk: `SUMMARY#${input.lineage}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
-    })
-  );
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
   assert(
     capacity,
@@ -1293,25 +1303,25 @@ export async function blindWriteCaseSummary(
     '#createdAt = if_not_exists(#createdAt, :createdAt)',
   ].join(', ')} ADD #version :one`;
 
+  const commandInput: UpdateCommandInput = {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    Key: {
+      pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+      sk: `SUMMARY#${input.lineage}`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: ue,
+  };
+
   const {
     ConsumedCapacity: capacity,
     ItemCollectionMetrics: metrics,
     Attributes: item,
-  } = await ddbDocClient.send(
-    new UpdateCommand({
-      ExpressionAttributeNames: ean,
-      ExpressionAttributeValues: eav,
-      Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-        sk: `SUMMARY#${input.lineage}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: ue,
-    })
-  );
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
   assert(
     capacity,
@@ -1344,23 +1354,23 @@ export async function deleteCaseSummary(
   assert(tableName, 'TABLE_CASE_SUMMARY is not set');
 
   try {
+    const commandInput: DeleteCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+      },
+      Key: {
+        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        sk: `SUMMARY#${input.lineage}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'NONE',
+      TableName: tableName,
+    };
+
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(
-        new DeleteCommand({
-          ConditionExpression: 'attribute_exists(#pk)',
-          ExpressionAttributeNames: {
-            '#pk': 'pk',
-          },
-          Key: {
-            pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-            sk: `SUMMARY#${input.lineage}`,
-          },
-          ReturnConsumedCapacity: 'INDEXES',
-          ReturnItemCollectionMetrics: 'SIZE',
-          ReturnValues: 'NONE',
-          TableName: tableName,
-        })
-      );
+      await ddbDocClient.send(new DeleteCommand(commandInput));
 
     assert(
       capacity,
@@ -1392,16 +1402,18 @@ export async function readCaseSummary(
   const tableName = process.env.TABLE_CASE_SUMMARY;
   assert(tableName, 'TABLE_CASE_SUMMARY is not set');
 
+  const commandInput: GetCommandInput = {
+    ConsistentRead: false,
+    Key: {
+      pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+      sk: `SUMMARY#${input.lineage}`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    TableName: tableName,
+  };
+
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand({
-      ConsistentRead: false,
-      Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-        sk: `SUMMARY#${input.lineage}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      TableName: tableName,
-    })
+    new GetCommand(commandInput)
   );
 
   assert(
@@ -1436,28 +1448,28 @@ export async function touchCaseSummary(
   const tableName = process.env.TABLE_CASE_SUMMARY;
   assert(tableName, 'TABLE_CASE_SUMMARY is not set');
   try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+        '#version': '_v',
+      },
+      ExpressionAttributeValues: {
+        ':versionInc': 1,
+      },
+      Key: {
+        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        sk: `SUMMARY#${input.lineage}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: 'SET #version = #version + :versionInc',
+    };
+
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(
-        new UpdateCommand({
-          ConditionExpression: 'attribute_exists(#pk)',
-          ExpressionAttributeNames: {
-            '#pk': 'pk',
-            '#version': '_v',
-          },
-          ExpressionAttributeValues: {
-            ':versionInc': 1,
-          },
-          Key: {
-            pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-            sk: `SUMMARY#${input.lineage}`,
-          },
-          ReturnConsumedCapacity: 'INDEXES',
-          ReturnItemCollectionMetrics: 'SIZE',
-          ReturnValues: 'ALL_NEW',
-          TableName: tableName,
-          UpdateExpression: 'SET #version = #version + :versionInc',
-        })
-      );
+      await ddbDocClient.send(new UpdateCommand(commandInput));
 
     assert(
       capacity,
@@ -1498,30 +1510,30 @@ export async function updateCaseSummary(
     UpdateExpression,
   } = marshallCaseSummary(input);
   try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression:
+        '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':previousVersion': input.version,
+      },
+      Key: {
+        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        sk: `SUMMARY#${input.lineage}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression,
+    };
+
     const {
       Attributes: item,
       ConsumedCapacity: capacity,
       ItemCollectionMetrics: metrics,
-    } = await ddbDocClient.send(
-      new UpdateCommand({
-        ConditionExpression:
-          '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
-        ExpressionAttributeNames,
-        ExpressionAttributeValues: {
-          ...ExpressionAttributeValues,
-          ':previousVersion': input.version,
-        },
-        Key: {
-          pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-          sk: `SUMMARY#${input.lineage}`,
-        },
-        ReturnConsumedCapacity: 'INDEXES',
-        ReturnItemCollectionMetrics: 'SIZE',
-        ReturnValues: 'ALL_NEW',
-        TableName: tableName,
-        UpdateExpression,
-      })
-    );
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
     assert(
       capacity,
@@ -1720,20 +1732,20 @@ export async function queryCaseSummary(
   const ExpressionAttributeValues = makeEavForQueryCaseSummary(input);
   const KeyConditionExpression = makeKceForQueryCaseSummary(input, {operator});
 
+  const commandInput: QueryCommandInput = {
+    ConsistentRead: false,
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    IndexName: 'index' in input ? input.index : undefined,
+    KeyConditionExpression,
+    Limit: limit,
+    ReturnConsumedCapacity: 'INDEXES',
+    ScanIndexForward: !reverse,
+    TableName: tableName,
+  };
+
   const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(
-      new QueryCommand({
-        ConsistentRead: false,
-        ExpressionAttributeNames,
-        ExpressionAttributeValues,
-        IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression,
-        Limit: limit,
-        ReturnConsumedCapacity: 'INDEXES',
-        ScanIndexForward: !reverse,
-        TableName: tableName,
-      })
-    );
+    await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -1992,34 +2004,35 @@ export async function createFileTiming(
     ExpressionAttributeValues,
     UpdateExpression,
   } = marshallFileTiming(input, now);
+
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
+  const commandInput: UpdateCommandInput = {
+    ConditionExpression: 'attribute_not_exists(#pk)',
+    ExpressionAttributeNames: {
+      ...ExpressionAttributeNames,
+      '#createdAt': '_ct',
+    },
+    ExpressionAttributeValues: {
+      ...ExpressionAttributeValues,
+      ':createdAt': now.getTime(),
+    },
+    Key: {
+      pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+      sk: `FILE#${input.filename}`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+  };
+
   const {
     ConsumedCapacity: capacity,
     ItemCollectionMetrics: metrics,
     Attributes: item,
-  } = await ddbDocClient.send(
-    new UpdateCommand({
-      ConditionExpression: 'attribute_not_exists(#pk)',
-      ExpressionAttributeNames: {
-        ...ExpressionAttributeNames,
-        '#createdAt': '_ct',
-      },
-      ExpressionAttributeValues: {
-        ...ExpressionAttributeValues,
-        ':createdAt': now.getTime(),
-      },
-      Key: {
-        pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-        sk: `FILE#${input.filename}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
-    })
-  );
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
   assert(
     capacity,
@@ -2077,25 +2090,25 @@ export async function blindWriteFileTiming(
     '#createdAt = if_not_exists(#createdAt, :createdAt)',
   ].join(', ')} ADD #version :one`;
 
+  const commandInput: UpdateCommandInput = {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    Key: {
+      pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+      sk: `FILE#${input.filename}`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: ue,
+  };
+
   const {
     ConsumedCapacity: capacity,
     ItemCollectionMetrics: metrics,
     Attributes: item,
-  } = await ddbDocClient.send(
-    new UpdateCommand({
-      ExpressionAttributeNames: ean,
-      ExpressionAttributeValues: eav,
-      Key: {
-        pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-        sk: `FILE#${input.filename}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: ue,
-    })
-  );
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
   assert(
     capacity,
@@ -2128,23 +2141,23 @@ export async function deleteFileTiming(
   assert(tableName, 'TABLE_FILE_TIMING is not set');
 
   try {
+    const commandInput: DeleteCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+      },
+      Key: {
+        pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        sk: `FILE#${input.filename}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'NONE',
+      TableName: tableName,
+    };
+
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(
-        new DeleteCommand({
-          ConditionExpression: 'attribute_exists(#pk)',
-          ExpressionAttributeNames: {
-            '#pk': 'pk',
-          },
-          Key: {
-            pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-            sk: `FILE#${input.filename}`,
-          },
-          ReturnConsumedCapacity: 'INDEXES',
-          ReturnItemCollectionMetrics: 'SIZE',
-          ReturnValues: 'NONE',
-          TableName: tableName,
-        })
-      );
+      await ddbDocClient.send(new DeleteCommand(commandInput));
 
     assert(
       capacity,
@@ -2176,16 +2189,18 @@ export async function readFileTiming(
   const tableName = process.env.TABLE_FILE_TIMING;
   assert(tableName, 'TABLE_FILE_TIMING is not set');
 
+  const commandInput: GetCommandInput = {
+    ConsistentRead: false,
+    Key: {
+      pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+      sk: `FILE#${input.filename}`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    TableName: tableName,
+  };
+
   const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand({
-      ConsistentRead: false,
-      Key: {
-        pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-        sk: `FILE#${input.filename}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      TableName: tableName,
-    })
+    new GetCommand(commandInput)
   );
 
   assert(
@@ -2220,28 +2235,28 @@ export async function touchFileTiming(
   const tableName = process.env.TABLE_FILE_TIMING;
   assert(tableName, 'TABLE_FILE_TIMING is not set');
   try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+        '#version': '_v',
+      },
+      ExpressionAttributeValues: {
+        ':versionInc': 1,
+      },
+      Key: {
+        pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        sk: `FILE#${input.filename}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: 'SET #version = #version + :versionInc',
+    };
+
     const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(
-        new UpdateCommand({
-          ConditionExpression: 'attribute_exists(#pk)',
-          ExpressionAttributeNames: {
-            '#pk': 'pk',
-            '#version': '_v',
-          },
-          ExpressionAttributeValues: {
-            ':versionInc': 1,
-          },
-          Key: {
-            pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-            sk: `FILE#${input.filename}`,
-          },
-          ReturnConsumedCapacity: 'INDEXES',
-          ReturnItemCollectionMetrics: 'SIZE',
-          ReturnValues: 'ALL_NEW',
-          TableName: tableName,
-          UpdateExpression: 'SET #version = #version + :versionInc',
-        })
-      );
+      await ddbDocClient.send(new UpdateCommand(commandInput));
 
     assert(
       capacity,
@@ -2282,30 +2297,30 @@ export async function updateFileTiming(
     UpdateExpression,
   } = marshallFileTiming(input);
   try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression:
+        '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':previousVersion': input.version,
+      },
+      Key: {
+        pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        sk: `FILE#${input.filename}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression,
+    };
+
     const {
       Attributes: item,
       ConsumedCapacity: capacity,
       ItemCollectionMetrics: metrics,
-    } = await ddbDocClient.send(
-      new UpdateCommand({
-        ConditionExpression:
-          '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
-        ExpressionAttributeNames,
-        ExpressionAttributeValues: {
-          ...ExpressionAttributeValues,
-          ':previousVersion': input.version,
-        },
-        Key: {
-          pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-          sk: `FILE#${input.filename}`,
-        },
-        ReturnConsumedCapacity: 'INDEXES',
-        ReturnItemCollectionMetrics: 'SIZE',
-        ReturnValues: 'ALL_NEW',
-        TableName: tableName,
-        UpdateExpression,
-      })
-    );
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
     assert(
       capacity,
@@ -2493,20 +2508,20 @@ export async function queryFileTiming(
   const ExpressionAttributeValues = makeEavForQueryFileTiming(input);
   const KeyConditionExpression = makeKceForQueryFileTiming(input, {operator});
 
+  const commandInput: QueryCommandInput = {
+    ConsistentRead: false,
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    IndexName: 'index' in input ? input.index : undefined,
+    KeyConditionExpression,
+    Limit: limit,
+    ReturnConsumedCapacity: 'INDEXES',
+    ScanIndexForward: !reverse,
+    TableName: tableName,
+  };
+
   const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(
-      new QueryCommand({
-        ConsistentRead: false,
-        ExpressionAttributeNames,
-        ExpressionAttributeValues,
-        IndexName: 'index' in input ? input.index : undefined,
-        KeyConditionExpression,
-        Limit: limit,
-        ReturnConsumedCapacity: 'INDEXES',
-        ScanIndexForward: !reverse,
-        TableName: tableName,
-      })
-    );
+    await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,

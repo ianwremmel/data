@@ -50,7 +50,7 @@ export async function update${typeName}(input: Readonly<${inputTypeName}>): Prom
 ${ensureTableTemplate(tableName)}
   const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${typeName}(input);
   try {
-    const {Attributes: item, ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand({
+    const commandInput: UpdateCommandInput = {
       ConditionExpression: '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
       ExpressionAttributeNames,
       ExpressionAttributeValues: {
@@ -63,7 +63,9 @@ ${ensureTableTemplate(tableName)}
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
       UpdateExpression,
-    }));
+    };
+
+    const {Attributes: item, ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand(commandInput));
 
     assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 

@@ -32,7 +32,7 @@ export type ${outputTypeName} = ResultType<void>;
 export async function touch${typeName}(input: ${primaryKeyType}): Promise<${outputTypeName}> {
 ${ensureTableTemplate(tableName)}
   try {
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand({
+    const commandInput: UpdateCommandInput = {
       ConditionExpression: 'attribute_exists(#pk)',
       ExpressionAttributeNames: {
 ${ean.map((e) => `        ${e},`).join('\n')}
@@ -46,7 +46,9 @@ ${eav.map((e) => `        ${e},`).join('\n')}
       ReturnValues: 'ALL_NEW',
       TableName: tableName,
       UpdateExpression: 'SET ${updateExpressions.join(', ')}',
-    }));
+    };
+
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} = await ddbDocClient.send(new UpdateCommand(commandInput));
 
     assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 

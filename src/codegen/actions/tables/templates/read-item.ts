@@ -25,12 +25,14 @@ export type ${outputTypeName} = ResultType<${typeName}>;
 export async function read${typeName}(input: ${primaryKeyType}): Promise<Readonly<${outputTypeName}>> {
 ${ensureTableTemplate(tableName)}
 
-  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(new GetCommand({
+  const commandInput: GetCommandInput = {
     ConsistentRead: ${consistent},
     Key: ${objectToString(key)},
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
-  }));
+  };
+
+  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(new GetCommand(commandInput));
 
   assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
