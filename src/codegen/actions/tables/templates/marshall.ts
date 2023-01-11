@@ -77,9 +77,11 @@ export function marshall${typeName}(input: ${inputTypeName}, now = new Date()): 
     .join('\n')}
   ${secondaryIndexes
     .filter(({name}) => name !== 'publicId')
-    .map(({name, type}) =>
+    .map(({isSingleField, name, type}) =>
       type === 'gsi'
-        ? [`'#${name}pk = :${name}pk',`, `'#${name}sk = :${name}sk',`]
+        ? isSingleField
+          ? []
+          : [`'#${name}pk = :${name}pk',`, `'#${name}sk = :${name}sk',`]
         : [`'#${name}sk = :${name}sk',`]
     )
     .flat()
@@ -98,9 +100,11 @@ ${requiredFields
   .join('\n')}
 ${secondaryIndexes
   .filter(({name}) => name !== 'publicId')
-  .map(({name, type}) =>
+  .map(({isSingleField, name, type}) =>
     type === 'gsi'
-      ? [`'#${name}pk': '${name}pk',`, `'#${name}sk': '${name}sk',`]
+      ? isSingleField
+        ? []
+        : [`'#${name}pk': '${name}pk',`, `'#${name}sk': '${name}sk',`]
       : [`'#${name}sk': '${name}sk',`]
   )
   .flat()
@@ -133,30 +137,35 @@ ${secondaryIndexes
       .join('\n')}
 ${secondaryIndexes
   .filter(({name}) => name !== 'publicId')
-  .map((index) =>
-    index.type === 'gsi'
-      ? [
-          `':${index.name}pk': \`${makeKeyTemplate(
-            index.partitionKeyPrefix,
-            index.partitionKeyFields,
-            'read'
-          )}\`,`,
-          index.isComposite
-            ? `':${index.name}sk': \`${makeKeyTemplate(
-                index.sortKeyPrefix,
-                index.sortKeyFields,
-                'read'
-              )}\`,`
-            : undefined,
-        ]
-      : [
-          `':${index.name}sk': \`${makeKeyTemplate(
-            index.sortKeyPrefix,
-            index.sortKeyFields,
-            'read'
-          )}\`,`,
-        ]
-  )
+  .map((index) => {
+    if (index.type === 'gsi') {
+      if (index.isSingleField) {
+        return [];
+      }
+      return [
+        `':${`${index.name}pk`}': \`${makeKeyTemplate(
+          index.partitionKeyPrefix,
+          index.partitionKeyFields,
+          'read'
+        )}\`,`,
+        index.isComposite
+          ? `':${index.name}sk': \`${makeKeyTemplate(
+              index.sortKeyPrefix,
+              index.sortKeyFields,
+              'read'
+            )}\`,`
+          : undefined,
+      ];
+    }
+
+    return [
+      `':${index.name}sk': \`${makeKeyTemplate(
+        index.sortKeyPrefix,
+        index.sortKeyFields,
+        'read'
+      )}\`,`,
+    ];
+  })
   .flat()
   .join('\n')}
   };

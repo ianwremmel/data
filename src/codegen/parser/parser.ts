@@ -144,8 +144,10 @@ export function parse<T extends {dependenciesModuleId: string}>(
             isComposite: firstModel.primaryKey.isComposite,
           },
           secondaryIndexes: firstModel.secondaryIndexes.map(
-            ({isComposite, name, type}) => ({
+            ({isComposite, name, type, ...rest}) => ({
               isComposite,
+              isSingleField:
+                'isSingleField' in rest ? rest.isSingleField : false,
               name,
               type,
             })
@@ -259,6 +261,7 @@ function extractPrimaryKey(
 
     return {
       isComposite: false,
+      isSingleField: false,
       partitionKeyFields: getArgStringArrayValue('pkFields', directive).map(
         (fieldName) => getFieldFromFieldMap(fieldMap, fieldName)
       ),
@@ -282,12 +285,14 @@ function extractSecondaryIndexes(
       ?.filter(
         (directive) =>
           directive.name.value === 'compositeIndex' ||
-          directive.name.value === 'secondaryIndex'
+          directive.name.value === 'secondaryIndex' ||
+          directive.name.value === 'simpleIndex'
       )
       .map((directive) => {
         if (directive.name.value === 'compositeIndex') {
           return {
             isComposite: true,
+            isSingleField: false,
             name: getArgStringValue('name', directive),
             partitionKeyFields: getArgStringArrayValue(
               'pkFields',
@@ -305,10 +310,22 @@ function extractSecondaryIndexes(
           };
         }
 
+        if (directive.name.value === 'simpleIndex') {
+          const name = getArgStringValue('field', directive);
+          return {
+            isComposite: false,
+            isSingleField: true,
+            name,
+            partitionKeyFields: [getFieldFromFieldMap(fieldMap, name)],
+            type: 'gsi',
+          };
+        }
+
         assert.equal(directive.name.value, 'secondaryIndex', ``);
 
         return {
           isComposite: true,
+          isSingleField: false,
           name: getArgStringValue('name', directive),
           sortKeyFields: getArgStringArrayValue('fields', directive).map(
             (fieldName) => getFieldFromFieldMap(fieldMap, fieldName)
@@ -321,6 +338,7 @@ function extractSecondaryIndexes(
   if (hasInterface('PublicModel', type)) {
     const publicIdIndex: GSI = {
       isComposite: false,
+      isSingleField: true,
       name: 'publicId',
       partitionKeyFields: [getFieldFromFieldMap(fieldMap, 'publicId')],
       type: 'gsi',

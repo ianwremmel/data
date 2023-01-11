@@ -125,7 +125,7 @@ export type Repository = Model &
     organization: Scalars['String'];
     private?: Maybe<Scalars['Boolean']>;
     publicId: Scalars['String'];
-    repository?: Maybe<Scalars['String']>;
+    repo?: Maybe<Scalars['String']>;
     token: Scalars['String'];
     updatedAt: Scalars['Date'];
     vendor: Vendor;
@@ -595,9 +595,10 @@ export type QueryRepositoryInput =
   | {
       index: 'gsi1';
       organization: Scalars['String'];
-      repository?: Maybe<Scalars['String']>;
+      repo?: Maybe<Scalars['String']>;
       vendor: Vendor;
     }
+  | {index: 'token'; token: Scalars['String']}
   | {index: 'publicId'; publicId: Scalars['String']};
 export type QueryRepositoryOutput = MultiResultType<Repository>;
 
@@ -608,6 +609,8 @@ function makeEanForQueryRepository(
   if ('index' in input) {
     if (input.index === 'gsi1') {
       return {'#pk': 'gsi1pk', '#sk': 'gsi1sk'};
+    } else if (input.index === 'token') {
+      return {'#pk': 'token'};
     } else if (input.index === 'publicId') {
       return {'#pk': 'publicId'};
     }
@@ -627,10 +630,12 @@ function makeEavForQueryRepository(
     if (input.index === 'gsi1') {
       return {
         ':pk': `REPOSITORY#${input.vendor}#${input.organization}`,
-        ':sk': ['REPOSITORY', 'repository' in input && input.repository]
+        ':sk': ['REPOSITORY', 'repo' in input && input.repo]
           .filter(Boolean)
           .join('#'),
       };
+    } else if (input.index === 'token') {
+      return {':pk': `${input.token}`};
     } else if (input.index === 'publicId') {
       return {':pk': `${input.publicId}`};
     }
@@ -657,6 +662,8 @@ function makeKceForQueryRepository(
           ? 'begins_with(#sk, :sk)'
           : `#sk ${operator} :sk`
       }`;
+    } else if (input.index === 'token') {
+      return '#pk = :pk';
     } else if (input.index === 'publicId') {
       return '#pk = :pk';
     }
@@ -782,7 +789,7 @@ export type MarshallRepositoryInput = Required<
   >
 > &
   Partial<
-    Pick<Repository, 'defaultBranchName' | 'private' | 'repository' | 'version'>
+    Pick<Repository, 'defaultBranchName' | 'private' | 'repo' | 'version'>
   >;
 
 /** Marshalls a DynamoDB record into a Repository object */
@@ -830,7 +837,7 @@ export function marshallRepository(
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
     ':gsi1pk': `REPOSITORY#${input.vendor}#${input.organization}`,
-    ':gsi1sk': `REPOSITORY#${input.repository}`,
+    ':gsi1sk': `REPOSITORY#${input.repo}`,
   };
 
   if (
@@ -848,10 +855,10 @@ export function marshallRepository(
     updateExpression.push('#private = :private');
   }
 
-  if ('repository' in input && typeof input.repository !== 'undefined') {
-    ean['#repository'] = 'repository';
-    eav[':repository'] = input.repository;
-    updateExpression.push('#repository = :repository');
+  if ('repo' in input && typeof input.repo !== 'undefined') {
+    ean['#repo'] = 'repo';
+    eav[':repo'] = input.repo;
+    updateExpression.push('#repo = :repo');
   }
   updateExpression.sort();
 
@@ -984,10 +991,10 @@ export function unmarshallRepository(item: Record<string, any>): Repository {
     };
   }
 
-  if ('repository' in item) {
+  if ('repo' in item) {
     result = {
       ...result,
-      repository: item.repository,
+      repo: item.repo,
     };
   }
 

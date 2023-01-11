@@ -356,7 +356,7 @@ describe('@simpleIndex', () => {
       externalId: String(faker.datatype.number()),
       externalInstallationId: String(faker.datatype.number()),
       organization: faker.internet.userName(),
-      repository: faker.random.word(),
+      repo: faker.random.word(),
       token,
       vendor: 'GITHUB',
     });

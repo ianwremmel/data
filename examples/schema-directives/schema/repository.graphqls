@@ -12,7 +12,7 @@ type Repository implements PublicModel & Model & Timestamped & Versioned
     name: "gsi1"
     pkFields: ["vendor", "organization"]
     pkPrefix: "REPOSITORY"
-    skFields: ["repository"]
+    skFields: ["repo"]
     skPrefix: "REPOSITORY"
   )
   @simpleIndex(field: "token")
@@ -26,7 +26,7 @@ type Repository implements PublicModel & Model & Timestamped & Versioned
   organization: String!
   private: Boolean
   publicId: String!
-  repository: String
+  repo: String
   token: String!
   updatedAt: Date!
   vendor: Vendor!

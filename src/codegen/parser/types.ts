@@ -17,6 +17,7 @@ export interface TablePrimaryKeyConfig {
 
 export interface TableSecondaryIndex {
   readonly isComposite: boolean;
+  readonly isSingleField: boolean;
   readonly name: string;
   readonly type: 'gsi' | 'lsi';
 }
@@ -58,12 +59,14 @@ export interface ChangeDataCaptureConfig {
 }
 
 export type GSI = {
+  readonly isSingleField: boolean;
   readonly name: string;
   readonly type: 'gsi';
 } & (PartitionKey | CompositeKey);
 
 export interface LSI {
   readonly isComposite: true;
+  readonly isSingleField: false;
   readonly name: string;
   readonly type: 'lsi';
   readonly sortKeyFields: readonly Field[];
@@ -74,6 +77,7 @@ export type SecondaryIndex = GSI | LSI;
 
 export interface PartitionKey {
   readonly isComposite: false;
+  readonly isSingleField: boolean;
   readonly partitionKeyFields: readonly Field[];
   readonly partitionKeyPrefix?: string;
 }
