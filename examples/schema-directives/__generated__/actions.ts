@@ -146,6 +146,7 @@ export type UserSession = Model &
      * random uuid, which the underlying system will use as the basis for `id`.
      */
     sessionId: Scalars['String'];
+    token: Scalars['String'];
     updatedAt: Scalars['Date'];
     version: Scalars['Int'];
   };
@@ -692,7 +693,7 @@ export interface MarshallUserSessionOutput {
 }
 
 export type MarshallUserSessionInput = Required<
-  Pick<UserSession, 'session' | 'sessionId'>
+  Pick<UserSession, 'session' | 'sessionId' | 'token'>
 > &
   Partial<
     Pick<UserSession, 'aliasedField' | 'expires' | 'optionalField' | 'version'>
@@ -707,6 +708,7 @@ export function marshallUserSession(
     '#entity = :entity',
     '#session = :session',
     '#sessionId = :sessionId',
+    '#token = :token',
     '#updatedAt = :updatedAt',
     '#version = :version',
   ];
@@ -716,6 +718,7 @@ export function marshallUserSession(
     '#pk': 'pk',
     '#session': 'session',
     '#sessionId': 'session_id',
+    '#token': 'token',
     '#updatedAt': '_md',
     '#version': '_v',
   };
@@ -724,6 +727,7 @@ export function marshallUserSession(
     ':entity': 'UserSession',
     ':session': input.session,
     ':sessionId': input.sessionId,
+    ':token': input.token,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
   };
@@ -797,6 +801,15 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
   );
 
   assert(
+    item.token !== null,
+    () => new DataIntegrityError('Expected token to be non-null')
+  );
+  assert(
+    typeof item.token !== 'undefined',
+    () => new DataIntegrityError('Expected token to be defined')
+  );
+
+  assert(
     item._md !== null,
     () => new DataIntegrityError('Expected updatedAt to be non-null')
   );
@@ -820,6 +833,7 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
     publicId: item.publicId,
     session: item.session,
     sessionId: item.session_id,
+    token: item.token,
     updatedAt: new Date(item._md),
     version: item._v,
   };
