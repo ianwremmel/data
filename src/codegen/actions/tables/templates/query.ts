@@ -250,8 +250,8 @@ function keyNames(key: PrimaryKeyConfig | SecondaryIndex) {
   }
 
   if (key.type === 'gsi') {
-    if (key.name === 'publicId') {
-      return `{'#pk': 'publicId'}`;
+    if (key.isSingleField) {
+      return `{'#pk': '${key.name}'}`;
     }
 
     const pk = `${key.name}pk`;

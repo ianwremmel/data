@@ -110,6 +110,28 @@ export interface QueryNodeArgs {
   id: Scalars['ID'];
 }
 
+/** A Repository */
+export type Repository = Model &
+  PublicModel &
+  Timestamped &
+  Versioned & {
+    __typename?: 'Repository';
+    createdAt: Scalars['Date'];
+    defaultBranchName?: Maybe<Scalars['String']>;
+    externalAccountId: Scalars['String'];
+    externalId: Scalars['String'];
+    externalInstallationId: Scalars['String'];
+    id: Scalars['ID'];
+    organization: Scalars['String'];
+    private?: Maybe<Scalars['Boolean']>;
+    publicId: Scalars['String'];
+    repo?: Maybe<Scalars['String']>;
+    token: Scalars['String'];
+    updatedAt: Scalars['Date'];
+    vendor: Vendor;
+    version: Scalars['Int'];
+  };
+
 /**
  * Automatically adds a createdAt and updatedAt timestamp to the entity and sets
  * them appropriately. The createdAt timestamp is only set on create, while the
@@ -151,6 +173,12 @@ export type UserSession = Model &
   };
 
 /**
+ * Support Vendors. Remember to add aliases in .graphqlrc.js to maintain backwards
+ * compatibility with pre-graphql tables.
+ */
+export type Vendor = 'GITHUB';
+
+/**
  * Automatically adds a column to enable optimistic locking. This field shouldn't
  * be manipulated directly, but may need to be passed around by the runtime in
  * order to make updates.
@@ -168,6 +196,809 @@ export interface ResultType<T> {
 export interface MultiResultType<T> {
   capacity: ConsumedCapacity;
   items: T[];
+}
+
+export interface RepositoryPrimaryKey {
+  externalId: Scalars['String'];
+  vendor: Vendor;
+}
+
+export type CreateRepositoryInput = Omit<
+  Repository,
+  'createdAt' | 'id' | 'publicId' | 'updatedAt' | 'version'
+>;
+export type CreateRepositoryOutput = ResultType<Repository>;
+/**  */
+export async function createRepository(
+  input: Readonly<CreateRepositoryInput>
+): Promise<Readonly<CreateRepositoryOutput>> {
+  const tableName = process.env.TABLE_APPLICATION_DATA;
+  assert(tableName, 'TABLE_APPLICATION_DATA is not set');
+
+  const now = new Date();
+
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallRepository(input, now);
+
+  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+  // cannot return the newly written values.
+  const commandInput: UpdateCommandInput = {
+    ConditionExpression: 'attribute_not_exists(#pk)',
+    ExpressionAttributeNames: {
+      ...ExpressionAttributeNames,
+      '#createdAt': '_ct',
+      '#publicId': 'publicId',
+    },
+    ExpressionAttributeValues: {
+      ...ExpressionAttributeValues,
+      ':createdAt': now.getTime(),
+      ':publicId': idGenerator(),
+    },
+    Key: {
+      pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
+      sk: `REPOSITORY`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt, #publicId = :publicId`,
+  };
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'Repository',
+    () =>
+      new DataIntegrityError(
+        `Expected to write Repository but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallRepository(item),
+    metrics,
+  };
+}
+
+export type BlindWriteRepositoryInput = Omit<
+  Repository,
+  'createdAt' | 'id' | 'publicId' | 'updatedAt' | 'version'
+>;
+export type BlindWriteRepositoryOutput = ResultType<Repository>;
+/** */
+export async function blindWriteRepository(
+  input: Readonly<BlindWriteRepositoryInput>
+): Promise<Readonly<BlindWriteRepositoryOutput>> {
+  const tableName = process.env.TABLE_APPLICATION_DATA;
+  assert(tableName, 'TABLE_APPLICATION_DATA is not set');
+  const now = new Date();
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallRepository(input, now);
+
+  delete ExpressionAttributeNames['#pk'];
+  delete ExpressionAttributeValues[':version'];
+
+  const ean = {
+    ...ExpressionAttributeNames,
+    '#createdAt': '_ct',
+    '#publicId': 'publicId',
+  };
+  const eav = {
+    ...ExpressionAttributeValues,
+    ':one': 1,
+    ':createdAt': now.getTime(),
+    ':publicId': idGenerator(),
+  };
+  const ue = `${[
+    ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
+    '#createdAt = if_not_exists(#createdAt, :createdAt)',
+    '#publicId = if_not_exists(#publicId, :publicId)',
+  ].join(', ')} ADD #version :one`;
+
+  const commandInput: UpdateCommandInput = {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    Key: {
+      pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
+      sk: `REPOSITORY`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: ue,
+  };
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'Repository',
+    () =>
+      new DataIntegrityError(
+        `Expected to write Repository but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallRepository(item),
+    metrics,
+  };
+}
+
+export type DeleteRepositoryOutput = ResultType<void>;
+
+/**  */
+export async function deleteRepository(
+  input: RepositoryPrimaryKey
+): Promise<DeleteRepositoryOutput> {
+  const tableName = process.env.TABLE_APPLICATION_DATA;
+  assert(tableName, 'TABLE_APPLICATION_DATA is not set');
+
+  try {
+    const commandInput: DeleteCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+      },
+      Key: {
+        pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
+        sk: `REPOSITORY`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'NONE',
+      TableName: tableName,
+    };
+
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
+      await ddbDocClient.send(new DeleteCommand(commandInput));
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
+    return {
+      capacity,
+      item: undefined,
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new NotFoundError('Repository', input);
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
+}
+
+export type ReadRepositoryOutput = ResultType<Repository>;
+
+/**  */
+export async function readRepository(
+  input: RepositoryPrimaryKey
+): Promise<Readonly<ReadRepositoryOutput>> {
+  const tableName = process.env.TABLE_APPLICATION_DATA;
+  assert(tableName, 'TABLE_APPLICATION_DATA is not set');
+
+  const commandInput: GetCommandInput = {
+    ConsistentRead: false,
+    Key: {
+      pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
+      sk: `REPOSITORY`,
+    },
+    ReturnConsumedCapacity: 'INDEXES',
+    TableName: tableName,
+  };
+
+  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+    new GetCommand(commandInput)
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, () => new NotFoundError('Repository', input));
+  assert(
+    item._et === 'Repository',
+    () =>
+      new DataIntegrityError(
+        `Expected ${JSON.stringify(input)} to load a Repository but loaded ${
+          item._et
+        } instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallRepository(item),
+    metrics: undefined,
+  };
+}
+
+export type TouchRepositoryOutput = ResultType<void>;
+
+/**  */
+export async function touchRepository(
+  input: RepositoryPrimaryKey
+): Promise<TouchRepositoryOutput> {
+  const tableName = process.env.TABLE_APPLICATION_DATA;
+  assert(tableName, 'TABLE_APPLICATION_DATA is not set');
+  try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+        '#version': '_v',
+      },
+      ExpressionAttributeValues: {
+        ':versionInc': 1,
+      },
+      Key: {
+        pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
+        sk: `REPOSITORY`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: 'SET #version = #version + :versionInc',
+    };
+
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
+      await ddbDocClient.send(new UpdateCommand(commandInput));
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
+    return {
+      capacity,
+      item: undefined,
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new NotFoundError('Repository', input);
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
+}
+
+export type UpdateRepositoryInput = Omit<
+  Repository,
+  'createdAt' | 'id' | 'publicId' | 'updatedAt'
+>;
+export type UpdateRepositoryOutput = ResultType<Repository>;
+
+/**  */
+export async function updateRepository(
+  input: Readonly<UpdateRepositoryInput>
+): Promise<Readonly<UpdateRepositoryOutput>> {
+  const tableName = process.env.TABLE_APPLICATION_DATA;
+  assert(tableName, 'TABLE_APPLICATION_DATA is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallRepository(input);
+  try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression:
+        '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':previousVersion': input.version,
+      },
+      Key: {
+        pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
+        sk: `REPOSITORY`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression,
+    };
+
+    const {
+      Attributes: item,
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'Repository',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify({
+            externalId: input.externalId,
+            vendor: input.vendor,
+          })} to update a Repository but updated ${item._et} instead`
+        )
+    );
+
+    return {
+      capacity,
+      item: unmarshallRepository(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      try {
+        await readRepository(input);
+      } catch {
+        throw new NotFoundError('Repository', {
+          externalId: input.externalId,
+          vendor: input.vendor,
+        });
+      }
+      throw new OptimisticLockingError('Repository', {
+        externalId: input.externalId,
+        vendor: input.vendor,
+      });
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
+}
+
+export type QueryRepositoryInput =
+  | {externalId: Scalars['String']; vendor: Vendor}
+  | {index: 'gsi1'; organization: Scalars['String']; vendor: Vendor}
+  | {
+      index: 'gsi1';
+      organization: Scalars['String'];
+      repo?: Maybe<Scalars['String']>;
+      vendor: Vendor;
+    }
+  | {index: 'token'; token: Scalars['String']}
+  | {index: 'publicId'; publicId: Scalars['String']};
+export type QueryRepositoryOutput = MultiResultType<Repository>;
+
+/** helper */
+function makeEanForQueryRepository(
+  input: QueryRepositoryInput
+): Record<string, string> {
+  if ('index' in input) {
+    if (input.index === 'gsi1') {
+      return {'#pk': 'gsi1pk', '#sk': 'gsi1sk'};
+    } else if (input.index === 'token') {
+      return {'#pk': 'token'};
+    } else if (input.index === 'publicId') {
+      return {'#pk': 'publicId'};
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {'#pk': 'pk', '#sk': 'sk'};
+  }
+}
+
+/** helper */
+function makeEavForQueryRepository(
+  input: QueryRepositoryInput
+): Record<string, any> {
+  if ('index' in input) {
+    if (input.index === 'gsi1') {
+      return {
+        ':pk': `REPOSITORY#${input.vendor}#${input.organization}`,
+        ':sk': ['REPOSITORY', 'repo' in input && input.repo]
+          .filter(Boolean)
+          .join('#'),
+      };
+    } else if (input.index === 'token') {
+      return {':pk': `${input.token}`};
+    } else if (input.index === 'publicId') {
+      return {':pk': `${input.publicId}`};
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {
+      ':pk': `REPOSITORY#${input.vendor}#${input.externalId}`,
+      ':sk': ['REPOSITORY'].filter(Boolean).join('#'),
+    };
+  }
+}
+
+/** helper */
+function makeKceForQueryRepository(
+  input: QueryRepositoryInput,
+  {operator}: Pick<QueryOptions, 'operator'>
+): string {
+  if ('index' in input) {
+    if (input.index === 'gsi1') {
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
+    } else if (input.index === 'token') {
+      return '#pk = :pk';
+    } else if (input.index === 'publicId') {
+      return '#pk = :pk';
+    }
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return `#pk = :pk AND ${
+      operator === 'begins_with'
+        ? 'begins_with(#sk, :sk)'
+        : `#sk ${operator} :sk`
+    }`;
+  }
+}
+
+/** queryRepository */
+export async function queryRepository(
+  input: Readonly<QueryRepositoryInput>,
+  {
+    limit = undefined,
+    operator = 'begins_with',
+    reverse = false,
+  }: QueryOptions = {}
+): Promise<Readonly<QueryRepositoryOutput>> {
+  const tableName = process.env.TABLE_APPLICATION_DATA;
+  assert(tableName, 'TABLE_APPLICATION_DATA is not set');
+
+  const ExpressionAttributeNames = makeEanForQueryRepository(input);
+  const ExpressionAttributeValues = makeEavForQueryRepository(input);
+  const KeyConditionExpression = makeKceForQueryRepository(input, {operator});
+
+  const commandInput: QueryCommandInput = {
+    ConsistentRead: false,
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    IndexName: 'index' in input ? input.index : undefined,
+    KeyConditionExpression,
+    Limit: limit,
+    ReturnConsumedCapacity: 'INDEXES',
+    ScanIndexForward: !reverse,
+    TableName: tableName,
+  };
+
+  const {ConsumedCapacity: capacity, Items: items = []} =
+    await ddbDocClient.send(new QueryCommand(commandInput));
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  return {
+    capacity,
+    items: items.map((item) => {
+      assert(item._et === 'Repository', () => new DataIntegrityError('TODO'));
+      return unmarshallRepository(item);
+    }),
+  };
+}
+
+/** queries the Repository table by primary key using a node id */
+export async function queryRepositoryByNodeId(
+  id: Scalars['ID']
+): Promise<Readonly<Omit<ResultType<Repository>, 'metrics'>>> {
+  const primaryKeyValues = Base64.decode(id)
+    .split(':')
+    .slice(1)
+    .join(':')
+    .split('#');
+
+  const primaryKey: QueryRepositoryInput = {
+    vendor: primaryKeyValues[1] as Vendor,
+    externalId: primaryKeyValues[2],
+  };
+
+  const {capacity, items} = await queryRepository(primaryKey);
+
+  assert(items.length > 0, () => new NotFoundError('Repository', primaryKey));
+  assert(
+    items.length < 2,
+    () => new DataIntegrityError(`Found multiple Repository with id ${id}`)
+  );
+
+  return {capacity, item: items[0]};
+}
+
+/** queries the Repository table by primary key using a node id */
+export async function queryRepositoryByPublicId(
+  publicId: Scalars['String']
+): Promise<Readonly<Omit<ResultType<Repository>, 'metrics'>>> {
+  const {capacity, items} = await queryRepository({
+    index: 'publicId',
+    publicId,
+  });
+
+  assert(items.length > 0, () => new NotFoundError('Repository', {publicId}));
+  assert(
+    items.length < 2,
+    () =>
+      new DataIntegrityError(
+        `Found multiple Repository with publicId ${publicId}`
+      )
+  );
+
+  return {capacity, item: items[0]};
+}
+
+export interface MarshallRepositoryOutput {
+  ExpressionAttributeNames: Record<string, string>;
+  ExpressionAttributeValues: Record<string, NativeAttributeValue>;
+  UpdateExpression: string;
+}
+
+export type MarshallRepositoryInput = Required<
+  Pick<
+    Repository,
+    | 'externalAccountId'
+    | 'externalId'
+    | 'externalInstallationId'
+    | 'organization'
+    | 'token'
+    | 'vendor'
+  >
+> &
+  Partial<
+    Pick<Repository, 'defaultBranchName' | 'private' | 'repo' | 'version'>
+  >;
+
+/** Marshalls a DynamoDB record into a Repository object */
+export function marshallRepository(
+  input: MarshallRepositoryInput,
+  now = new Date()
+): MarshallRepositoryOutput {
+  const updateExpression: string[] = [
+    '#entity = :entity',
+    '#externalAccountId = :externalAccountId',
+    '#externalId = :externalId',
+    '#externalInstallationId = :externalInstallationId',
+    '#organization = :organization',
+    '#token = :token',
+    '#updatedAt = :updatedAt',
+    '#vendor = :vendor',
+    '#version = :version',
+    '#gsi1pk = :gsi1pk',
+    '#gsi1sk = :gsi1sk',
+  ];
+
+  const ean: Record<string, string> = {
+    '#entity': '_et',
+    '#pk': 'pk',
+    '#externalAccountId': 'external_account_id',
+    '#externalId': 'external_id',
+    '#externalInstallationId': 'external_installation_id',
+    '#organization': 'organization',
+    '#token': 'token',
+    '#updatedAt': '_md',
+    '#vendor': 'vendor',
+    '#version': '_v',
+    '#gsi1pk': 'gsi1pk',
+    '#gsi1sk': 'gsi1sk',
+  };
+
+  const eav: Record<string, unknown> = {
+    ':entity': 'Repository',
+    ':externalAccountId': input.externalAccountId,
+    ':externalId': input.externalId,
+    ':externalInstallationId': input.externalInstallationId,
+    ':organization': input.organization,
+    ':token': input.token,
+    ':vendor': input.vendor,
+    ':updatedAt': now.getTime(),
+    ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
+    ':gsi1pk': `REPOSITORY#${input.vendor}#${input.organization}`,
+    ':gsi1sk': `REPOSITORY#${input.repo}`,
+  };
+
+  if (
+    'defaultBranchName' in input &&
+    typeof input.defaultBranchName !== 'undefined'
+  ) {
+    ean['#defaultBranchName'] = 'default_branch_name';
+    eav[':defaultBranchName'] = input.defaultBranchName;
+    updateExpression.push('#defaultBranchName = :defaultBranchName');
+  }
+
+  if ('private' in input && typeof input.private !== 'undefined') {
+    ean['#private'] = 'private';
+    eav[':private'] = input.private;
+    updateExpression.push('#private = :private');
+  }
+
+  if ('repo' in input && typeof input.repo !== 'undefined') {
+    ean['#repo'] = 'repo';
+    eav[':repo'] = input.repo;
+    updateExpression.push('#repo = :repo');
+  }
+  updateExpression.sort();
+
+  return {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    UpdateExpression: `SET ${updateExpression.join(', ')}`,
+  };
+}
+
+/** Unmarshalls a DynamoDB record into a Repository object */
+export function unmarshallRepository(item: Record<string, any>): Repository {
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.external_account_id !== null,
+    () => new DataIntegrityError('Expected externalAccountId to be non-null')
+  );
+  assert(
+    typeof item.external_account_id !== 'undefined',
+    () => new DataIntegrityError('Expected externalAccountId to be defined')
+  );
+
+  assert(
+    item.external_id !== null,
+    () => new DataIntegrityError('Expected externalId to be non-null')
+  );
+  assert(
+    typeof item.external_id !== 'undefined',
+    () => new DataIntegrityError('Expected externalId to be defined')
+  );
+
+  assert(
+    item.external_installation_id !== null,
+    () =>
+      new DataIntegrityError('Expected externalInstallationId to be non-null')
+  );
+  assert(
+    typeof item.external_installation_id !== 'undefined',
+    () =>
+      new DataIntegrityError('Expected externalInstallationId to be defined')
+  );
+
+  assert(
+    item.organization !== null,
+    () => new DataIntegrityError('Expected organization to be non-null')
+  );
+  assert(
+    typeof item.organization !== 'undefined',
+    () => new DataIntegrityError('Expected organization to be defined')
+  );
+
+  assert(
+    item.publicId !== null,
+    () => new DataIntegrityError('Expected publicId to be non-null')
+  );
+  assert(
+    typeof item.publicId !== 'undefined',
+    () => new DataIntegrityError('Expected publicId to be defined')
+  );
+
+  assert(
+    item.token !== null,
+    () => new DataIntegrityError('Expected token to be non-null')
+  );
+  assert(
+    typeof item.token !== 'undefined',
+    () => new DataIntegrityError('Expected token to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
+
+  let result: Repository = {
+    createdAt: new Date(item._ct),
+    externalAccountId: item.external_account_id,
+    externalId: item.external_id,
+    externalInstallationId: item.external_installation_id,
+    id: Base64.encode(`Repository:${item.pk}#:#${item.sk}`),
+    organization: item.organization,
+    publicId: item.publicId,
+    token: item.token,
+    updatedAt: new Date(item._md),
+    vendor: item.vendor,
+    version: item._v,
+  };
+
+  if ('default_branch_name' in item) {
+    result = {
+      ...result,
+      defaultBranchName: item.default_branch_name,
+    };
+  }
+
+  if ('private' in item) {
+    result = {
+      ...result,
+      private: item.private,
+    };
+  }
+
+  if ('repo' in item) {
+    result = {
+      ...result,
+      repo: item.repo,
+    };
+  }
+
+  return result;
 }
 
 export interface UserSessionPrimaryKey {

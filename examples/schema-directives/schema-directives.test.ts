@@ -7,8 +7,10 @@ import Base64 from 'base64url';
 import {ddbDocClient} from '../dependencies';
 
 import {
+  createRepository,
   createUserSession,
   deleteUserSession,
+  queryRepository,
   queryUserSessionByPublicId,
   readUserSession,
   updateUserSession,
@@ -342,5 +344,29 @@ describe('PublicModel', () => {
 
     // cleanup, not part of test
     await deleteUserSession(result.item);
+  });
+});
+
+describe('@simpleIndex', () => {
+  it('creates a gsi for a single field', async () => {
+    const token = faker.datatype.uuid();
+
+    const createResult = await createRepository({
+      externalAccountId: String(faker.datatype.number()),
+      externalId: String(faker.datatype.number()),
+      externalInstallationId: String(faker.datatype.number()),
+      organization: faker.internet.userName(),
+      repo: faker.random.word(),
+      token,
+      vendor: 'GITHUB',
+    });
+
+    const queryResult = await queryRepository({
+      index: 'token',
+      token,
+    });
+
+    expect(queryResult.items).toHaveLength(1);
+    expect(queryResult.items[0]).toStrictEqual(createResult.item);
   });
 });

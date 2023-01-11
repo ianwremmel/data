@@ -64,8 +64,9 @@ export function defineTable({
             ]
           : [
               {
-                AttributeName:
-                  index.name === 'publicId' ? 'publicId' : `${index.name}pk`,
+                AttributeName: index.isSingleField
+                  ? index.name
+                  : `${index.name}pk`,
                 AttributeType: 'S',
               },
             ])
@@ -83,8 +84,9 @@ export function defineTable({
           ]
         : [
             {
-              AttributeName:
-                index.name === 'publicId' ? 'publicId' : `${index.name}pk`,
+              AttributeName: index.isSingleField
+                ? index.name
+                : `${index.name}pk`,
               KeyType: 'HASH',
             },
           ];

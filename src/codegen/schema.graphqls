@@ -85,6 +85,12 @@ directive @compositeIndex(
 ) repeatable on OBJECT
 
 """
+Creates a Global Secondary Index on a single field with the same name as the
+field
+"""
+directive @simpleIndex(field: String!) repeatable on OBJECT
+
+"""
 Indicates this Model has a Local Secondary Index. May be specified more than
 once.
 """

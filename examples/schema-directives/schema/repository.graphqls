@@ -1,0 +1,34 @@
+"""
+A Repository
+"""
+type Repository implements PublicModel & Model & Timestamped & Versioned
+  @compositeKey(
+    pkFields: ["vendor", "externalId"]
+    pkPrefix: "REPOSITORY"
+    skFields: []
+    skPrefix: "REPOSITORY"
+  )
+  @compositeIndex(
+    name: "gsi1"
+    pkFields: ["vendor", "organization"]
+    pkPrefix: "REPOSITORY"
+    skFields: ["repo"]
+    skPrefix: "REPOSITORY"
+  )
+  @simpleIndex(field: "token")
+  @table(enableStreaming: true, name: "TableApplicationData") {
+  createdAt: Date!
+  defaultBranchName: String
+  externalAccountId: String!
+  externalId: String!
+  externalInstallationId: String!
+  id: ID!
+  organization: String!
+  private: Boolean
+  publicId: String!
+  repo: String
+  token: String!
+  updatedAt: Date!
+  vendor: Vendor!
+  version: Int!
+}

@@ -1,0 +1,7 @@
+"""
+Support Vendors. Remember to add aliases in .graphqlrc.js to maintain backwards
+compatibility with pre-graphql tables.
+"""
+enum Vendor {
+  GITHUB
+}
