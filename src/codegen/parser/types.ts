@@ -57,6 +57,7 @@ export interface ChangeDataCaptureConfig {
   readonly handlerModuleId: string;
   readonly sourceModelName: string;
   readonly targetTable: string;
+  readonly type: 'CDC';
 }
 
 export type GSI = {

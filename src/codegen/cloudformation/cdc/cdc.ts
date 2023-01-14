@@ -47,7 +47,7 @@ export function defineModelCdc(
   config: CloudformationPluginConfig,
   {outputFile}: {outputFile: string}
 ): CloudFormationFragment {
-  if (!model.changeDataCaptureConfig) {
+  if (model.changeDataCaptureConfig?.type !== 'CDC') {
     return {};
   }
 

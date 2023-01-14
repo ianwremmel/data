@@ -39,6 +39,7 @@ export function extractChangeDataCaptureConfig(
     handlerModuleId,
     sourceModelName: type.name,
     targetTable,
+    type: 'CDC',
   };
 }
 
