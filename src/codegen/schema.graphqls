@@ -85,6 +85,12 @@ directive @compositeIndex(
 ) repeatable on OBJECT
 
 """
+Indicates that this type is an append-only ledger and should not have touch,
+update, or blindWrite.
+"""
+directive @ledger on OBJECT
+
+"""
 Creates a Global Secondary Index on a single field with the same name as the
 field
 """

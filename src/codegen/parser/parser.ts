@@ -77,6 +77,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
           path.resolve(process.cwd(), config.dependenciesModuleId)
         ),
         fields,
+        isLedger: hasDirective('ledger', type),
         isPublicModel: hasInterface('PublicModel', type),
         libImportPath: '@ianwremmel/data',
         primaryKey: extractPrimaryKey(type, fieldMap),
