@@ -1,10 +1,9 @@
 import type {Context, DynamoDBRecord, EventBridgeHandler} from 'aws-lambda';
 
 import type {WithTelemetry} from '../../dependencies';
+import type {UnmarshalledDynamoDBRecord} from '../common/unmarshall-record';
+import {unmarshallRecord} from '../common/unmarshall-record';
 import {makeLambdaOTelAttributes} from '../telemetry';
-
-import type {UnmarshalledDynamoDBRecord} from './unmarshall-record';
-import {unmarshallRecord} from './unmarshall-record';
 
 type Handler = (
   record: UnmarshalledDynamoDBRecord,
