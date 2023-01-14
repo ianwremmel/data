@@ -9,10 +9,8 @@ import {waitFor} from '../test-helpers';
 
 import type {SubscriptionPrimaryKey} from './__generated__/actions';
 import {
-  createAccount,
   createSubscription,
   deleteAccount,
-  queryAccount,
   readAccount,
 } from './__generated__/actions';
 
@@ -40,7 +38,7 @@ export async function deleteSubscription(
   );
 }
 
-describe('Change Date Capture', () => {
+describe('@enriches', () => {
   // some part of the eventbridge setup doesn't work in localstack. This means
   // there's no test for this in CI right now, but it works when tested locally
   // against a real AWS account, which I don't want to wire into CI right now.
@@ -137,32 +135,4 @@ describe('Change Date Capture', () => {
     },
     5 * 60 * 1000
   );
-});
-
-describe('@secondaryIndex', () => {
-  it('allows loading a record by an lsi', async () => {
-    const result = await createAccount({
-      cancelled: false,
-      effectiveDate: faker.date.past(3),
-      externalId: String(faker.datatype.number()),
-      onFreeTrial: true,
-      planName: 'ENTERPRISE',
-      vendor: 'GITHUB',
-    });
-
-    const {item: account} = result;
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const {items: accounts} = await queryAccount({
-      externalId: account.externalId,
-      index: 'lsi1',
-      vendor: account.vendor,
-    });
-
-    expect(accounts).toHaveLength(1);
-    expect(accounts[0]).toStrictEqual(account);
-
-    await deleteAccount(account);
-  });
 });

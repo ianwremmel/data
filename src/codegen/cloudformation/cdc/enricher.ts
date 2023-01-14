@@ -9,17 +9,13 @@ import type {CloudFormationFragment} from '../types';
 
 import {makeHandler} from './lambdas';
 
-/** Generates CDC config for a model */
-export function defineModelCdc(
+/** Generates CDC Projector config for a model */
+export function defineModelEnricher(
   model: Model,
   config: CloudformationPluginConfig,
   {outputFile}: {outputFile: string}
 ): CloudFormationFragment {
-  if (!model.changeDataCaptureConfig) {
-    return {};
-  }
-
-  if (model.changeDataCaptureConfig.type !== 'CDC') {
+  if (model.changeDataCaptureConfig?.type !== 'ENRICHER') {
     return {};
   }
 
@@ -28,15 +24,17 @@ export function defineModelCdc(
       handlerModuleId,
       event,
       sourceModelName,
+      targetModelName,
       targetTable,
     },
     dependenciesModuleId,
     libImportPath,
     tableName,
+    typeName,
   } = model;
 
-  const handlerFileName = `handler-${kebabCase(sourceModelName)}`;
-  const handlerFunctionName = `${sourceModelName}CDCHandler`;
+  const handlerFileName = `handler-${kebabCase(typeName)}`;
+  const handlerFunctionName = `${typeName}CDCHandler`;
   const handlerOutputPath = path.join(
     path.dirname(outputFile),
     handlerFileName
@@ -58,16 +56,34 @@ export function defineModelCdc(
 
   const template = `// This file is generated. Do not edit by hand.
 
-import {assert, makeModelChangeHandler} from '${libImportPath}';
+import {makeEnricher} from '${libImportPath}';
 
 import * as dependencies from '${resolvedDependenciesModuleId}';
-import {handler as cdcHandler} from '${resolvedHandlerModuleId}';
-import {unmarshall${sourceModelName}} from '${actionsModuleId}';
+import {create, load, update} from '${resolvedHandlerModuleId}';
+import {
+  ${sourceModelName},
+  ${targetModelName},
+  create${targetModelName},
+  unmarshall${sourceModelName},
+  update${targetModelName},
+  Create${targetModelName}Input,
+  Update${targetModelName}Input
+} from '${actionsModuleId}';
 
-export const handler = makeModelChangeHandler(dependencies, (record) => {
-  assert(record.dynamodb.NewImage, 'Expected DynamoDB Record to have a NewImage');
-  return cdcHandler(unmarshall${sourceModelName}(record.dynamodb.NewImage));
-});
+export const handler = makeEnricher<
+${sourceModelName},
+${targetModelName},
+Create${targetModelName}Input,
+Update${targetModelName}Input
+>(
+  dependencies,
+  {create, load, update},
+  {
+    createTargetModel: create${targetModelName},
+    unmarshallSourceModel: unmarshall${sourceModelName},
+    updateTargetModel: update${targetModelName}
+  }
+);
 `;
 
   return combineFragments(

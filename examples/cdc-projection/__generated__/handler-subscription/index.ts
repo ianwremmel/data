@@ -1,15 +1,28 @@
 // This file is generated. Do not edit by hand.
 
-import {assert, makeModelChangeHandler} from '@ianwremmel/data';
+import {makeEnricher} from '@ianwremmel/data';
 
 import * as dependencies from '../../../dependencies';
-import {handler as cdcHandler} from '../../handler';
-import {unmarshallSubscription} from '../actions';
+import {create, load, update} from '../../handler';
+import type {
+  Subscription,
+  Account,
+  CreateAccountInput,
+  UpdateAccountInput,
+} from '../actions';
+import {createAccount, unmarshallSubscription, updateAccount} from '../actions';
 
-export const handler = makeModelChangeHandler(dependencies, (record) => {
-  assert(
-    record.dynamodb.NewImage,
-    'Expected DynamoDB Record to have a NewImage'
-  );
-  return cdcHandler(unmarshallSubscription(record.dynamodb.NewImage));
-});
+export const handler = makeEnricher<
+  Subscription,
+  Account,
+  CreateAccountInput,
+  UpdateAccountInput
+>(
+  dependencies,
+  {create, load, update},
+  {
+    createTargetModel: createAccount,
+    unmarshallSourceModel: unmarshallSubscription,
+    updateTargetModel: updateAccount,
+  }
+);

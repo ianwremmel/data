@@ -1,16 +1,24 @@
-import type {Account, Subscription} from './__generated__/actions';
+import type {
+  Account,
+  CreateAccountInput,
+  Subscription,
+  UpdateAccountInput,
+} from './__generated__/actions';
 import {readAccount} from './__generated__/actions';
 
 /** cdc function */
-export async function load(subscription: Subscription) {
-  return await readAccount({
+export async function load(subscription: Subscription): Promise<Account> {
+  const {item} = await readAccount({
     externalId: subscription.externalId,
     vendor: subscription.vendor,
   });
+  return item;
 }
 
 /** cdc function */
-export async function create(subscription: Subscription) {
+export async function create(
+  subscription: Subscription
+): Promise<CreateAccountInput> {
   return {
     cancelled: subscription.cancelled,
     effectiveDate: subscription.effectiveDate,
@@ -22,7 +30,10 @@ export async function create(subscription: Subscription) {
 }
 
 /** cdc function */
-export async function update(subscription: Subscription, account: Account) {
+export async function update(
+  subscription: Subscription,
+  account: Account
+): Promise<UpdateAccountInput | undefined> {
   if (subscription.effectiveDate > account.effectiveDate) {
     return {
       ...account,

@@ -1,9 +1,18 @@
 import assert from 'assert';
 
-import type {GraphQLObjectType, GraphQLSchema} from 'graphql';
+import type {
+  ConstDirectiveNode,
+  GraphQLObjectType,
+  GraphQLSchema,
+} from 'graphql';
 import {assertObjectType} from 'graphql';
 
-import {getArgStringValue, getOptionalDirective} from '../helpers';
+import {
+  getArgStringValue,
+  getDirective,
+  getOptionalDirective,
+  hasDirective,
+} from '../helpers';
 import {extractTableName} from '../parser';
 import type {ChangeDataCaptureConfig} from '../types';
 
@@ -12,19 +21,16 @@ export function extractChangeDataCaptureConfig(
   schema: GraphQLSchema,
   type: GraphQLObjectType<unknown, unknown>
 ): ChangeDataCaptureConfig | undefined {
+  if (hasDirective('enriches', type)) {
+    return extractEnricherConfig(schema, type);
+  }
+
   const directive = getOptionalDirective('cdc', type);
   if (!directive) {
     return undefined;
   }
 
-  const event = getArgStringValue('event', directive);
-  assert(
-    event === 'INSERT' ||
-      event === 'MODIFY' ||
-      event === 'REMOVE' ||
-      event === 'UPSERT',
-    `Invalid event type ${event} for @cdc on ${type.name}`
-  );
+  const event = getEvent(type, directive);
 
   const handlerModuleId = getArgStringValue('handler', directive);
 
@@ -55,4 +61,40 @@ function getTargetTable(
     `\`produces\` arg on @cdc for ${modelName} identifies ${produces}, which does not appear to identify a type`
   );
   return extractTableName(assertObjectType(targetModel));
+}
+
+/** helper */
+function extractEnricherConfig(
+  schema: GraphQLSchema,
+  type: GraphQLObjectType<unknown, unknown>
+): ChangeDataCaptureConfig {
+  const directive = getDirective('enriches', type);
+  const event = getEvent(type, directive);
+  const handlerModuleId = getArgStringValue('handler', directive);
+
+  const targetModelName = getArgStringValue('targetModel', directive);
+  return {
+    event,
+    handlerModuleId,
+    sourceModelName: type.name,
+    targetModelName,
+    targetTable: getTargetTable(schema, type.name, targetModelName),
+    type: 'ENRICHER',
+  };
+}
+
+/** helper */
+function getEvent(
+  type: GraphQLObjectType<unknown, unknown>,
+  directive: ConstDirectiveNode
+) {
+  const event = getArgStringValue('event', directive);
+  assert(
+    event === 'INSERT' ||
+      event === 'MODIFY' ||
+      event === 'REMOVE' ||
+      event === 'UPSERT',
+    `Invalid event type ${event} for @${directive.name.value} on ${type.name}`
+  );
+  return event;
 }

@@ -52,7 +52,20 @@ export interface Field {
 
 export type ChangeDataCaptureEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
-export interface ChangeDataCaptureConfig {
+export type ChangeDataCaptureConfig =
+  | ChangeDataCaptureEnricherConfig
+  | LegacyChangeDataCaptureConfig;
+
+export interface ChangeDataCaptureEnricherConfig {
+  readonly event: ChangeDataCaptureEvent;
+  readonly handlerModuleId: string;
+  readonly sourceModelName: string;
+  readonly targetModelName: string;
+  readonly targetTable: string;
+  readonly type: 'ENRICHER';
+}
+
+export interface LegacyChangeDataCaptureConfig {
   readonly event: ChangeDataCaptureEvent;
   readonly handlerModuleId: string;
   readonly sourceModelName: string;
