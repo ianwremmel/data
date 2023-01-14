@@ -39,6 +39,7 @@ export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
 };
 export interface QueryOptions {
   limit?: number;
+  nextToken?: Record<string, NativeAttributeValue>;
   /**
    * All operators supported by DynamoDB are except `between`. `between` is
    * not supported because it requires two values and that makes the codegen
@@ -195,7 +196,9 @@ export interface ResultType<T> {
 
 export interface MultiResultType<T> {
   capacity: ConsumedCapacity;
+  hasNextPage: boolean;
   items: T[];
+  nextToken: Record<string, NativeAttributeValue> | undefined;
 }
 
 export interface RepositoryPrimaryKey {
@@ -684,6 +687,7 @@ export async function queryRepository(
   input: Readonly<QueryRepositoryInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -699,6 +703,7 @@ export async function queryRepository(
     ConsistentRead: false,
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: 'index' in input ? input.index : undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -707,8 +712,11 @@ export async function queryRepository(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -717,10 +725,12 @@ export async function queryRepository(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === 'Repository', () => new DataIntegrityError('TODO'));
       return unmarshallRepository(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 
@@ -1430,6 +1440,7 @@ export async function queryUserSession(
   input: Readonly<QueryUserSessionInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -1445,6 +1456,7 @@ export async function queryUserSession(
     ConsistentRead: !('index' in input),
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: 'index' in input ? input.index : undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -1453,8 +1465,11 @@ export async function queryUserSession(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -1463,10 +1478,12 @@ export async function queryUserSession(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === 'UserSession', () => new DataIntegrityError('TODO'));
       return unmarshallUserSession(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 

@@ -39,6 +39,7 @@ export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
 };
 export interface QueryOptions {
   limit?: number;
+  nextToken?: Record<string, NativeAttributeValue>;
   /**
    * All operators supported by DynamoDB are except `between`. `between` is
    * not supported because it requires two values and that makes the codegen
@@ -181,7 +182,9 @@ export interface ResultType<T> {
 
 export interface MultiResultType<T> {
   capacity: ConsumedCapacity;
+  hasNextPage: boolean;
   items: T[];
+  nextToken: Record<string, NativeAttributeValue> | undefined;
 }
 
 export interface AccountPrimaryKey {
@@ -631,6 +634,7 @@ export async function queryAccount(
   input: Readonly<QueryAccountInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -646,6 +650,7 @@ export async function queryAccount(
     ConsistentRead: false,
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: 'index' in input ? input.index : undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -654,8 +659,11 @@ export async function queryAccount(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -664,10 +672,12 @@ export async function queryAccount(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === 'Account', () => new DataIntegrityError('TODO'));
       return unmarshallAccount(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 
@@ -1313,6 +1323,7 @@ export async function querySubscription(
   input: Readonly<QuerySubscriptionInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -1328,6 +1339,7 @@ export async function querySubscription(
     ConsistentRead: false,
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -1336,8 +1348,11 @@ export async function querySubscription(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -1346,10 +1361,12 @@ export async function querySubscription(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === 'Subscription', () => new DataIntegrityError('TODO'));
       return unmarshallSubscription(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 

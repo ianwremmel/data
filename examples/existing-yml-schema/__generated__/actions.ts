@@ -39,6 +39,7 @@ export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
 };
 export interface QueryOptions {
   limit?: number;
+  nextToken?: Record<string, NativeAttributeValue>;
   /**
    * All operators supported by DynamoDB are except `between`. `between` is
    * not supported because it requires two values and that makes the codegen
@@ -157,7 +158,9 @@ export interface ResultType<T> {
 
 export interface MultiResultType<T> {
   capacity: ConsumedCapacity;
+  hasNextPage: boolean;
   items: T[];
+  nextToken: Record<string, NativeAttributeValue> | undefined;
 }
 
 export interface UserLoginPrimaryKey {
@@ -634,6 +637,7 @@ export async function queryUserLogin(
   input: Readonly<QueryUserLoginInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -649,6 +653,7 @@ export async function queryUserLogin(
     ConsistentRead: false,
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: 'index' in input ? input.index : undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -657,8 +662,11 @@ export async function queryUserLogin(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -667,10 +675,12 @@ export async function queryUserLogin(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === 'UserLogin', () => new DataIntegrityError('TODO'));
       return unmarshallUserLogin(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 

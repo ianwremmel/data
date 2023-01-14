@@ -39,6 +39,7 @@ export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
 };
 export interface QueryOptions {
   limit?: number;
+  nextToken?: Record<string, NativeAttributeValue>;
   /**
    * All operators supported by DynamoDB are except `between`. `between` is
    * not supported because it requires two values and that makes the codegen
@@ -158,7 +159,9 @@ export interface ResultType<T> {
 
 export interface MultiResultType<T> {
   capacity: ConsumedCapacity;
+  hasNextPage: boolean;
   items: T[];
+  nextToken: Record<string, NativeAttributeValue> | undefined;
 }
 
 export interface UserSessionPrimaryKey {

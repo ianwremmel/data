@@ -39,6 +39,7 @@ export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
 };
 export interface QueryOptions {
   limit?: number;
+  nextToken?: Record<string, NativeAttributeValue>;
   /**
    * All operators supported by DynamoDB are except `between`. `between` is
    * not supported because it requires two values and that makes the codegen
@@ -207,7 +208,9 @@ export interface ResultType<T> {
 
 export interface MultiResultType<T> {
   capacity: ConsumedCapacity;
+  hasNextPage: boolean;
   items: T[];
+  nextToken: Record<string, NativeAttributeValue> | undefined;
 }
 
 export interface CaseInstancePrimaryKey {
@@ -868,6 +871,7 @@ export async function queryCaseInstance(
   input: Readonly<QueryCaseInstanceInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -883,6 +887,7 @@ export async function queryCaseInstance(
     ConsistentRead: false,
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: 'index' in input ? input.index : undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -891,8 +896,11 @@ export async function queryCaseInstance(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -901,10 +909,12 @@ export async function queryCaseInstance(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === 'CaseInstance', () => new DataIntegrityError('TODO'));
       return unmarshallCaseInstance(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 
@@ -1721,6 +1731,7 @@ export async function queryCaseSummary(
   input: Readonly<QueryCaseSummaryInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -1736,6 +1747,7 @@ export async function queryCaseSummary(
     ConsistentRead: false,
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: 'index' in input ? input.index : undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -1744,8 +1756,11 @@ export async function queryCaseSummary(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -1754,10 +1769,12 @@ export async function queryCaseSummary(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === 'CaseSummary', () => new DataIntegrityError('TODO'));
       return unmarshallCaseSummary(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 
@@ -2497,6 +2514,7 @@ export async function queryFileTiming(
   input: Readonly<QueryFileTimingInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -2512,6 +2530,7 @@ export async function queryFileTiming(
     ConsistentRead: false,
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: 'index' in input ? input.index : undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -2520,8 +2539,11 @@ export async function queryFileTiming(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -2530,10 +2552,12 @@ export async function queryFileTiming(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === 'FileTiming', () => new DataIntegrityError('TODO'));
       return unmarshallFileTiming(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 
