@@ -27,8 +27,11 @@ module.exports = {
     ...glob.sync('examples/*/').map((example) => ({
       ...commonProjectConfig,
       displayName: `Example: ${upperFirst(camelCase(example.split('/')[1]))}`,
-      globalSetup: '<rootDir>/jest.d/global-setup/stack-env.ts',
-      setupFilesAfterEnv: ['<rootDir>/jest.d/setup-files-after-env/faker.ts'],
+      globalSetup: '<rootDir>/jest.d/global-setup/credentials.ts',
+      setupFilesAfterEnv: [
+        '<rootDir>/jest.d/setup-files-after-env/faker.ts',
+        '<rootDir>/jest.d/setup-files-after-env/stack-env.ts',
+      ],
       testMatch: [`<rootDir>/${example}**/?(*.)+(test).[tj]s?(x)`],
     })),
   ],
