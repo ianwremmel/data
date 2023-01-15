@@ -77,6 +77,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
           path.resolve(process.cwd(), config.dependenciesModuleId)
         ),
         fields,
+        isLedger: hasDirective('ledger', type),
         isPublicModel: hasInterface('PublicModel', type),
         libImportPath: '@ianwremmel/data',
         primaryKey: extractPrimaryKey(type, fieldMap),
@@ -376,6 +377,8 @@ function extractTableInfo(type: GraphQLObjectType<unknown, unknown>) {
       : true,
     enableStreaming:
       hasDirective('cdc', type) ||
+      hasDirective('enriches', type) ||
+      hasDirective('triggers', type) ||
       (!!tableDirective &&
         (getOptionalArgBooleanValue('enableStreaming', tableDirective) ??
           false)),

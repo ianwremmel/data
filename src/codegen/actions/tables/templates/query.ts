@@ -55,7 +55,7 @@ ${kceForQuery(primaryKey, secondaryIndexes)}
 }
 
 /** query${typeName} */
-export async function query${typeName}(input: Readonly<Query${typeName}Input>, {limit = undefined, operator = 'begins_with', reverse = false}: QueryOptions = {}): Promise<Readonly<${outputTypeName}>> {
+export async function query${typeName}(input: Readonly<Query${typeName}Input>, {limit = undefined, nextToken, operator = 'begins_with', reverse = false}: QueryOptions = {}): Promise<Readonly<${outputTypeName}>> {
   ${ensureTableTemplate(tableName)}
 
   const ExpressionAttributeNames = makeEanForQuery${typeName}(input);
@@ -66,6 +66,7 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>, {
     ConsistentRead: ${consistent ? `!('index' in input)` : 'false'},
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: ${
       hasIndexes ? `'index' in input ? input.index : undefined` : 'undefined'
     },
@@ -76,16 +77,18 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>, {
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} = await ddbDocClient.send(new QueryCommand(commandInput));
+  const {ConsumedCapacity: capacity, Items: items = [], LastEvaluatedKey: lastEvaluatedKey} = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === '${typeName}', () => new DataIntegrityError('TODO'));
       return unmarshall${typeName}(item);
-    })
+    }),
+    nextToken: lastEvaluatedKey
   };
 }
 

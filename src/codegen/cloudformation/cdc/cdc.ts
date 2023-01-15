@@ -2,44 +2,12 @@ import path from 'path';
 
 import {kebabCase} from 'lodash';
 
-import type {Model, Table} from '../../parser';
+import type {Model} from '../../parser';
 import type {CloudformationPluginConfig} from '../config';
 import {combineFragments} from '../fragments/combine-fragments';
-import {makeTableDispatcher} from '../fragments/table-dispatcher';
 import type {CloudFormationFragment} from '../types';
 
 import {makeHandler} from './lambdas';
-
-/** Generates CDC config for a table */
-export function defineTableCdc(
-  table: Table,
-  config: CloudformationPluginConfig,
-  {outputFile}: {outputFile: string}
-): CloudFormationFragment {
-  if (!table.hasCdc) {
-    return {};
-  }
-
-  const {dependenciesModuleId, libImportPath, tableName} = table;
-
-  const dispatcherFileName = `dispatcher-${kebabCase(tableName)}`;
-  const dispatcherFunctionName = `${tableName}CDCDispatcher`;
-  const dispatcherOutputPath = path.join(
-    path.dirname(outputFile),
-    dispatcherFileName
-  );
-
-  return combineFragments(
-    makeTableDispatcher({
-      codeUri: dispatcherFileName,
-      dependenciesModuleId,
-      functionName: dispatcherFunctionName,
-      libImportPath,
-      outputPath: dispatcherOutputPath,
-      tableName,
-    })
-  );
-}
 
 /** Generates CDC config for a model */
 export function defineModelCdc(
@@ -48,6 +16,10 @@ export function defineModelCdc(
   {outputFile}: {outputFile: string}
 ): CloudFormationFragment {
   if (!model.changeDataCaptureConfig) {
+    return {};
+  }
+
+  if (model.changeDataCaptureConfig.type !== 'CDC') {
     return {};
   }
 
@@ -61,11 +33,10 @@ export function defineModelCdc(
     dependenciesModuleId,
     libImportPath,
     tableName,
-    typeName,
   } = model;
 
-  const handlerFileName = `handler-${kebabCase(typeName)}`;
-  const handlerFunctionName = `${typeName}CDCHandler`;
+  const handlerFileName = `handler-${kebabCase(sourceModelName)}`;
+  const handlerFunctionName = `${sourceModelName}CDCHandler`;
   const handlerOutputPath = path.join(
     path.dirname(outputFile),
     handlerFileName
@@ -75,20 +46,42 @@ export function defineModelCdc(
     ? path.relative(handlerOutputPath, config.actionsModuleId)
     : config.actionsModuleId;
 
+  // Account for the fact that the parser only knows the module id, not produced
+  // directory layout
+  const resolvedDependenciesModuleId = dependenciesModuleId.startsWith('.')
+    ? path.join('..', dependenciesModuleId)
+    : dependenciesModuleId;
+
+  const resolvedHandlerModuleId = handlerModuleId.startsWith('.')
+    ? path.join('..', handlerModuleId)
+    : handlerModuleId;
+
+  const template = `// This file is generated. Do not edit by hand.
+
+import {assert, makeModelChangeHandler} from '${libImportPath}';
+
+import * as dependencies from '${resolvedDependenciesModuleId}';
+import {handler as cdcHandler} from '${resolvedHandlerModuleId}';
+import {unmarshall${sourceModelName}} from '${actionsModuleId}';
+
+export const handler = makeModelChangeHandler(dependencies, (record) => {
+  assert(record.dynamodb.NewImage, 'Expected DynamoDB Record to have a NewImage');
+  return cdcHandler(unmarshall${sourceModelName}(record.dynamodb.NewImage));
+});
+`;
+
   return combineFragments(
     makeHandler({
-      actionsModuleId,
       codeUri: handlerFileName,
       dependenciesModuleId,
       event,
       functionName: handlerFunctionName,
-      handlerModuleId,
       libImportPath,
       outputPath: handlerOutputPath,
       sourceModelName,
       tableName,
       targetTable,
-      typeName: sourceModelName,
+      template,
     })
   );
 }

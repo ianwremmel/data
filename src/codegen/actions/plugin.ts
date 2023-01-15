@@ -40,16 +40,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
 ) => {
   try {
     const {tables, models} = parse(schema, documents, config, info);
-    const content = `export interface ResultType<T> {
-  capacity: ConsumedCapacity;
-  item: T;
-  metrics: ItemCollectionMetrics | undefined;
-}
-
-export interface MultiResultType<T> {
-  capacity: ConsumedCapacity;
-  items: T[];
-}
+    const content = `
 
 ${models
   .map((table) => {
@@ -68,11 +59,11 @@ ${models
         )
       )}`,
       createItemTemplate(table),
-      blindWriteTemplate(table),
-      deleteItemTemplate(table),
+      !table.isLedger && blindWriteTemplate(table),
+      !table.isLedger && deleteItemTemplate(table),
       readItemTemplate(table),
-      touchItemTemplate(table),
-      updateItemTemplate(table),
+      !table.isLedger && touchItemTemplate(table),
+      !table.isLedger && updateItemTemplate(table),
       queryTemplate(table),
       marshallTpl({table}),
       unmarshallTpl({table}),
@@ -99,7 +90,6 @@ ${models
       content,
       prepend: [
         `import {ConditionalCheckFailedException, ConsumedCapacity, ItemCollectionMetrics} from '@aws-sdk/client-dynamodb';`,
-        `import {ServiceException} from '@aws-sdk/smithy-client';`,
         `import {
           DeleteCommand,
           DeleteCommandInput,
@@ -110,24 +100,14 @@ ${models
           UpdateCommand,
           UpdateCommandInput
         } from '@aws-sdk/lib-dynamodb';`,
+        `import {ServiceException} from '@aws-sdk/smithy-client';`,
+        `import {NativeAttributeValue} from '@aws-sdk/util-dynamodb';`,
         `import Base64 from 'base64url';`,
-        `import {assert, DataIntegrityError, NotFoundError, OptimisticLockingError, UnexpectedAwsError, UnexpectedError} from '${runtimeModuleId}';`,
-        `import {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';`,
+        `import {assert, DataIntegrityError, MultiResultType, NotFoundError, OptimisticLockingError, ResultType, QueryOptions, UnexpectedAwsError, UnexpectedError} from '${runtimeModuleId}';`,
         `import {${importFromDependencies}} from "${resolveDependenciesPath(
           info.outputFile,
           config.dependenciesModuleId
         )}";`,
-        `export interface QueryOptions {
-  limit?: number;
-  /**
-   * All operators supported by DynamoDB are except \`between\`. \`between\` is
-   * not supported because it requires two values and that makes the codegen
-   * quite a bit more tedious. If it's needed, please open a ticket and we can
-   * look into adding it.
-   */
-  operator?: 'begins_with' | '=' | '<' | '<=' | '>' | '>=';
-  reverse?: boolean;
-}`,
       ],
     };
   } catch (err) {

@@ -1,8 +1,8 @@
-import type {
+import {
+  ConditionalCheckFailedException,
   ConsumedCapacity,
   ItemCollectionMetrics,
 } from '@aws-sdk/client-dynamodb';
-import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
 import type {
   DeleteCommandInput,
   GetCommandInput,
@@ -16,7 +16,8 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import {ServiceException} from '@aws-sdk/smithy-client';
-import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
+import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
+import type {MultiResultType, ResultType, QueryOptions} from '@ianwremmel/data';
 import {
   assert,
   DataIntegrityError,
@@ -37,17 +38,6 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
   [SubKey in K]: Maybe<T[SubKey]>;
 };
-export interface QueryOptions {
-  limit?: number;
-  /**
-   * All operators supported by DynamoDB are except `between`. `between` is
-   * not supported because it requires two values and that makes the codegen
-   * quite a bit more tedious. If it's needed, please open a ticket and we can
-   * look into adding it.
-   */
-  operator?: 'begins_with' | '=' | '<' | '<=' | '>' | '>=';
-  reverse?: boolean;
-}
 /** All built-in and custom scalars, mapped to their actual values */
 export interface Scalars {
   ID: string;
@@ -201,17 +191,6 @@ export type Vendor = 'AZURE_DEV_OPS' | 'GITHUB' | 'GITLAB';
  */
 export interface Versioned {
   version: Scalars['Int'];
-}
-
-export interface ResultType<T> {
-  capacity: ConsumedCapacity;
-  item: T;
-  metrics: ItemCollectionMetrics | undefined;
-}
-
-export interface MultiResultType<T> {
-  capacity: ConsumedCapacity;
-  items: T[];
 }
 
 export interface AccountPrimaryKey {
@@ -661,6 +640,7 @@ export async function queryAccount(
   input: Readonly<QueryAccountInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -676,6 +656,7 @@ export async function queryAccount(
     ConsistentRead: false,
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: 'index' in input ? input.index : undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -684,8 +665,11 @@ export async function queryAccount(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -694,10 +678,12 @@ export async function queryAccount(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === 'Account', () => new DataIntegrityError('TODO'));
       return unmarshallAccount(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 
@@ -1349,6 +1335,7 @@ export async function queryScheduledEmail(
   input: Readonly<QueryScheduledEmailInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -1366,6 +1353,7 @@ export async function queryScheduledEmail(
     ConsistentRead: false,
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -1374,8 +1362,11 @@ export async function queryScheduledEmail(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -1384,6 +1375,7 @@ export async function queryScheduledEmail(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(
         item._et === 'ScheduledEmail',
@@ -1391,6 +1383,7 @@ export async function queryScheduledEmail(
       );
       return unmarshallScheduledEmail(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 
@@ -2034,6 +2027,7 @@ export async function querySentEmail(
   input: Readonly<QuerySentEmailInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -2049,6 +2043,7 @@ export async function querySentEmail(
     ConsistentRead: false,
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -2057,8 +2052,11 @@ export async function querySentEmail(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -2067,10 +2065,12 @@ export async function querySentEmail(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === 'SentEmail', () => new DataIntegrityError('TODO'));
       return unmarshallSentEmail(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 
@@ -2700,6 +2700,7 @@ export async function querySubscription(
   input: Readonly<QuerySubscriptionInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -2715,6 +2716,7 @@ export async function querySubscription(
     ConsistentRead: false,
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -2723,8 +2725,11 @@ export async function querySubscription(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -2733,10 +2738,12 @@ export async function querySubscription(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === 'Subscription', () => new DataIntegrityError('TODO'));
       return unmarshallSubscription(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 

@@ -29,6 +29,7 @@ export interface Model {
   readonly enablePointInTimeRecovery: boolean;
   readonly enableStreaming: boolean;
   readonly fields: readonly Field[];
+  readonly isLedger: boolean;
   readonly isPublicModel: boolean;
   readonly libImportPath: string;
   readonly tableName: string;
@@ -51,11 +52,33 @@ export interface Field {
 
 export type ChangeDataCaptureEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
-export interface ChangeDataCaptureConfig {
+export type ChangeDataCaptureConfig =
+  | ChangeDataCaptureEnricherConfig
+  | ChangeDataCaptureTriggerConfig
+  | LegacyChangeDataCaptureConfig;
+
+export interface ChangeDataCaptureEnricherConfig {
+  readonly event: ChangeDataCaptureEvent;
+  readonly handlerModuleId: string;
+  readonly sourceModelName: string;
+  readonly targetModelName: string;
+  readonly targetTable: string;
+  readonly type: 'ENRICHER';
+}
+
+export interface ChangeDataCaptureTriggerConfig {
+  readonly event: ChangeDataCaptureEvent;
+  readonly handlerModuleId: string;
+  readonly sourceModelName: string;
+  readonly type: 'TRIGGER';
+}
+
+export interface LegacyChangeDataCaptureConfig {
   readonly event: ChangeDataCaptureEvent;
   readonly handlerModuleId: string;
   readonly sourceModelName: string;
   readonly targetTable: string;
+  readonly type: 'CDC';
 }
 
 export type GSI = {

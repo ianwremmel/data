@@ -37,7 +37,7 @@ enum CdcEvent {
 }
 
 """
-Wires a up a change data capture stream to a DynamoDB table.
+Deprecated. Use @enriches or @triggers instead
 """
 directive @cdc(
   """
@@ -54,6 +54,42 @@ directive @cdc(
   The model type that will be updated by this stream.
   """
   produces: String!
+) repeatable on OBJECT
+
+"""
+Enriches the targetModel anytime there's a change to this model.
+"""
+directive @enriches(
+  """
+  The type of change events to subscribe to.
+  """
+  event: CdcEvent!
+  """
+  Path to the requireable package that handles a specific event. Relative paths
+  are, unfortunately, relative to the _generated_ file, not the GraphQL schema
+  file.
+  """
+  handler: String!
+  """
+  The model type that will be updated by this stream.
+  """
+  targetModel: String!
+) repeatable on OBJECT
+
+"""
+Triggers the specified handler whenever there's a change to this model.
+"""
+directive @triggers(
+  """
+  The type of change events to subscribe to.
+  """
+  event: CdcEvent!
+  """
+  Path to the requireable package that handles a specific event. Relative paths
+  are, unfortunately, relative to the _generated_ file, not the GraphQL schema
+  file.
+  """
+  handler: String!
 ) repeatable on OBJECT
 
 """
@@ -83,6 +119,12 @@ directive @compositeIndex(
   skFields: [String!]!
   skPrefix: String
 ) repeatable on OBJECT
+
+"""
+Indicates that this type is an append-only ledger and should not have touch,
+update, or blindWrite.
+"""
+directive @ledger on OBJECT
 
 """
 Creates a Global Secondary Index on a single field with the same name as the

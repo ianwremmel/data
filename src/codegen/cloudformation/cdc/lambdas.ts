@@ -1,5 +1,3 @@
-import path from 'path';
-
 import type {ChangeDataCaptureEvent} from '../../parser';
 import {combineFragments} from '../fragments/combine-fragments';
 import type {LambdaInput} from '../fragments/lambda';
@@ -7,56 +5,25 @@ import {metadata, writeLambda} from '../fragments/lambda';
 import {makeLogGroup} from '../fragments/log-group';
 
 export interface MakeHandlerOptions extends LambdaInput {
-  readonly actionsModuleId: string;
   readonly event: ChangeDataCaptureEvent;
-  readonly handlerModuleId: string;
   readonly sourceModelName: string;
-  readonly targetTable: string;
   readonly tableName: string;
-  readonly typeName: string;
+  readonly targetTable?: string;
+  readonly template: string;
 }
 
 /** generate the dispatcher lambda function */
 export function makeHandler({
-  actionsModuleId,
   codeUri,
   event,
   functionName,
-  dependenciesModuleId,
-  handlerModuleId,
   outputPath,
-  libImportPath,
   sourceModelName,
   tableName,
   targetTable,
-  typeName,
+  template,
 }: MakeHandlerOptions) {
-  // Account for the fact that the parser only knows the module id, not produced
-  // directory layout
-  dependenciesModuleId = dependenciesModuleId.startsWith('.')
-    ? path.join('..', dependenciesModuleId)
-    : dependenciesModuleId;
-
-  handlerModuleId = handlerModuleId.startsWith('.')
-    ? path.join('..', handlerModuleId)
-    : handlerModuleId;
-
-  writeLambda(
-    outputPath,
-    `// This file is generated. Do not edit by hand.
-
-import {assert, makeModelChangeHandler} from '${libImportPath}';
-
-import * as dependencies from '${dependenciesModuleId}';
-import {handler as cdcHandler} from '${handlerModuleId}';
-import {unmarshall${typeName}} from '${actionsModuleId}';
-
-export const handler = makeModelChangeHandler(dependencies, (record) => {
-  assert(record.dynamodb.NewImage, 'Expected DynamoDB Record to have a NewImage');
-  return cdcHandler(unmarshall${typeName}(record.dynamodb.NewImage));
-});
-`
-  );
+  writeLambda(outputPath, template);
 
   return combineFragments(makeLogGroup({functionName}), {
     resources: {
@@ -114,7 +81,7 @@ export const handler = makeModelChangeHandler(dependencies, (record) => {
             'AWSXrayWriteOnlyAccess',
             'CloudWatchLambdaInsightsExecutionRolePolicy',
             {CloudWatchPutMetricPolicy: {}},
-            {
+            targetTable && {
               DynamoDBCrudPolicy: {
                 TableName: {Ref: targetTable},
               },
@@ -126,7 +93,7 @@ export const handler = makeModelChangeHandler(dependencies, (record) => {
                 },
               },
             },
-          ],
+          ].filter(Boolean),
         },
         Type: 'AWS::Serverless::Function',
       },

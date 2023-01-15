@@ -7,6 +7,8 @@ build () {
   local dir
   dir="$(get_example_dir "$example")"
 
+  rm -rf .aws-sam
+
   log "Building $example in $dir"
 
   sam build \

@@ -1,8 +1,8 @@
-import type {
+import {
+  ConditionalCheckFailedException,
   ConsumedCapacity,
   ItemCollectionMetrics,
 } from '@aws-sdk/client-dynamodb';
-import {ConditionalCheckFailedException} from '@aws-sdk/client-dynamodb';
 import type {
   DeleteCommandInput,
   GetCommandInput,
@@ -16,7 +16,8 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import {ServiceException} from '@aws-sdk/smithy-client';
-import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb/dist-types/models';
+import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
+import type {MultiResultType, ResultType, QueryOptions} from '@ianwremmel/data';
 import {
   assert,
   DataIntegrityError,
@@ -37,17 +38,6 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
   [SubKey in K]: Maybe<T[SubKey]>;
 };
-export interface QueryOptions {
-  limit?: number;
-  /**
-   * All operators supported by DynamoDB are except `between`. `between` is
-   * not supported because it requires two values and that makes the codegen
-   * quite a bit more tedious. If it's needed, please open a ticket and we can
-   * look into adding it.
-   */
-  operator?: 'begins_with' | '=' | '<' | '<=' | '>' | '>=';
-  reverse?: boolean;
-}
 /** All built-in and custom scalars, mapped to their actual values */
 export interface Scalars {
   ID: string;
@@ -147,17 +137,6 @@ export type Vendor = 'AZURE_DEV_OPS' | 'GITHUB' | 'GITLAB';
  */
 export interface Versioned {
   version: Scalars['Int'];
-}
-
-export interface ResultType<T> {
-  capacity: ConsumedCapacity;
-  item: T;
-  metrics: ItemCollectionMetrics | undefined;
-}
-
-export interface MultiResultType<T> {
-  capacity: ConsumedCapacity;
-  items: T[];
 }
 
 export interface UserLoginPrimaryKey {
@@ -634,6 +613,7 @@ export async function queryUserLogin(
   input: Readonly<QueryUserLoginInput>,
   {
     limit = undefined,
+    nextToken,
     operator = 'begins_with',
     reverse = false,
   }: QueryOptions = {}
@@ -649,6 +629,7 @@ export async function queryUserLogin(
     ConsistentRead: false,
     ExpressionAttributeNames,
     ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
     IndexName: 'index' in input ? input.index : undefined,
     KeyConditionExpression,
     Limit: limit,
@@ -657,8 +638,11 @@ export async function queryUserLogin(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = []} =
-    await ddbDocClient.send(new QueryCommand(commandInput));
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
 
   assert(
     capacity,
@@ -667,10 +651,12 @@ export async function queryUserLogin(
 
   return {
     capacity,
+    hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
       assert(item._et === 'UserLogin', () => new DataIntegrityError('TODO'));
       return unmarshallUserLogin(item);
     }),
+    nextToken: lastEvaluatedKey,
   };
 }
 

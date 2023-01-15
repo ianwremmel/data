@@ -1,16 +1,44 @@
+import assert from 'assert';
+
+import {DeleteCommand} from '@aws-sdk/lib-dynamodb';
 import {faker} from '@faker-js/faker';
 import {NotFoundError} from '@ianwremmel/data';
 
+import {ddbDocClient} from '../dependencies';
+import type {SubscriptionPrimaryKey} from '../single-table-design/__generated__/actions';
 import {waitFor} from '../test-helpers';
 
 import {
   createAccount,
   createSubscription,
   deleteAccount,
-  deleteSubscription,
   queryAccount,
   readAccount,
 } from './__generated__/actions';
+
+export async function deleteSubscription(
+  input: SubscriptionPrimaryKey
+): Promise<void> {
+  const tableName = process.env.TABLE_SUBSCRIPTION;
+  assert(tableName, 'TABLE_SUBSCRIPTION is not set');
+
+  await ddbDocClient.send(
+    new DeleteCommand({
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+      },
+      Key: {
+        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
+        sk: `SUBSCRIPTION#${input.effectiveDate.getTime()}`,
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'NONE',
+      TableName: tableName,
+    })
+  );
+}
 
 describe('Change Date Capture', () => {
   // some part of the eventbridge setup doesn't work in localstack. This means

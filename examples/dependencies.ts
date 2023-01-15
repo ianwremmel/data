@@ -2,6 +2,7 @@
 import http from 'http';
 import https from 'https';
 
+import {CloudWatchLogsClient} from '@aws-sdk/client-cloudwatch-logs';
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
 import {EventBridgeClient} from '@aws-sdk/client-eventbridge';
 import {DynamoDBDocumentClient} from '@aws-sdk/lib-dynamodb';
@@ -97,3 +98,10 @@ export async function captureAsyncFunction<R>(
 export function idGenerator() {
   return cuid();
 }
+
+const _cw = new CloudWatchLogsClient({
+  endpoint: getEndpointUrl(),
+});
+export const cwc: CloudWatchLogsClient = isRunningInLambda
+  ? captureAWSv3Client(_cw)
+  : _cw;

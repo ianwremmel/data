@@ -63,7 +63,7 @@ build: README.md dist/codegen/actions.js dist/codegen/cloudformation.js dist/cod
 .PHONY: build
 
 clean:
-	rm -rf dist $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_ESM_JS) $(EXAMPLE_OUTPUT) $(TMP_DIR) $(SENTINEL_DIR) $(GENERATED_DIRS)
+	rm -rf .aws-sam dist $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_ESM_JS) $(EXAMPLE_OUTPUT) $(TMP_DIR) $(SENTINEL_DIR) $(GENERATED_DIRS)
 .PHONY: clean
 
 ################################################################################
@@ -103,10 +103,10 @@ $(foreach EXAMPLE_DIR,$(EXAMPLE_DIRS),$(eval $(GEN_EXAMPLE)))
 ###############################################################################
 
 $(RUNTIME_DIST_CJS_JS) &: $(RUNTIME_SRC)
-	$(NPX) esbuild $(?) --format=cjs --outbase=src --outdir=dist/cjs --platform=node
+	$(NPX) esbuild $(?) --format=cjs --outbase=src --outdir=dist/cjs --platform=node --sourcemap=external
 
 $(RUNTIME_DIST_ESM_JS) &: $(RUNTIME_SRC)
-	$(NPX) esbuild $(?) --format=esm --outbase=src --outdir=dist/esm --platform=node
+	$(NPX) esbuild $(?) --format=esm --outbase=src --outdir=dist/esm --platform=node --sourcemap=external
 
 dist/codegen/actions.js: src/codegen/actions/index.ts dist/schema.graphqls $(CODEGEN_SRC)
 	$(NPX) esbuild $(<) --bundle --external:graphql --format=cjs --outfile=$@ --platform=node --sourcemap=external
