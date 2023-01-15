@@ -557,6 +557,7 @@ describe('queryUserLogin()', () => {
           "TableName": Any<String>,
           "WriteCapacityUnits": undefined,
         },
+        "hasNextPage": false,
         "items": [
           {
             "createdAt": Any<Date>,
@@ -586,6 +587,7 @@ describe('queryUserLogin()', () => {
             "version": 1,
           },
         ],
+        "nextToken": undefined,
       }
     `
     );
@@ -623,6 +625,7 @@ describe('queryUserLogin()', () => {
           "TableName": Any<String>,
           "WriteCapacityUnits": undefined,
         },
+        "hasNextPage": false,
         "items": [
           {
             "createdAt": Any<Date>,
@@ -634,6 +637,7 @@ describe('queryUserLogin()', () => {
             "version": 1,
           },
         ],
+        "nextToken": undefined,
       }
     `
     );
@@ -677,6 +681,7 @@ describe('queryUserLogin()', () => {
           "TableName": Any<String>,
           "WriteCapacityUnits": undefined,
         },
+        "hasNextPage": false,
         "items": [
           {
             "createdAt": Any<Date>,
@@ -688,6 +693,7 @@ describe('queryUserLogin()', () => {
             "version": 1,
           },
         ],
+        "nextToken": undefined,
       }
     `
     );
