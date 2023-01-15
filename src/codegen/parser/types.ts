@@ -54,6 +54,7 @@ export type ChangeDataCaptureEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
 export type ChangeDataCaptureConfig =
   | ChangeDataCaptureEnricherConfig
+  | ChangeDataCaptureTriggerConfig
   | LegacyChangeDataCaptureConfig;
 
 export interface ChangeDataCaptureEnricherConfig {
@@ -63,6 +64,13 @@ export interface ChangeDataCaptureEnricherConfig {
   readonly targetModelName: string;
   readonly targetTable: string;
   readonly type: 'ENRICHER';
+}
+
+export interface ChangeDataCaptureTriggerConfig {
+  readonly event: ChangeDataCaptureEvent;
+  readonly handlerModuleId: string;
+  readonly sourceModelName: string;
+  readonly type: 'TRIGGER';
 }
 
 export interface LegacyChangeDataCaptureConfig {

@@ -8,7 +8,7 @@ export interface MakeHandlerOptions extends LambdaInput {
   readonly event: ChangeDataCaptureEvent;
   readonly sourceModelName: string;
   readonly tableName: string;
-  readonly targetTable: string;
+  readonly targetTable?: string;
   readonly template: string;
 }
 
@@ -81,7 +81,7 @@ export function makeHandler({
             'AWSXrayWriteOnlyAccess',
             'CloudWatchLambdaInsightsExecutionRolePolicy',
             {CloudWatchPutMetricPolicy: {}},
-            {
+            targetTable && {
               DynamoDBCrudPolicy: {
                 TableName: {Ref: targetTable},
               },
@@ -93,7 +93,7 @@ export function makeHandler({
                 },
               },
             },
-          ],
+          ].filter(Boolean),
         },
         Type: 'AWS::Serverless::Function',
       },

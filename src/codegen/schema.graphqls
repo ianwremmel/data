@@ -37,7 +37,7 @@ enum CdcEvent {
 }
 
 """
-Deprecated. Use @enriches instead
+Deprecated. Use @enriches or @triggers instead
 """
 directive @cdc(
   """
@@ -74,6 +74,22 @@ directive @enriches(
   The model type that will be updated by this stream.
   """
   targetModel: String!
+) repeatable on OBJECT
+
+"""
+Triggers the specified handler whenever there's a change to this model.
+"""
+directive @triggers(
+  """
+  The type of change events to subscribe to.
+  """
+  event: CdcEvent!
+  """
+  Path to the requireable package that handles a specific event. Relative paths
+  are, unfortunately, relative to the _generated_ file, not the GraphQL schema
+  file.
+  """
+  handler: String!
 ) repeatable on OBJECT
 
 """

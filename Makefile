@@ -63,7 +63,7 @@ build: README.md dist/codegen/actions.js dist/codegen/cloudformation.js dist/cod
 .PHONY: build
 
 clean:
-	rm -rf dist $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_ESM_JS) $(EXAMPLE_OUTPUT) $(TMP_DIR) $(SENTINEL_DIR) $(GENERATED_DIRS)
+	rm -rf .aws-sam dist $(RUNTIME_DIST_CJS_JS) $(RUNTIME_DIST_ESM_JS) $(EXAMPLE_OUTPUT) $(TMP_DIR) $(SENTINEL_DIR) $(GENERATED_DIRS)
 .PHONY: clean
 
 ################################################################################

@@ -14,7 +14,11 @@ import {
   hasDirective,
 } from '../helpers';
 import {extractTableName} from '../parser';
-import type {ChangeDataCaptureConfig} from '../types';
+import type {
+  ChangeDataCaptureConfig,
+  ChangeDataCaptureEnricherConfig,
+  ChangeDataCaptureTriggerConfig,
+} from '../types';
 
 /** Extracts CDC config for a type */
 export function extractChangeDataCaptureConfig(
@@ -23,6 +27,10 @@ export function extractChangeDataCaptureConfig(
 ): ChangeDataCaptureConfig | undefined {
   if (hasDirective('enriches', type)) {
     return extractEnricherConfig(schema, type);
+  }
+
+  if (hasDirective('triggers', type)) {
+    return extractTriggersConfig(schema, type);
   }
 
   const directive = getOptionalDirective('cdc', type);
@@ -67,7 +75,7 @@ function getTargetTable(
 function extractEnricherConfig(
   schema: GraphQLSchema,
   type: GraphQLObjectType<unknown, unknown>
-): ChangeDataCaptureConfig {
+): ChangeDataCaptureEnricherConfig {
   const directive = getDirective('enriches', type);
   const event = getEvent(type, directive);
   const handlerModuleId = getArgStringValue('handler', directive);
@@ -80,6 +88,23 @@ function extractEnricherConfig(
     targetModelName,
     targetTable: getTargetTable(schema, type.name, targetModelName),
     type: 'ENRICHER',
+  };
+}
+
+/** helper */
+function extractTriggersConfig(
+  schema: GraphQLSchema,
+  type: GraphQLObjectType<unknown, unknown>
+): ChangeDataCaptureTriggerConfig {
+  const directive = getDirective('triggers', type);
+  const event = getEvent(type, directive);
+  const handlerModuleId = getArgStringValue('handler', directive);
+
+  return {
+    event,
+    handlerModuleId,
+    sourceModelName: type.name,
+    type: 'TRIGGER',
   };
 }
 
