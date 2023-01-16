@@ -1,5 +1,6 @@
 import assert from 'assert';
 
+import {filterNull} from '../../../common/filters';
 import type {Field, Model, TTLConfig} from '../../../parser';
 
 import {makeKeyTemplate, marshallField} from './helpers';
@@ -28,7 +29,7 @@ export function marshallTpl({
   const requiredFieldsWithDefaultBehaviorsNames = [
     'version',
     ttlConfig?.fieldName,
-  ].filter(Boolean) as string[];
+  ].filter(filterNull);
   const requiredFieldsWithDefaultBehaviors = requiredFields.filter(
     ({fieldName}) => requiredFieldsWithDefaultBehaviorsNames.includes(fieldName)
   );
@@ -130,7 +131,7 @@ ${secondaryIndexes
 
         throw new Error(`No default behavior for field \`${fieldName}\``);
       })
-      .filter(Boolean)
+      .filter(filterNull)
       .join('\n')}
 ${secondaryIndexes
   .filter(({name}) => name !== 'publicId')

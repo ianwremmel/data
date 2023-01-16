@@ -1,5 +1,6 @@
 import assert from 'assert';
 
+import {filterNull} from '../../../common/filters';
 import type {Field} from '../../../parser';
 
 /** Gets the TypeScript type for that corresponds to the field. */
@@ -69,7 +70,7 @@ export function makeKeyTemplate(
       return `\${${marshallField(field)}}`;
     }),
   ]
-    .filter(Boolean)
+    .filter(filterNull)
     .join('#');
 }
 

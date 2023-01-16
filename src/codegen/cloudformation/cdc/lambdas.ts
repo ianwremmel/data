@@ -1,3 +1,4 @@
+import {filterNull} from '../../common/filters';
 import type {ChangeDataCaptureEvent} from '../../parser';
 import {combineFragments} from '../fragments/combine-fragments';
 import type {LambdaInput} from '../fragments/lambda';
@@ -93,7 +94,7 @@ export function makeHandler({
                 },
               },
             },
-          ].filter(Boolean),
+          ].filter(filterNull),
         },
         Type: 'AWS::Serverless::Function',
       },
