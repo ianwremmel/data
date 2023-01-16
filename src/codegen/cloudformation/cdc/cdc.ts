@@ -2,6 +2,7 @@ import path from 'path';
 
 import {kebabCase} from 'lodash';
 
+import {increasePathDepth, resolveActionsModule} from '../../common/paths';
 import type {Model} from '../../parser';
 import type {CloudformationPluginConfig} from '../config';
 import {combineFragments} from '../fragments/combine-fragments';
@@ -42,19 +43,13 @@ export function defineModelCdc(
     handlerFileName
   );
 
-  const actionsModuleId = config.actionsModuleId.startsWith('.')
-    ? path.relative(handlerOutputPath, config.actionsModuleId)
-    : config.actionsModuleId;
+  const actionsModuleId = resolveActionsModule(
+    handlerOutputPath,
+    config.actionsModuleId
+  );
 
-  // Account for the fact that the parser only knows the module id, not produced
-  // directory layout
-  const resolvedDependenciesModuleId = dependenciesModuleId.startsWith('.')
-    ? path.join('..', dependenciesModuleId)
-    : dependenciesModuleId;
-
-  const resolvedHandlerModuleId = handlerModuleId.startsWith('.')
-    ? path.join('..', handlerModuleId)
-    : handlerModuleId;
+  const resolvedDependenciesModuleId = increasePathDepth(dependenciesModuleId);
+  const resolvedHandlerModuleId = increasePathDepth(handlerModuleId);
 
   const template = `// This file is generated. Do not edit by hand.
 

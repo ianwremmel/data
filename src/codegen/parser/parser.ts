@@ -1,15 +1,16 @@
 import assert from 'assert';
-import path from 'path';
 
 import type {Types} from '@graphql-codegen/plugin-helpers/typings/types';
+import type {GraphQLField, GraphQLObjectType, GraphQLSchema} from 'graphql';
 import {
   assertObjectType,
   isNonNullType,
   isObjectType,
   isScalarType,
 } from 'graphql';
-import type {GraphQLObjectType, GraphQLSchema, GraphQLField} from 'graphql';
 import {snakeCase} from 'lodash';
+
+import {resolveDependenciesModuleId} from '../common/paths';
 
 import {extractChangeDataCaptureConfig} from './extractors/cdc';
 import {
@@ -25,13 +26,14 @@ import {
 } from './helpers';
 import type {
   Field,
+  GSI,
+  IntermediateRepresentation,
+  Model,
   PrimaryKeyConfig,
   SecondaryIndex,
-  Model,
-  TTLConfig,
   Table,
   TableSecondaryIndex,
-  GSI,
+  TTLConfig,
 } from './types';
 
 export interface Info {
@@ -52,9 +54,14 @@ export function parse<T extends {dependenciesModuleId: string}>(
   documents: Types.DocumentFile[],
   config: T,
   info?: Info
-): {models: readonly Model[]; tables: readonly Table[]} {
+): IntermediateRepresentation {
   const outputFile = info?.outputFile;
   assert(outputFile, 'outputFile is required');
+
+  const dependenciesModuleId = resolveDependenciesModuleId(
+    outputFile,
+    config.dependenciesModuleId
+  );
 
   const typesMap = schema.getTypeMap();
   const models = Object.keys(typesMap)
@@ -72,10 +79,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
       return {
         changeDataCaptureConfig: extractChangeDataCaptureConfig(schema, type),
         consistent: hasDirective('consistent', type),
-        dependenciesModuleId: path.relative(
-          path.resolve(process.cwd(), path.dirname(outputFile)),
-          path.resolve(process.cwd(), config.dependenciesModuleId)
-        ),
+        dependenciesModuleId,
         fields,
         isLedger: hasDirective('ledger', type),
         isPublicModel: hasInterface('PublicModel', type),
@@ -118,7 +122,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
           );
 
           return {
-            dependenciesModuleId: model.dependenciesModuleId,
+            dependenciesModuleId,
             enablePointInTimeRecovery:
               acc.enablePointInTimeRecovery || model.enablePointInTimeRecovery,
             enableStreaming: acc.enableStreaming || model.enableStreaming,
@@ -134,7 +138,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
           };
         },
         {
-          dependenciesModuleId: firstModel.dependenciesModuleId,
+          dependenciesModuleId,
           enablePointInTimeRecovery: firstModel.enablePointInTimeRecovery,
           enableStreaming: firstModel.enableStreaming,
           hasCdc: !!firstModel.changeDataCaptureConfig,
@@ -158,7 +162,11 @@ export function parse<T extends {dependenciesModuleId: string}>(
       );
     });
 
-  return {models, tables};
+  return {
+    dependenciesModuleId,
+    models,
+    tables,
+  };
 }
 
 /** helper */
@@ -225,6 +233,7 @@ function extractFields(
     };
   });
 }
+
 /** helper */
 function getFieldFromFieldMap(
   fieldMap: Record<string, Field>,
