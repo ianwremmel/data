@@ -1,3 +1,9 @@
+export interface IntermediateRepresentation {
+  readonly dependenciesModuleId: string;
+  readonly models: readonly Model[];
+  readonly tables: readonly Table[];
+}
+
 export interface Table {
   readonly dependenciesModuleId: string;
   readonly enablePointInTimeRecovery: boolean;

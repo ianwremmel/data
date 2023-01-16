@@ -39,7 +39,12 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   info
 ) => {
   try {
-    const {tables, models} = parse(schema, documents, config, info);
+    const {dependenciesModuleId, tables, models} = parse(
+      schema,
+      documents,
+      config,
+      info
+    );
     const content = `
 
 ${models
@@ -104,10 +109,7 @@ ${models
         `import {NativeAttributeValue} from '@aws-sdk/util-dynamodb';`,
         `import Base64 from 'base64url';`,
         `import {assert, DataIntegrityError, MultiResultType, NotFoundError, OptimisticLockingError, ResultType, QueryOptions, UnexpectedAwsError, UnexpectedError} from '${runtimeModuleId}';`,
-        `import {${importFromDependencies}} from "${resolveDependenciesPath(
-          info.outputFile,
-          config.dependenciesModuleId
-        )}";`,
+        `import {${importFromDependencies}} from "${dependenciesModuleId}";`,
       ],
     };
   } catch (err) {
@@ -116,19 +118,3 @@ ${models
     throw err;
   }
 };
-
-/** helper */
-function resolveDependenciesPath(outputFile: string, depsModuleId: string) {
-  if (depsModuleId.startsWith('.')) {
-    const fullPathToOutputFile = path.resolve(
-      process.cwd(),
-      path.dirname(outputFile)
-    );
-    const fullPathToDependenciesFile = path.resolve(
-      process.cwd(),
-      depsModuleId
-    );
-    return path.relative(fullPathToOutputFile, fullPathToDependenciesFile);
-  }
-  return depsModuleId;
-}
