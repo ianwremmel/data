@@ -1569,7 +1569,10 @@ export function marshallUserSession(
       'expires was passed but is not a valid date'
     );
     ean['#expires'] = 'ttl';
-    eav[':expires'] = input.expires === null ? null : input.expires.getTime();
+    eav[':expires'] =
+      input.expires === null
+        ? null
+        : Math.floor(input.expires.getTime() / 1000);
     updateExpression.push('#expires = :expires');
   }
 
@@ -1658,7 +1661,7 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
   if ('ttl' in item) {
     result = {
       ...result,
-      expires: item.ttl ? new Date(item.ttl) : null,
+      expires: item.ttl * 1000 ? new Date(item.ttl * 1000) : null,
     };
   }
 

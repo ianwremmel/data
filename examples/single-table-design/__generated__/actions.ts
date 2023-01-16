@@ -1472,7 +1472,8 @@ export function marshallScheduledEmail(
       'sendAt was passed but is not a valid date'
     );
     ean['#sendAt'] = 'ttl';
-    eav[':sendAt'] = input.sendAt === null ? null : input.sendAt.getTime();
+    eav[':sendAt'] =
+      input.sendAt === null ? null : Math.floor(input.sendAt.getTime() / 1000);
     updateExpression.push('#sendAt = :sendAt');
   } else {
     ean['#sendAt'] = 'ttl';
@@ -1560,7 +1561,7 @@ export function unmarshallScheduledEmail(
   if ('ttl' in item) {
     result = {
       ...result,
-      sendAt: item.ttl ? new Date(item.ttl) : null,
+      sendAt: item.ttl * 1000 ? new Date(item.ttl * 1000) : null,
     };
   }
 

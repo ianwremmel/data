@@ -114,10 +114,7 @@ ${secondaryIndexes
   const eav: Record<string, unknown> = {
     ":entity": "${typeName}",
     ${normalRequiredFields
-      .map(
-        ({fieldName, isDateType}) =>
-          `':${fieldName}': ${marshallField(fieldName, isDateType)},`
-      )
+      .map((field) => `':${field.fieldName}': ${marshallField(field)},`)
       .join('\n')}
     ':updatedAt': now.getTime(),
     ${requiredFieldsWithDefaultBehaviors
@@ -174,11 +171,13 @@ ${secondaryIndexes
     // the TTL field will always be handled by renderTTL
     .filter(({fieldName}) => fieldName !== ttlConfig?.fieldName)
     .map(
-      ({columnName, fieldName, isDateType}) => `
-  if ('${fieldName}' in input && typeof input.${fieldName} !== 'undefined') {
-    ean['#${fieldName}'] = '${columnName}';
-    eav[':${fieldName}'] = ${marshallField(fieldName, isDateType)};
-    updateExpression.push('#${fieldName} = :${fieldName}');
+      (field) => `
+  if ('${field.fieldName}' in input && typeof input.${
+        field.fieldName
+      } !== 'undefined') {
+    ean['#${field.fieldName}'] = '${field.columnName}';
+    eav[':${field.fieldName}'] = ${marshallField(field)};
+    updateExpression.push('#${field.fieldName} = :${field.fieldName}');
   }
   `
     )
@@ -212,7 +211,6 @@ function renderTTL(
   const field = fields.find(({fieldName: f}) => f === fieldName);
   assert(field, `Field ${fieldName} not found`);
 
-  const {isDateType} = field;
   const out = `
   if ('${fieldName}' in input && typeof input.${fieldName} !== 'undefined') {
     assert(!Number.isNaN(input.${fieldName}${
@@ -221,7 +219,7 @@ function renderTTL(
     ean['#${fieldName}'] = 'ttl';
     eav[':${fieldName}'] = input.${fieldName} === null
       ? null
-      : ${marshallField(fieldName, isDateType)};
+      : ${marshallField(field)};
     updateExpression.push('#${fieldName} = :${fieldName}');
   }
   `;

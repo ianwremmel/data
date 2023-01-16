@@ -557,7 +557,10 @@ export function marshallUserSession(
       'expires was passed but is not a valid date'
     );
     ean['#expires'] = 'ttl';
-    eav[':expires'] = input.expires === null ? null : input.expires.getTime();
+    eav[':expires'] =
+      input.expires === null
+        ? null
+        : Math.floor(input.expires.getTime() / 1000);
     updateExpression.push('#expires = :expires');
   } else {
     ean['#expires'] = 'ttl';
@@ -632,7 +635,7 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
 
   const result: UserSession = {
     createdAt: new Date(item._ct),
-    expires: new Date(item.ttl),
+    expires: new Date(item.ttl * 1000),
     id: Base64.encode(`UserSession:${item.pk}`),
     session: item.session,
     sessionId: item.session_id,
