@@ -1,10 +1,11 @@
 import {filterNull} from '../../../common/filters';
-import type {TTLConfig} from '../../../parser';
+import type {Field, TTLConfig} from '../../../parser';
 
 import {ensureTableTemplate} from './ensure-table';
 import {objectToString} from './helpers';
 
 export interface CreateItemTplInput {
+  readonly fields: readonly Field[];
   readonly hasPublicId: boolean;
   readonly key: Record<string, string>;
   readonly tableName: string;
@@ -14,6 +15,7 @@ export interface CreateItemTplInput {
 
 /** template */
 export function createItemTpl({
+  fields,
   hasPublicId,
   ttlConfig,
   key,
@@ -28,6 +30,9 @@ export function createItemTpl({
     'version',
     hasPublicId && 'publicId',
     ttlConfig?.fieldName,
+    ...fields
+      .filter(({computeFunction}) => !!computeFunction)
+      .map(({fieldName}) => fieldName),
   ]
     .filter(filterNull)
     .map((f) => `'${f}'`)

@@ -992,7 +992,13 @@ export interface UserSessionPrimaryKey {
 
 export type CreateUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'expires' | 'id' | 'publicId' | 'updatedAt' | 'version'
+  | 'computedField'
+  | 'createdAt'
+  | 'expires'
+  | 'id'
+  | 'publicId'
+  | 'updatedAt'
+  | 'version'
 > &
   Partial<Pick<UserSession, 'expires'>>;
 export type CreateUserSessionOutput = ResultType<UserSession>;
@@ -1062,7 +1068,13 @@ export async function createUserSession(
 
 export type BlindWriteUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'expires' | 'id' | 'publicId' | 'updatedAt' | 'version'
+  | 'computedField'
+  | 'createdAt'
+  | 'expires'
+  | 'id'
+  | 'publicId'
+  | 'updatedAt'
+  | 'version'
 > &
   Partial<Pick<UserSession, 'expires'>>;
 export type BlindWriteUserSessionOutput = ResultType<UserSession>;
@@ -1278,7 +1290,7 @@ export async function touchUserSession(
 
 export type UpdateUserSessionInput = Omit<
   UserSession,
-  'createdAt' | 'expires' | 'id' | 'publicId' | 'updatedAt'
+  'computedField' | 'createdAt' | 'expires' | 'id' | 'publicId' | 'updatedAt'
 > &
   Partial<Pick<UserSession, 'expires'>>;
 export type UpdateUserSessionOutput = ResultType<UserSession>;
@@ -1533,17 +1545,15 @@ export function marshallUserSession(
   // original input.
   const input = {..._input};
 
-  const computedFieldInitialValue = input.computedField;
-  let computedFieldComputedValue: any;
+  let computedFieldComputed = false;
+  let computedFieldComputedValue: UserSession['computedField'];
   Object.defineProperty(input, 'computedField', {
     enumerable: true,
     /** getter */
     get() {
-      if (typeof computedFieldComputedValue === 'undefined') {
-        computedFieldComputedValue = computeField(
-          computedFieldInitialValue,
-          this
-        );
+      if (!computedFieldComputed) {
+        computedFieldComputed = true;
+        computedFieldComputedValue = computeField(this);
       }
       return computedFieldComputedValue;
     },
@@ -1707,17 +1717,20 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
     };
   }
 
+  let computedFieldComputed = false;
   const computedFieldDatabaseValue = item.computed_field;
-  let computedFieldComputedValue: any;
+  let computedFieldComputedValue: UserSession['computedField'];
   Object.defineProperty(result, 'computedField', {
     enumerable: true,
     /** getter */
     get() {
-      if (typeof computedFieldComputedValue === 'undefined') {
-        computedFieldComputedValue = computeField(
-          computedFieldDatabaseValue,
-          this
-        );
+      if (!computedFieldComputed) {
+        computedFieldComputed = true;
+        if (typeof computedFieldDatabaseValue !== 'undefined') {
+          computedFieldComputedValue = computedFieldDatabaseValue;
+        } else {
+          computedFieldComputedValue = computeField(this);
+        }
       }
       return computedFieldComputedValue;
     },

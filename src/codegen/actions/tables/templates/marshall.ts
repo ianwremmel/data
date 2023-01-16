@@ -263,19 +263,20 @@ function renderTTL(
  * Uses Object.defineProperty to add computed fields to `input` so that
  * order-of-access doesn't matter.
  */
-function defineComputedFields(fields: readonly Field[]) {
+function defineComputedFields(fields: readonly Field[], typeName: string) {
   return fields
     .filter(({computeFunction}) => !!computeFunction)
     .map(({fieldName, computeFunction}) => {
       return `
-        const ${fieldName}InitialValue = input.${fieldName};
-        let ${fieldName}ComputedValue: any;
+        let ${fieldName}Computed = false;
+        let ${fieldName}ComputedValue: ${typeName}['${fieldName}'];
         Object.defineProperty(input, '${fieldName}', {
           enumerable: true,
           /** getter */
           get() {
-            if (typeof ${fieldName}ComputedValue === 'undefined') {
-              ${fieldName}ComputedValue = ${computeFunction?.importName}(${fieldName}InitialValue, this);
+            if (!${fieldName}Computed) {
+              ${fieldName}Computed = true
+              ${fieldName}ComputedValue = ${computeFunction?.importName}(this);
             }
             return ${fieldName}ComputedValue;
           }

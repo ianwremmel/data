@@ -1,3 +1,5 @@
+import assert from 'assert';
+
 import type {Field, Model} from '../../../parser';
 
 import {unmarshallField, unmarshallFieldValue} from './helpers';
@@ -64,7 +66,7 @@ ${optionalFields
   )
   .join('\n')}
 
-  ${defineComputedFields(fields)}
+  ${defineComputedFields(fields, typeName)}
 
   return result;
 }
@@ -75,22 +77,32 @@ ${optionalFields
  * Uses Object.defineProperty to add computes fields to the database result  so
  * that order-of-access doesn't matter.
  */
-function defineComputedFields(fields: readonly Field[]): string {
+function defineComputedFields(
+  fields: readonly Field[],
+  typeName: string
+): string {
   return fields
     .filter(({computeFunction}) => !!computeFunction)
     .map((field) => {
       const {fieldName, computeFunction} = field;
+      assert(computeFunction);
+      const {importName} = computeFunction;
       return `
+      let ${fieldName}Computed = false;
       const ${fieldName}DatabaseValue = ${unmarshallFieldValue(field)};
-      let ${fieldName}ComputedValue: any;
+      let ${fieldName}ComputedValue: ${typeName}['${fieldName}'];
       Object.defineProperty(result, '${fieldName}', {
           enumerable: true,
           /** getter */
           get() {
-            if (typeof ${fieldName}ComputedValue === 'undefined') {
-              ${fieldName}ComputedValue = ${
-        computeFunction?.importName
-      }(${fieldName}DatabaseValue, this);
+            if (!${fieldName}Computed) {
+              ${fieldName}Computed = true
+              if (typeof ${fieldName}DatabaseValue !== 'undefined') {
+                ${fieldName}ComputedValue = ${fieldName}DatabaseValue;
+              }
+              else {
+                ${fieldName}ComputedValue = ${importName}(this);
+              }
             }
             return ${fieldName}ComputedValue;
           }
