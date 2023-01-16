@@ -29,7 +29,7 @@ import {
 import Base64 from 'base64url';
 
 import {ddbDocClient, idGenerator} from '../../dependencies';
-import {computeField} from '../compute-functions';
+import {computeIndexedPlanName, computeField} from '../compute-functions';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends {[key: string]: unknown}> = {[K in keyof T]: T[K]};
@@ -64,6 +64,7 @@ export type Account = Model &
     externalId: Scalars['String'];
     hasEverSubscribed: Scalars['Boolean'];
     id: Scalars['ID'];
+    indexedPlanName?: Maybe<Scalars['String']>;
     lastPlanName?: Maybe<PlanName>;
     onFreeTrial?: Maybe<Scalars['Boolean']>;
     planName?: Maybe<PlanName>;
@@ -206,7 +207,7 @@ export interface AccountPrimaryKey {
 
 export type CreateAccountInput = Omit<
   Account,
-  'createdAt' | 'id' | 'updatedAt' | 'version'
+  'createdAt' | 'id' | 'indexedPlanName' | 'updatedAt' | 'version'
 >;
 export type CreateAccountOutput = ResultType<Account>;
 /**  */
@@ -273,7 +274,7 @@ export async function createAccount(
 
 export type BlindWriteAccountInput = Omit<
   Account,
-  'createdAt' | 'id' | 'updatedAt' | 'version'
+  'createdAt' | 'id' | 'indexedPlanName' | 'updatedAt' | 'version'
 >;
 export type BlindWriteAccountOutput = ResultType<Account>;
 /** */
@@ -485,7 +486,7 @@ export async function touchAccount(
 
 export type UpdateAccountInput = Omit<
   Account,
-  'createdAt' | 'id' | 'updatedAt'
+  'createdAt' | 'id' | 'indexedPlanName' | 'updatedAt'
 >;
 export type UpdateAccountOutput = ResultType<Account>;
 
@@ -567,10 +568,20 @@ export async function updateAccount(
   }
 }
 
-export interface QueryAccountInput {
-  externalId: Scalars['String'];
-  vendor: Vendor;
-}
+export type QueryAccountInput =
+  | {externalId: Scalars['String']; vendor: Vendor}
+  | {index: 'gsi1'; hasEverSubscribed: Scalars['Boolean']}
+  | {
+      index: 'gsi1';
+      cancelled?: Maybe<Scalars['Boolean']>;
+      hasEverSubscribed: Scalars['Boolean'];
+    }
+  | {
+      index: 'gsi1';
+      cancelled?: Maybe<Scalars['Boolean']>;
+      hasEverSubscribed: Scalars['Boolean'];
+      indexedPlanName?: Maybe<Scalars['String']>;
+    };
 export type QueryAccountOutput = MultiResultType<Account>;
 
 /** helper */
@@ -578,6 +589,9 @@ function makeEanForQueryAccount(
   input: QueryAccountInput
 ): Record<string, string> {
   if ('index' in input) {
+    if (input.index === 'gsi1') {
+      return {'#pk': 'gsi1pk', '#sk': 'gsi1sk'};
+    }
     throw new Error(
       'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
     );
@@ -589,6 +603,18 @@ function makeEanForQueryAccount(
 /** helper */
 function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
   if ('index' in input) {
+    if (input.index === 'gsi1') {
+      return {
+        ':pk': `PLAN#${input.hasEverSubscribed}`,
+        ':sk': [
+          'PLAN',
+          'cancelled' in input && input.cancelled,
+          'indexedPlanName' in input && input.indexedPlanName,
+        ]
+          .filter(Boolean)
+          .join('#'),
+      };
+    }
     throw new Error(
       'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
     );
@@ -606,6 +632,13 @@ function makeKceForQueryAccount(
   {operator}: Pick<QueryOptions, 'operator'>
 ): string {
   if ('index' in input) {
+    if (input.index === 'gsi1') {
+      return `#pk = :pk AND ${
+        operator === 'begins_with'
+          ? 'begins_with(#sk, :sk)'
+          : `#sk ${operator} :sk`
+      }`;
+    }
     throw new Error(
       'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
     );
@@ -640,7 +673,7 @@ export async function queryAccount(
     ExpressionAttributeNames,
     ExpressionAttributeValues,
     ExclusiveStartKey: nextToken,
-    IndexName: undefined,
+    IndexName: 'index' in input ? input.index : undefined,
     KeyConditionExpression,
     Limit: limit,
     ReturnConsumedCapacity: 'INDEXES',
@@ -712,6 +745,21 @@ export type MarshallAccountInput = Required<
     >
   >;
 
+type VirtualMarshallAccountInput = Required<
+  Pick<Account, 'effectiveDate' | 'externalId' | 'hasEverSubscribed' | 'vendor'>
+> &
+  Partial<
+    Pick<
+      Account,
+      | 'cancelled'
+      | 'indexedPlanName'
+      | 'lastPlanName'
+      | 'onFreeTrial'
+      | 'planName'
+      | 'version'
+    >
+  >;
+
 /** Marshalls a DynamoDB record into a Account object */
 export function marshallAccount(
   _input: MarshallAccountInput,
@@ -719,7 +767,21 @@ export function marshallAccount(
 ): MarshallAccountOutput {
   // Make a copy so that if we have to define fields, we don't modify the
   // original input.
-  const input = {..._input};
+  const input: VirtualMarshallAccountInput = {..._input};
+
+  let indexedPlanNameComputed = false;
+  let indexedPlanNameComputedValue: Account['indexedPlanName'];
+  Object.defineProperty(input, 'indexedPlanName', {
+    enumerable: true,
+    /** getter */
+    get() {
+      if (!indexedPlanNameComputed) {
+        indexedPlanNameComputed = true;
+        indexedPlanNameComputedValue = computeIndexedPlanName(this);
+      }
+      return indexedPlanNameComputedValue;
+    },
+  });
 
   const updateExpression: string[] = [
     '#entity = :entity',
@@ -729,6 +791,8 @@ export function marshallAccount(
     '#updatedAt = :updatedAt',
     '#vendor = :vendor',
     '#version = :version',
+    '#gsi1pk = :gsi1pk',
+    '#gsi1sk = :gsi1sk',
   ];
 
   const ean: Record<string, string> = {
@@ -740,6 +804,8 @@ export function marshallAccount(
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
+    '#gsi1pk': 'gsi1pk',
+    '#gsi1sk': 'gsi1sk',
   };
 
   const eav: Record<string, unknown> = {
@@ -750,6 +816,8 @@ export function marshallAccount(
     ':vendor': input.vendor,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
+    ':gsi1pk': `PLAN#${input.hasEverSubscribed}`,
+    ':gsi1sk': `PLAN#${input.cancelled}#${input.indexedPlanName}`,
   };
 
   if ('cancelled' in input && typeof input.cancelled !== 'undefined') {
@@ -887,6 +955,25 @@ export function unmarshallAccount(item: Record<string, any>): Account {
       planName: item.plan_name,
     };
   }
+
+  let indexedPlanNameComputed = false;
+  const indexedPlanNameDatabaseValue = item.indexed_plan_name;
+  let indexedPlanNameComputedValue: Account['indexedPlanName'];
+  Object.defineProperty(result, 'indexedPlanName', {
+    enumerable: true,
+    /** getter */
+    get() {
+      if (!indexedPlanNameComputed) {
+        indexedPlanNameComputed = true;
+        if (typeof indexedPlanNameDatabaseValue !== 'undefined') {
+          indexedPlanNameComputedValue = indexedPlanNameDatabaseValue;
+        } else {
+          indexedPlanNameComputedValue = computeIndexedPlanName(this);
+        }
+      }
+      return indexedPlanNameComputedValue;
+    },
+  });
 
   return result;
 }
@@ -2258,7 +2345,7 @@ export function marshallUserSession(
 ): MarshallUserSessionOutput {
   // Make a copy so that if we have to define fields, we don't modify the
   // original input.
-  const input = {..._input};
+  const input: MarshallUserSessionInput = {..._input};
 
   let computedFieldComputed = false;
   let computedFieldComputedValue: UserSession['computedField'];

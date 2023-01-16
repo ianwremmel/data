@@ -14,8 +14,12 @@ export interface UnmarshallTplInput {
 export function unmarshallTpl({
   table: {fields, primaryKey, typeName},
 }: UnmarshallTplInput): string {
-  const requiredFields = fields.filter((f) => f.isRequired);
-  const optionalFields = fields.filter((f) => !f.isRequired);
+  const requiredFields = fields
+    .filter((f) => f.isRequired)
+    .filter(({computeFunction}) => !computeFunction?.isVirtual);
+  const optionalFields = fields
+    .filter((f) => !f.isRequired)
+    .filter(({computeFunction}) => !computeFunction?.isVirtual);
 
   return `
 /** Unmarshalls a DynamoDB record into a ${typeName} object */

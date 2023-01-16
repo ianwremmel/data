@@ -51,7 +51,7 @@ export interface Scalars {
   JSONObject: Record<string, unknown>;
 }
 
-/** A customer's account */
+/** A customer account */
 export type Account = Model &
   Node &
   Timestamped &

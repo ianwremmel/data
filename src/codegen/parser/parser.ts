@@ -226,6 +226,7 @@ function extractFields(
       ? {
           importName: getArgStringValue('importName', computed),
           importPath: getArgStringValue('importPath', computed),
+          isVirtual: !!getOptionalArgBooleanValue('virtual', computed),
         }
       : undefined;
     return {

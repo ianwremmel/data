@@ -1,5 +1,5 @@
 """
-A customer's account
+A customer account
 """
 type Account implements Model & Node & Timestamped & Versioned
   @compositeKey(

@@ -8,9 +8,26 @@ import {makeKeyTemplate, marshallField} from './helpers';
 export interface MarshallTplInput {
   readonly table: Model;
 }
+
 /** helper */
 function wrapFieldNameWithQuotes({fieldName}: Field): string {
   return `'${fieldName}'`;
+}
+
+/** helper */
+function makeTypeDefinition(
+  typeName: string,
+  requiredFields: readonly Field[],
+  optionalFields: readonly Field[]
+) {
+  const rf = requiredFields.map(wrapFieldNameWithQuotes).sort().join('|');
+  const of = optionalFields.map(wrapFieldNameWithQuotes).sort().join('|');
+
+  let marshallType = `Required<Pick<${typeName}, ${rf}>>`;
+  if (of.length) {
+    marshallType += ` & Partial<Pick<${typeName}, ${of}>>`;
+  }
+  return marshallType;
 }
 
 /** Generates the marshall function for a table */
@@ -19,10 +36,11 @@ export function marshallTpl({
 }: MarshallTplInput): string {
   const requiredFields = fields
     .filter((f) => f.isRequired && f.fieldName !== 'publicId')
-    .filter(({fieldName}) => fieldName !== 'id');
-  const optionalFields = fields.filter(
-    (f) => !f.isRequired && f.fieldName !== 'publicId'
-  );
+    .filter(({fieldName}) => fieldName !== 'id')
+    .filter(({computeFunction}) => !computeFunction?.isVirtual);
+  const optionalFields = fields
+    .filter((f) => !f.isRequired && f.fieldName !== 'publicId')
+    .filter(({computeFunction}) => !computeFunction?.isVirtual);
 
   // These are fields that are required on the object but have overridable
   // default behaviors
@@ -44,17 +62,34 @@ export function marshallTpl({
       !builtinDateFieldNames.includes(fieldName)
   );
 
-  const rf = normalRequiredFields.map(wrapFieldNameWithQuotes).sort().join('|');
-  const of = [
-    ...optionalFields.map(wrapFieldNameWithQuotes).sort(),
-    ...requiredFieldsWithDefaultBehaviors.map(wrapFieldNameWithQuotes).sort(),
-  ].join('|');
-  let marshallType = `Required<Pick<${typeName}, ${rf}>>`;
-  if (of.length) {
-    marshallType += ` & Partial<Pick<${typeName}, ${of}>>`;
-  }
+  const marshallType = makeTypeDefinition(typeName, normalRequiredFields, [
+    ...optionalFields,
+    ...requiredFieldsWithDefaultBehaviors,
+  ]);
+
+  const virtualRequiredFields = fields
+    .filter(({isRequired}) => isRequired)
+    .filter(({computeFunction}) => computeFunction?.isVirtual);
+
+  const virtualOptionalFields = fields
+    .filter(({isRequired}) => !isRequired)
+    .filter(({computeFunction}) => computeFunction?.isVirtual);
+
+  const hasVirtualFields =
+    virtualRequiredFields.length > 0 || virtualOptionalFields.length > 0;
+
+  const virtualType = makeTypeDefinition(
+    typeName,
+    [...normalRequiredFields, ...virtualRequiredFields],
+    [
+      ...optionalFields,
+      ...requiredFieldsWithDefaultBehaviors,
+      ...virtualOptionalFields,
+    ]
+  );
 
   const inputTypeName = `Marshall${typeName}Input`;
+  const virtualTypeName = `VirtualMarshall${typeName}Input`;
 
   const hasComputedFields = fields.some(
     ({computeFunction}) => !!computeFunction
@@ -69,20 +104,23 @@ export interface Marshall${typeName}Output {
 
 export type ${inputTypeName} = ${marshallType};
 
+${hasVirtualFields ? `type ${virtualTypeName} = ${virtualType};` : ''}
+
 /** Marshalls a DynamoDB record into a ${typeName} object */
 export function marshall${typeName}(${
     hasComputedFields ? '_input' : 'input'
   }: ${inputTypeName}, now = new Date()): Marshall${typeName}Output {
-${
-  hasComputedFields
-    ? `
-  // Make a copy so that if we have to define fields, we don't modify the
-  // original input.
-  const input = {..._input};
-  `
-    : ''
-}
 
+  ${
+    hasComputedFields
+      ? `
+      // Make a copy so that if we have to define fields, we don't modify the
+      // original input.
+      const input: ${
+        hasVirtualFields ? virtualTypeName : inputTypeName
+      } = {..._input}`
+      : ``
+  }
   ${defineComputedFields(fields, typeName)}
 
   const updateExpression: string[] = [

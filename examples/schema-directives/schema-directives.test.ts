@@ -8,12 +8,15 @@ import {ddbDocClient, idGenerator} from '../dependencies';
 import {load} from '../test-helpers';
 
 import {
+  createAccount,
   createRepository,
   createUserSession,
+  deleteAccount,
   deleteUserSession,
   queryRepository,
   queryUserSessionByPublicId,
   readUserSession,
+  updateAccount,
   updateUserSession,
 } from './__generated__/actions';
 
@@ -455,6 +458,69 @@ describe('@computed', () => {
       );
     } finally {
       await deleteUserSession({sessionId});
+    }
+  });
+
+  it('uses a virtual fields to support indexes without writing them to the database', async () => {
+    const createResult = await createAccount({
+      cancelled: false,
+      effectiveDate: faker.date.past(),
+      externalId: String(faker.datatype.number()),
+      hasEverSubscribed: true,
+      onFreeTrial: false,
+      planName: 'ENTERPRISE',
+      vendor: 'GITHUB',
+    });
+    try {
+      const tableName = process.env.TABLE_ACCOUNT;
+      assert(tableName, 'TABLE_ACCOUNT is not set');
+
+      const rawCreateResult = await load({
+        pk: `ACCOUNT#${createResult.item.vendor}#${createResult.item.externalId}`,
+        sk: `SUMMARY`,
+        tableName,
+      });
+
+      expect(rawCreateResult.Item?.indexed_plan_name).toBeUndefined();
+      expect(rawCreateResult.Item?.gsi1sk).toMatchInlineSnapshot(
+        `"PLAN#false#ENTERPRISE"`
+      );
+
+      const updateResult = await updateAccount({
+        ...createResult.item,
+        planName: 'OPEN_SOURCE',
+      });
+
+      const rawUpdateResult = await load({
+        pk: `ACCOUNT#${createResult.item.vendor}#${createResult.item.externalId}`,
+        sk: `SUMMARY`,
+        tableName,
+      });
+
+      expect(rawUpdateResult.Item?.indexed_plan_name).toBeUndefined();
+      expect(rawUpdateResult.Item?.gsi1sk).toMatchInlineSnapshot(
+        `"PLAN#false#OPEN_SOURCE"`
+      );
+
+      await updateAccount({
+        ...updateResult.item,
+        cancelled: true,
+        lastPlanName: 'OPEN_SOURCE',
+        planName: null,
+      });
+
+      const rawUpdate2Result = await load({
+        pk: `ACCOUNT#${createResult.item.vendor}#${createResult.item.externalId}`,
+        sk: `SUMMARY`,
+        tableName,
+      });
+
+      expect(rawUpdate2Result.Item?.indexed_plan_name).toBeUndefined();
+      expect(rawUpdate2Result.Item?.gsi1sk).toMatchInlineSnapshot(
+        `"PLAN#true#OPEN_SOURCE"`
+      );
+    } finally {
+      await deleteAccount(createResult.item);
     }
   });
 });

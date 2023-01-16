@@ -10,6 +10,10 @@ export interface Import {
   readonly importPath: string;
 }
 
+export interface ComputeFunction extends Import {
+  readonly isVirtual: boolean;
+}
+
 export interface Table {
   readonly dependenciesModuleId: string;
   readonly enablePointInTimeRecovery: boolean;
@@ -53,7 +57,7 @@ export interface Model {
 
 export interface Field {
   readonly columnName: string;
-  readonly computeFunction: Import | undefined;
+  readonly computeFunction: ComputeFunction | undefined;
   readonly ean: string;
   readonly eav: string;
   readonly fieldName: string;
