@@ -51,7 +51,7 @@ export interface Scalars {
   JSONObject: Record<string, unknown>;
 }
 
-/** An object to track a user's logins */
+/** A customer account */
 export type Account = Model &
   Node &
   Timestamped &
@@ -97,7 +97,7 @@ export interface Node {
 export type PlanName = 'ENTERPRISE' | 'OPEN_SOURCE' | 'SMALL_TEAM';
 
 /**
- * Like Model, but includes a `publicId` field which, unline `id`, is semantically
+ * Like Model, but includes a `publicId` field which, unlike `id`, is semantically
  * meaningless. Types implementing PublicModel will have an additional function,
  * `queryByPublicId`, generated. If any of your models implement PublicModel, then
  * the dependencies module must include an `idGenerator()`.
@@ -121,7 +121,7 @@ export interface QueryNodeArgs {
   id: Scalars['ID'];
 }
 
-/** An object to track a user's logins */
+/** A particular subscription change for an account */
 export type Subscription = Model &
   Node &
   Timestamped &

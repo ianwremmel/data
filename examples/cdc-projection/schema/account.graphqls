@@ -1,5 +1,5 @@
 """
-An object to track a user's logins
+A customer account
 """
 type Account implements Model & Node & Timestamped & Versioned
   @compositeKey(

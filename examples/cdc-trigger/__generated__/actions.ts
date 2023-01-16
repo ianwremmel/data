@@ -78,7 +78,7 @@ export interface Node {
 }
 
 /**
- * Like Model, but includes a `publicId` field which, unline `id`, is semantically
+ * Like Model, but includes a `publicId` field which, unlike `id`, is semantically
  * meaningless. Types implementing PublicModel will have an additional function,
  * `queryByPublicId`, generated. If any of your models implement PublicModel, then
  * the dependencies module must include an `idGenerator()`.

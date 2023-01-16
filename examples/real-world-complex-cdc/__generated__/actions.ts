@@ -132,7 +132,7 @@ export interface Node {
 }
 
 /**
- * Like Model, but includes a `publicId` field which, unline `id`, is semantically
+ * Like Model, but includes a `publicId` field which, unlike `id`, is semantically
  * meaningless. Types implementing PublicModel will have an additional function,
  * `queryByPublicId`, generated. If any of your models implement PublicModel, then
  * the dependencies module must include an `idGenerator()`.
@@ -145,19 +145,13 @@ export interface PublicModel {
   version: Scalars['Int'];
 }
 
-/** Not used. Just here to satisfy ESLint. */
+/** The Query type */
 export interface Query {
   __typename?: 'Query';
-  model?: Maybe<Model>;
   node?: Maybe<Node>;
 }
 
-/** Not used. Just here to satisfy ESLint. */
-export interface QueryModelArgs {
-  id: Scalars['ID'];
-}
-
-/** Not used. Just here to satisfy ESLint. */
+/** The Query type */
 export interface QueryNodeArgs {
   id: Scalars['ID'];
 }
@@ -174,10 +168,7 @@ export interface Timestamped {
   updatedAt: Scalars['Date'];
 }
 
-/**
- * Support Vendors. Remember to add aliases in .graphqlrc.js to maintain backwards
- * compatibility with pre-graphql tables.
- */
+/** Supported Vendors */
 export type Vendor = 'GITHUB';
 
 /**
