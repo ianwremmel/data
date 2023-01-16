@@ -1,6 +1,0 @@
-"""
-Supported Vendors
-"""
-enum Vendor {
-  GITHUB
-}

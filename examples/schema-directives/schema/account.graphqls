@@ -1,5 +1,5 @@
 """
-A customer's account
+A customer account
 """
 type Account implements Model & Node & Timestamped & Versioned
   @compositeKey(
@@ -7,13 +7,14 @@ type Account implements Model & Node & Timestamped & Versioned
     pkFields: ["vendor", "externalId"]
     skPrefix: "SUMMARY"
     skFields: []
-  )
-  @secondaryIndex(name: "lsi1", fields: ["createdAt"], prefix: "INSTANCE") {
+  ) {
   cancelled: Boolean
   createdAt: Date!
   effectiveDate: Date!
   externalId: String!
+  hasEverSubscribed: Boolean!
   id: ID!
+  lastPlanName: PlanName
   onFreeTrial: Boolean
   planName: PlanName
   updatedAt: Date!

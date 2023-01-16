@@ -8,6 +8,8 @@ Globals:
   Function:
     Environment:
       Variables:
+        TABLE_ACCOUNT:
+          Ref: TableAccount
         TABLE_APPLICATION_DATA:
           Ref: TableApplicationData
         TABLE_USER_SESSIONS:
@@ -18,6 +20,15 @@ Globals:
     Timeout: 30
     Tracing: Active
 Outputs:
+  TableAccount:
+    Description: The name of the DynamoDB table for TableAccount
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-TableAccount
+      Value:
+        Ref: TableAccount
+    Value:
+      Ref: TableAccount
   TableApplicationData:
     Description: The name of the DynamoDB table for TableApplicationData
     Export:
@@ -46,6 +57,38 @@ Parameters:
     Description: The name of the stage
     Type: String
 Resources:
+  TableAccount:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled:
+          Fn::If:
+            - IsProd
+            - true
+            - false
+      SSESpecification:
+        SSEEnabled:
+          Fn::If:
+            - IsProd
+            - true
+            - false
+      Tags:
+        - Key: StageName
+          Value:
+            Ref: StageName
+        - Key: TableName
+          Value: TableAccount
+    Type: AWS::DynamoDB::Table
   TableApplicationData:
     Properties:
       AttributeDefinitions:

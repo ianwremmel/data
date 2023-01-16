@@ -52,6 +52,26 @@ export interface Scalars {
   JSONObject: Record<string, unknown>;
 }
 
+/** A customer account */
+export type Account = Model &
+  Node &
+  Timestamped &
+  Versioned & {
+    __typename?: 'Account';
+    cancelled?: Maybe<Scalars['Boolean']>;
+    createdAt: Scalars['Date'];
+    effectiveDate: Scalars['Date'];
+    externalId: Scalars['String'];
+    hasEverSubscribed: Scalars['Boolean'];
+    id: Scalars['ID'];
+    lastPlanName?: Maybe<PlanName>;
+    onFreeTrial?: Maybe<Scalars['Boolean']>;
+    planName?: Maybe<PlanName>;
+    updatedAt: Scalars['Date'];
+    vendor: Vendor;
+    version: Scalars['Int'];
+  };
+
 /** CDC Event Types */
 export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
@@ -75,6 +95,9 @@ export interface Model {
 export interface Node {
   id: Scalars['ID'];
 }
+
+/** The available plans. */
+export type PlanName = 'ENTERPRISE' | 'OPEN_SOURCE' | 'SMALL_TEAM';
 
 /**
  * Like Model, but includes a `publicId` field which, unlike `id`, is semantically
@@ -164,8 +187,8 @@ export type UserSession = Model &
     version: Scalars['Int'];
   };
 
-/** Supported Vendors */
-export type Vendor = 'GITHUB';
+/** Indicates which third-party this record came from. */
+export type Vendor = 'AZURE_DEV_OPS' | 'GITHUB' | 'GITLAB';
 
 /**
  * Automatically adds a column to enable optimistic locking. This field shouldn't
@@ -174,6 +197,698 @@ export type Vendor = 'GITHUB';
  */
 export interface Versioned {
   version: Scalars['Int'];
+}
+
+export interface AccountPrimaryKey {
+  externalId: Scalars['String'];
+  vendor: Vendor;
+}
+
+export type CreateAccountInput = Omit<
+  Account,
+  'createdAt' | 'id' | 'updatedAt' | 'version'
+>;
+export type CreateAccountOutput = ResultType<Account>;
+/**  */
+export async function createAccount(
+  input: Readonly<CreateAccountInput>
+): Promise<Readonly<CreateAccountOutput>> {
+  const tableName = process.env.TABLE_ACCOUNT;
+  assert(tableName, 'TABLE_ACCOUNT is not set');
+
+  const now = new Date();
+
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallAccount(input, now);
+
+  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+  // cannot return the newly written values.
+  const commandInput: UpdateCommandInput = {
+    ConditionExpression: 'attribute_not_exists(#pk)',
+    ExpressionAttributeNames: {
+      ...ExpressionAttributeNames,
+      '#createdAt': '_ct',
+    },
+    ExpressionAttributeValues: {
+      ...ExpressionAttributeValues,
+      ':createdAt': now.getTime(),
+    },
+    Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+  };
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'Account',
+    () =>
+      new DataIntegrityError(
+        `Expected to write Account but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallAccount(item),
+    metrics,
+  };
+}
+
+export type BlindWriteAccountInput = Omit<
+  Account,
+  'createdAt' | 'id' | 'updatedAt' | 'version'
+>;
+export type BlindWriteAccountOutput = ResultType<Account>;
+/** */
+export async function blindWriteAccount(
+  input: Readonly<BlindWriteAccountInput>
+): Promise<Readonly<BlindWriteAccountOutput>> {
+  const tableName = process.env.TABLE_ACCOUNT;
+  assert(tableName, 'TABLE_ACCOUNT is not set');
+  const now = new Date();
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallAccount(input, now);
+
+  delete ExpressionAttributeNames['#pk'];
+  delete ExpressionAttributeValues[':version'];
+
+  const ean = {
+    ...ExpressionAttributeNames,
+    '#createdAt': '_ct',
+  };
+  const eav = {
+    ...ExpressionAttributeValues,
+    ':one': 1,
+    ':createdAt': now.getTime(),
+  };
+  const ue = `${[
+    ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
+    '#createdAt = if_not_exists(#createdAt, :createdAt)',
+  ].join(', ')} ADD #version :one`;
+
+  const commandInput: UpdateCommandInput = {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+    ReturnConsumedCapacity: 'INDEXES',
+    ReturnItemCollectionMetrics: 'SIZE',
+    ReturnValues: 'ALL_NEW',
+    TableName: tableName,
+    UpdateExpression: ue,
+  };
+
+  const {
+    ConsumedCapacity: capacity,
+    ItemCollectionMetrics: metrics,
+    Attributes: item,
+  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(
+    item._et === 'Account',
+    () =>
+      new DataIntegrityError(
+        `Expected to write Account but wrote ${item?._et} instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallAccount(item),
+    metrics,
+  };
+}
+
+export type DeleteAccountOutput = ResultType<void>;
+
+/**  */
+export async function deleteAccount(
+  input: AccountPrimaryKey
+): Promise<DeleteAccountOutput> {
+  const tableName = process.env.TABLE_ACCOUNT;
+  assert(tableName, 'TABLE_ACCOUNT is not set');
+
+  try {
+    const commandInput: DeleteCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+      },
+      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'NONE',
+      TableName: tableName,
+    };
+
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
+      await ddbDocClient.send(new DeleteCommand(commandInput));
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
+    return {
+      capacity,
+      item: undefined,
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new NotFoundError('Account', input);
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
+}
+
+export type ReadAccountOutput = ResultType<Account>;
+
+/**  */
+export async function readAccount(
+  input: AccountPrimaryKey
+): Promise<Readonly<ReadAccountOutput>> {
+  const tableName = process.env.TABLE_ACCOUNT;
+  assert(tableName, 'TABLE_ACCOUNT is not set');
+
+  const commandInput: GetCommandInput = {
+    ConsistentRead: false,
+    Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+    ReturnConsumedCapacity: 'INDEXES',
+    TableName: tableName,
+  };
+
+  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+    new GetCommand(commandInput)
+  );
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  assert(item, () => new NotFoundError('Account', input));
+  assert(
+    item._et === 'Account',
+    () =>
+      new DataIntegrityError(
+        `Expected ${JSON.stringify(input)} to load a Account but loaded ${
+          item._et
+        } instead`
+      )
+  );
+
+  return {
+    capacity,
+    item: unmarshallAccount(item),
+    metrics: undefined,
+  };
+}
+
+export type TouchAccountOutput = ResultType<void>;
+
+/**  */
+export async function touchAccount(
+  input: AccountPrimaryKey
+): Promise<TouchAccountOutput> {
+  const tableName = process.env.TABLE_ACCOUNT;
+  assert(tableName, 'TABLE_ACCOUNT is not set');
+  try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_exists(#pk)',
+      ExpressionAttributeNames: {
+        '#pk': 'pk',
+        '#version': '_v',
+      },
+      ExpressionAttributeValues: {
+        ':versionInc': 1,
+      },
+      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: 'SET #version = #version + :versionInc',
+    };
+
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
+      await ddbDocClient.send(new UpdateCommand(commandInput));
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
+    return {
+      capacity,
+      item: undefined,
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new NotFoundError('Account', input);
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
+}
+
+export type UpdateAccountInput = Omit<
+  Account,
+  'createdAt' | 'id' | 'updatedAt'
+>;
+export type UpdateAccountOutput = ResultType<Account>;
+
+/**  */
+export async function updateAccount(
+  input: Readonly<UpdateAccountInput>
+): Promise<Readonly<UpdateAccountOutput>> {
+  const tableName = process.env.TABLE_ACCOUNT;
+  assert(tableName, 'TABLE_ACCOUNT is not set');
+  const {
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    UpdateExpression,
+  } = marshallAccount(input);
+  try {
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression:
+        '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+      ExpressionAttributeNames,
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':previousVersion': input.version,
+      },
+      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression,
+    };
+
+    const {
+      Attributes: item,
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
+
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
+
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'Account',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify({
+            externalId: input.externalId,
+            vendor: input.vendor,
+          })} to update a Account but updated ${item._et} instead`
+        )
+    );
+
+    return {
+      capacity,
+      item: unmarshallAccount(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      try {
+        await readAccount(input);
+      } catch {
+        throw new NotFoundError('Account', {
+          externalId: input.externalId,
+          vendor: input.vendor,
+        });
+      }
+      throw new OptimisticLockingError('Account', {
+        externalId: input.externalId,
+        vendor: input.vendor,
+      });
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
+}
+
+export interface QueryAccountInput {
+  externalId: Scalars['String'];
+  vendor: Vendor;
+}
+export type QueryAccountOutput = MultiResultType<Account>;
+
+/** helper */
+function makeEanForQueryAccount(
+  input: QueryAccountInput
+): Record<string, string> {
+  if ('index' in input) {
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {'#pk': 'pk', '#sk': 'sk'};
+  }
+}
+
+/** helper */
+function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
+  if ('index' in input) {
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return {
+      ':pk': `ACCOUNT#${input.vendor}#${input.externalId}`,
+      ':sk': ['SUMMARY'].filter(Boolean).join('#'),
+    };
+  }
+}
+
+/** helper */
+function makeKceForQueryAccount(
+  input: QueryAccountInput,
+  {operator}: Pick<QueryOptions, 'operator'>
+): string {
+  if ('index' in input) {
+    throw new Error(
+      'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
+    );
+  } else {
+    return `#pk = :pk AND ${
+      operator === 'begins_with'
+        ? 'begins_with(#sk, :sk)'
+        : `#sk ${operator} :sk`
+    }`;
+  }
+}
+
+/** queryAccount */
+export async function queryAccount(
+  input: Readonly<QueryAccountInput>,
+  {
+    limit = undefined,
+    nextToken,
+    operator = 'begins_with',
+    reverse = false,
+  }: QueryOptions = {}
+): Promise<Readonly<QueryAccountOutput>> {
+  const tableName = process.env.TABLE_ACCOUNT;
+  assert(tableName, 'TABLE_ACCOUNT is not set');
+
+  const ExpressionAttributeNames = makeEanForQueryAccount(input);
+  const ExpressionAttributeValues = makeEavForQueryAccount(input);
+  const KeyConditionExpression = makeKceForQueryAccount(input, {operator});
+
+  const commandInput: QueryCommandInput = {
+    ConsistentRead: false,
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
+    ExclusiveStartKey: nextToken,
+    IndexName: undefined,
+    KeyConditionExpression,
+    Limit: limit,
+    ReturnConsumedCapacity: 'INDEXES',
+    ScanIndexForward: !reverse,
+    TableName: tableName,
+  };
+
+  const {
+    ConsumedCapacity: capacity,
+    Items: items = [],
+    LastEvaluatedKey: lastEvaluatedKey,
+  } = await ddbDocClient.send(new QueryCommand(commandInput));
+
+  assert(
+    capacity,
+    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+  );
+
+  return {
+    capacity,
+    hasNextPage: !!lastEvaluatedKey,
+    items: items.map((item) => {
+      assert(item._et === 'Account', () => new DataIntegrityError('TODO'));
+      return unmarshallAccount(item);
+    }),
+    nextToken: lastEvaluatedKey,
+  };
+}
+
+/** queries the Account table by primary key using a node id */
+export async function queryAccountByNodeId(
+  id: Scalars['ID']
+): Promise<Readonly<Omit<ResultType<Account>, 'metrics'>>> {
+  const primaryKeyValues = Base64.decode(id)
+    .split(':')
+    .slice(1)
+    .join(':')
+    .split('#');
+
+  const primaryKey: QueryAccountInput = {
+    vendor: primaryKeyValues[1] as Vendor,
+    externalId: primaryKeyValues[2],
+  };
+
+  const {capacity, items} = await queryAccount(primaryKey);
+
+  assert(items.length > 0, () => new NotFoundError('Account', primaryKey));
+  assert(
+    items.length < 2,
+    () => new DataIntegrityError(`Found multiple Account with id ${id}`)
+  );
+
+  return {capacity, item: items[0]};
+}
+
+export interface MarshallAccountOutput {
+  ExpressionAttributeNames: Record<string, string>;
+  ExpressionAttributeValues: Record<string, NativeAttributeValue>;
+  UpdateExpression: string;
+}
+
+export type MarshallAccountInput = Required<
+  Pick<Account, 'effectiveDate' | 'externalId' | 'hasEverSubscribed' | 'vendor'>
+> &
+  Partial<
+    Pick<
+      Account,
+      'cancelled' | 'lastPlanName' | 'onFreeTrial' | 'planName' | 'version'
+    >
+  >;
+
+/** Marshalls a DynamoDB record into a Account object */
+export function marshallAccount(
+  _input: MarshallAccountInput,
+  now = new Date()
+): MarshallAccountOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
+  const updateExpression: string[] = [
+    '#entity = :entity',
+    '#effectiveDate = :effectiveDate',
+    '#externalId = :externalId',
+    '#hasEverSubscribed = :hasEverSubscribed',
+    '#updatedAt = :updatedAt',
+    '#vendor = :vendor',
+    '#version = :version',
+  ];
+
+  const ean: Record<string, string> = {
+    '#entity': '_et',
+    '#pk': 'pk',
+    '#effectiveDate': 'effective_date',
+    '#externalId': 'external_id',
+    '#hasEverSubscribed': 'has_ever_subscribed',
+    '#updatedAt': '_md',
+    '#vendor': 'vendor',
+    '#version': '_v',
+  };
+
+  const eav: Record<string, unknown> = {
+    ':entity': 'Account',
+    ':effectiveDate': input.effectiveDate.getTime(),
+    ':externalId': input.externalId,
+    ':hasEverSubscribed': input.hasEverSubscribed,
+    ':vendor': input.vendor,
+    ':updatedAt': now.getTime(),
+    ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
+  };
+
+  if ('cancelled' in input && typeof input.cancelled !== 'undefined') {
+    ean['#cancelled'] = 'cancelled';
+    eav[':cancelled'] = input.cancelled;
+    updateExpression.push('#cancelled = :cancelled');
+  }
+
+  if ('lastPlanName' in input && typeof input.lastPlanName !== 'undefined') {
+    ean['#lastPlanName'] = 'last_plan_name';
+    eav[':lastPlanName'] = input.lastPlanName;
+    updateExpression.push('#lastPlanName = :lastPlanName');
+  }
+
+  if ('onFreeTrial' in input && typeof input.onFreeTrial !== 'undefined') {
+    ean['#onFreeTrial'] = 'on_free_trial';
+    eav[':onFreeTrial'] = input.onFreeTrial;
+    updateExpression.push('#onFreeTrial = :onFreeTrial');
+  }
+
+  if ('planName' in input && typeof input.planName !== 'undefined') {
+    ean['#planName'] = 'plan_name';
+    eav[':planName'] = input.planName;
+    updateExpression.push('#planName = :planName');
+  }
+  updateExpression.sort();
+
+  return {
+    ExpressionAttributeNames: ean,
+    ExpressionAttributeValues: eav,
+    UpdateExpression: `SET ${updateExpression.join(', ')}`,
+  };
+}
+
+/** Unmarshalls a DynamoDB record into a Account object */
+export function unmarshallAccount(item: Record<string, any>): Account {
+  assert(
+    item._ct !== null,
+    () => new DataIntegrityError('Expected createdAt to be non-null')
+  );
+  assert(
+    typeof item._ct !== 'undefined',
+    () => new DataIntegrityError('Expected createdAt to be defined')
+  );
+
+  assert(
+    item.effective_date !== null,
+    () => new DataIntegrityError('Expected effectiveDate to be non-null')
+  );
+  assert(
+    typeof item.effective_date !== 'undefined',
+    () => new DataIntegrityError('Expected effectiveDate to be defined')
+  );
+
+  assert(
+    item.external_id !== null,
+    () => new DataIntegrityError('Expected externalId to be non-null')
+  );
+  assert(
+    typeof item.external_id !== 'undefined',
+    () => new DataIntegrityError('Expected externalId to be defined')
+  );
+
+  assert(
+    item.has_ever_subscribed !== null,
+    () => new DataIntegrityError('Expected hasEverSubscribed to be non-null')
+  );
+  assert(
+    typeof item.has_ever_subscribed !== 'undefined',
+    () => new DataIntegrityError('Expected hasEverSubscribed to be defined')
+  );
+
+  assert(
+    item._md !== null,
+    () => new DataIntegrityError('Expected updatedAt to be non-null')
+  );
+  assert(
+    typeof item._md !== 'undefined',
+    () => new DataIntegrityError('Expected updatedAt to be defined')
+  );
+
+  assert(
+    item.vendor !== null,
+    () => new DataIntegrityError('Expected vendor to be non-null')
+  );
+  assert(
+    typeof item.vendor !== 'undefined',
+    () => new DataIntegrityError('Expected vendor to be defined')
+  );
+
+  assert(
+    item._v !== null,
+    () => new DataIntegrityError('Expected version to be non-null')
+  );
+  assert(
+    typeof item._v !== 'undefined',
+    () => new DataIntegrityError('Expected version to be defined')
+  );
+
+  let result: Account = {
+    createdAt: new Date(item._ct),
+    effectiveDate: new Date(item.effective_date),
+    externalId: item.external_id,
+    hasEverSubscribed: item.has_ever_subscribed,
+    id: Base64.encode(`Account:${item.pk}#:#${item.sk}`),
+    updatedAt: new Date(item._md),
+    vendor: item.vendor,
+    version: item._v,
+  };
+
+  if ('cancelled' in item) {
+    result = {
+      ...result,
+      cancelled: item.cancelled,
+    };
+  }
+
+  if ('last_plan_name' in item) {
+    result = {
+      ...result,
+      lastPlanName: item.last_plan_name,
+    };
+  }
+
+  if ('on_free_trial' in item) {
+    result = {
+      ...result,
+      onFreeTrial: item.on_free_trial,
+    };
+  }
+
+  if ('plan_name' in item) {
+    result = {
+      ...result,
+      planName: item.plan_name,
+    };
+  }
+
+  return result;
 }
 
 export interface RepositoryPrimaryKey {
