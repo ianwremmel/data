@@ -1,6 +1,10 @@
+import assert from 'assert';
+
 import {faker} from '@faker-js/faker';
 import {NotFoundError, OptimisticLockingError} from '@ianwremmel/data';
 import Base64 from 'base64url';
+
+import {load} from '../test-helpers';
 
 import {
   blindWriteUserSession,
@@ -70,6 +74,16 @@ describe('createUserSession()', () => {
     expect(result.item.expires.getTime()).not.toBeNaN();
     expect(result.item.updatedAt.getTime()).not.toBeNaN();
 
+    const tableName = process.env.TABLE_USER_SESSION;
+    assert(tableName, 'TABLE_USER_SESSION is not set');
+
+    const raw = await load({
+      pk: `USER_SESSION#${result.item.sessionId}`,
+      tableName,
+    });
+
+    expect(raw.Item?.ttl * 1000).toBeCloseTo(result.item.expires.getTime(), -4);
+
     // cleanup, not part of test
     await deleteUserSession(result.item);
   });
@@ -85,7 +99,7 @@ describe('createUserSession()', () => {
 
     expect(result.item.expires.getTime()).not.toBeNaN();
 
-    expect(result.item.expires).toStrictEqual(expires);
+    expect(result.item.expires.getTime()).toBeCloseTo(expires.getTime(), -4);
 
     // cleanup, not part of test
     await deleteUserSession(result.item);
@@ -173,7 +187,8 @@ describe('blindWriteUserSession()', () => {
 
     expect(result.item.expires.getTime()).not.toBeNaN();
 
-    expect(result.item.expires).toStrictEqual(expires);
+    expect(result.item.expires.getTime()).toBeCloseTo(expires.getTime(), -4);
+
     expect(result.item.version).toBe(1);
 
     // cleanup, not part of test
@@ -338,11 +353,17 @@ describe('blindWriteUserSession()', () => {
       session: {foo: 'bar'},
     });
 
-    expect(updateResult.item.expires).toStrictEqual(expires);
+    expect(updateResult.item.expires.getTime()).toBeCloseTo(
+      expires.getTime(),
+      -4
+    );
     expect(updateResult.item.version).toBe(2);
 
     const readResult = await readUserSession(createResult.item);
-    expect(readResult.item.expires).toStrictEqual(expires);
+    expect(readResult.item.expires.getTime()).toBeCloseTo(
+      expires.getTime(),
+      -4
+    );
 
     // cleanup, not part of test
     await deleteUserSession(createResult.item);
@@ -697,10 +718,16 @@ describe('updateUserSession()', () => {
       session: {foo: 'bar'},
     });
 
-    expect(updateResult.item.expires).toStrictEqual(expires);
+    expect(updateResult.item.expires.getTime()).toBeCloseTo(
+      expires.getTime(),
+      -4
+    );
 
     const readResult = await readUserSession(createResult.item);
-    expect(readResult.item.expires).toStrictEqual(expires);
+    expect(readResult.item.expires.getTime()).toBeCloseTo(
+      expires.getTime(),
+      -4
+    );
 
     // cleanup, not part of test
     await deleteUserSession(createResult.item);

@@ -1,7 +1,5 @@
 import assert from 'assert';
 
-import type {GraphQLField} from 'graphql';
-
 import type {Field} from '../../../parser';
 
 /** Gets the TypeScript type for that corresponds to the field. */
@@ -28,21 +26,27 @@ export function getTypeScriptTypeForField({
 /**
  * Marshalls the specified field value for use with ddb.
  */
-export function marshallField(fieldName: string, isDate: boolean): string {
-  return isDate ? `input.${fieldName}.getTime()` : `input.${fieldName}`;
+export function marshallField({
+  columnName,
+  fieldName,
+  isDateType,
+}: Field): string {
+  if (columnName === 'ttl') {
+    return `Math.floor(input.${fieldName}.getTime()/1000)`;
+  }
+  return isDateType ? `input.${fieldName}.getTime()` : `input.${fieldName}`;
 }
 
 /** Generates the template for producing the desired primary key or index column */
 export function makeKeyTemplate(
   prefix: string | undefined,
-  fields: readonly GraphQLField<unknown, unknown>[] | readonly Field[],
+  fields: readonly Field[],
   mode: 'blind' | 'create' | 'read'
 ): string {
   return [
     prefix,
     ...fields.map((field) => {
-      const fieldName = 'fieldName' in field ? field.fieldName : field.name;
-      const isDateType = 'isDateType' in field ? field.isDateType : false;
+      const {fieldName} = field;
       if (fieldName === 'createdAt') {
         if (mode === 'blind') {
           return "'createdAt' in input ? input.createdAt.getTime() : now.getTime()";
@@ -62,7 +66,7 @@ export function makeKeyTemplate(
         // eslint-disable-next-line no-template-curly-in-string
         return '${now.getTime()}';
       }
-      return `\${${marshallField(fieldName, isDateType)}}`;
+      return `\${${marshallField(field)}}`;
     }),
   ]
     .filter(Boolean)
@@ -84,6 +88,11 @@ export function unmarshallField({
   isRequired,
 }: Field) {
   let out = `item.${columnName}`;
+
+  if (columnName === 'ttl') {
+    out = `${out} * 1000`;
+  }
+
   if (isDateType) {
     if (isRequired) {
       out = `new Date(${out})`;
