@@ -523,9 +523,13 @@ export type MarshallUserSessionInput = Required<
 
 /** Marshalls a DynamoDB record into a UserSession object */
 export function marshallUserSession(
-  input: MarshallUserSessionInput,
+  _input: MarshallUserSessionInput,
   now = new Date()
 ): MarshallUserSessionOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#session = :session',

@@ -957,9 +957,13 @@ export type MarshallCaseInstanceInput = Required<
 
 /** Marshalls a DynamoDB record into a CaseInstance object */
 export function marshallCaseInstance(
-  input: MarshallCaseInstanceInput,
+  _input: MarshallCaseInstanceInput,
   now = new Date()
 ): MarshallCaseInstanceOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#branchName = :branchName',
@@ -1804,9 +1808,13 @@ export type MarshallCaseSummaryInput = Required<
 
 /** Marshalls a DynamoDB record into a CaseSummary object */
 export function marshallCaseSummary(
-  input: MarshallCaseSummaryInput,
+  _input: MarshallCaseSummaryInput,
   now = new Date()
 ): MarshallCaseSummaryOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#branchName = :branchName',
@@ -2584,9 +2592,13 @@ export type MarshallFileTimingInput = Required<
 
 /** Marshalls a DynamoDB record into a FileTiming object */
 export function marshallFileTiming(
-  input: MarshallFileTimingInput,
+  _input: MarshallFileTimingInput,
   now = new Date()
 ): MarshallFileTimingOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#branchName = :branchName',

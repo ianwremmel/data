@@ -726,9 +726,13 @@ export type MarshallAccountInput = Required<
 
 /** Marshalls a DynamoDB record into a Account object */
 export function marshallAccount(
-  input: MarshallAccountInput,
+  _input: MarshallAccountInput,
   now = new Date()
 ): MarshallAccountOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#effectiveDate = :effectiveDate',
@@ -1435,9 +1439,13 @@ export type MarshallScheduledEmailInput = Required<
 
 /** Marshalls a DynamoDB record into a ScheduledEmail object */
 export function marshallScheduledEmail(
-  input: MarshallScheduledEmailInput,
+  _input: MarshallScheduledEmailInput,
   now = new Date()
 ): MarshallScheduledEmailOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#externalId = :externalId',
@@ -2126,9 +2134,13 @@ export type MarshallSentEmailInput = Required<
 
 /** Marshalls a DynamoDB record into a SentEmail object */
 export function marshallSentEmail(
-  input: MarshallSentEmailInput,
+  _input: MarshallSentEmailInput,
   now = new Date()
 ): MarshallSentEmailOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#externalId = :externalId',
@@ -2795,9 +2807,13 @@ export type MarshallSubscriptionInput = Required<
 
 /** Marshalls a DynamoDB record into a Subscription object */
 export function marshallSubscription(
-  input: MarshallSubscriptionInput,
+  _input: MarshallSubscriptionInput,
   now = new Date()
 ): MarshallSubscriptionOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#effectiveDate = :effectiveDate',

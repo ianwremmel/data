@@ -66,7 +66,12 @@ export interface Marshall${typeName}Output {
 export type ${inputTypeName} = ${marshallType};
 
 /** Marshalls a DynamoDB record into a ${typeName} object */
-export function marshall${typeName}(input: ${inputTypeName}, now = new Date()): Marshall${typeName}Output {
+export function marshall${typeName}(_input: ${inputTypeName}, now = new Date()): Marshall${typeName}Output {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+  ${defineComputedFields(fields)}
+
   const updateExpression: string[] = [
   "#entity = :entity",
   ${requiredFields
@@ -239,4 +244,29 @@ function renderTTL(
   );
 
   return out;
+}
+
+/**
+ * Uses Object.defineProperty to add computed fields to `input` so that
+ * order-of-access doesn't matter.
+ */
+function defineComputedFields(fields: readonly Field[]) {
+  return fields
+    .filter(({computeFunction}) => !!computeFunction)
+    .map(({fieldName, computeFunction}) => {
+      return `
+        const ${fieldName}InitialValue = input.${fieldName};
+        let ${fieldName}ComputedValue: any;
+        Object.defineProperty(input, '${fieldName}', {
+          enumerable: true,
+          /** getter */
+          get() {
+            if (typeof ${fieldName}ComputedValue === 'undefined') {
+              ${fieldName}ComputedValue = ${computeFunction?.importName}(${fieldName}InitialValue, this);
+            }
+            return ${fieldName}ComputedValue;
+          }
+        })`;
+    })
+    .join('\n');
 }

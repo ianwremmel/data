@@ -29,4 +29,7 @@ type UserSession implements PublicModel & Model & Node & Timestamped & Versioned
   optionalField: String
 
   aliasedField: String @alias(name: "renamedField")
+
+  computedField: String
+    @computed(importName: "computeField", importPath: "../compute-functions")
 }

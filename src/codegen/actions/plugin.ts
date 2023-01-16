@@ -40,7 +40,7 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   info
 ) => {
   try {
-    const {dependenciesModuleId, tables, models} = parse(
+    const {additionalImports, dependenciesModuleId, tables, models} = parse(
       schema,
       documents,
       config,
@@ -74,7 +74,7 @@ ${models
       marshallTpl({table}),
       unmarshallTpl({table}),
     ]
-      .filter(Boolean)
+      .filter(filterNull)
       .join('\n\n');
   })
   .join('\n')}`;
@@ -111,6 +111,10 @@ ${models
         `import Base64 from 'base64url';`,
         `import {assert, DataIntegrityError, MultiResultType, NotFoundError, OptimisticLockingError, ResultType, QueryOptions, UnexpectedAwsError, UnexpectedError} from '${runtimeModuleId}';`,
         `import {${importFromDependencies}} from "${dependenciesModuleId}";`,
+        ...additionalImports.map(
+          ({importName, importPath}) =>
+            `import {${importName}} from '${importPath}';`
+        ),
       ],
     };
   } catch (err) {

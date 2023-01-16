@@ -705,9 +705,13 @@ export type MarshallUserLoginInput = Required<
 
 /** Marshalls a DynamoDB record into a UserLogin object */
 export function marshallUserLogin(
-  input: MarshallUserLoginInput,
+  _input: MarshallUserLoginInput,
   now = new Date()
 ): MarshallUserLoginOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#externalId = :externalId',

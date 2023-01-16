@@ -696,9 +696,13 @@ export type MarshallAccountInput = Required<
 
 /** Marshalls a DynamoDB record into a Account object */
 export function marshallAccount(
-  input: MarshallAccountInput,
+  _input: MarshallAccountInput,
   now = new Date()
 ): MarshallAccountOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#effectiveDate = :effectiveDate',
@@ -1125,9 +1129,13 @@ export type MarshallSubscriptionInput = Required<
 
 /** Marshalls a DynamoDB record into a Subscription object */
 export function marshallSubscription(
-  input: MarshallSubscriptionInput,
+  _input: MarshallSubscriptionInput,
   now = new Date()
 ): MarshallSubscriptionOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#effectiveDate = :effectiveDate',
