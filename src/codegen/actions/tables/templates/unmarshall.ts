@@ -1,6 +1,6 @@
-import type {Model} from '../../../parser';
+import type {Field, Model} from '../../../parser';
 
-import {unmarshallField} from './helpers';
+import {unmarshallField, unmarshallFieldValue} from './helpers';
 
 export const DIVIDER = '#:#';
 
@@ -64,7 +64,38 @@ ${optionalFields
   )
   .join('\n')}
 
+  ${defineComputedFields(fields)}
+
   return result;
 }
 `;
+}
+
+/**
+ * Uses Object.defineProperty to add computes fields to the database result  so
+ * that order-of-access doesn't matter.
+ */
+function defineComputedFields(fields: readonly Field[]): string {
+  return fields
+    .filter(({computeFunction}) => !!computeFunction)
+    .map((field) => {
+      const {fieldName, computeFunction} = field;
+      return `
+      const ${fieldName}DatabaseValue = ${unmarshallFieldValue(field)};
+      let ${fieldName}ComputedValue: any;
+      Object.defineProperty(result, '${fieldName}', {
+          enumerable: true,
+          /** getter */
+          get() {
+            if (typeof ${fieldName}ComputedValue === 'undefined') {
+              ${fieldName}ComputedValue = ${
+        computeFunction?.importName
+      }(${fieldName}DatabaseValue, this);
+            }
+            return ${fieldName}ComputedValue;
+          }
+        })
+      `;
+    })
+    .join('\n');
 }

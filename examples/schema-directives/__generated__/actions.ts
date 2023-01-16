@@ -1707,5 +1707,21 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
     };
   }
 
+  const computedFieldDatabaseValue = item.computed_field;
+  let computedFieldComputedValue: any;
+  Object.defineProperty(result, 'computedField', {
+    enumerable: true,
+    /** getter */
+    get() {
+      if (typeof computedFieldComputedValue === 'undefined') {
+        computedFieldComputedValue = computeField(
+          computedFieldDatabaseValue,
+          this
+        );
+      }
+      return computedFieldComputedValue;
+    },
+  });
+
   return result;
 }
