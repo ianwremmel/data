@@ -1,10 +1,10 @@
 import assert from 'assert';
 
-import {GetCommand} from '@aws-sdk/lib-dynamodb';
+import {UpdateCommand, GetCommand} from '@aws-sdk/lib-dynamodb';
 import {faker} from '@faker-js/faker';
 import Base64 from 'base64url';
 
-import {ddbDocClient} from '../dependencies';
+import {ddbDocClient, idGenerator} from '../dependencies';
 import {load} from '../test-helpers';
 
 import {
@@ -404,6 +404,57 @@ describe('@computed', () => {
       );
     } finally {
       await deleteUserSession(createResult.item);
+    }
+  });
+
+  it("computes a field's value on read", async () => {
+    const sessionId = faker.datatype.uuid();
+
+    const tableName = process.env.TABLE_USER_SESSIONS;
+    assert(tableName, 'TABLE_USER_SESSIONS is not set');
+    const now = new Date();
+
+    await ddbDocClient.send(
+      new UpdateCommand({
+        ConditionExpression: 'attribute_not_exists(#pk)',
+        ExpressionAttributeNames: {
+          '#createdAt': '_ct',
+          '#entity': '_et',
+          '#expires': 'ttl',
+          '#pk': 'pk',
+          '#publicId': 'publicId',
+          '#session': 'session',
+          '#sessionId': 'session_id',
+          '#updatedAt': '_md',
+          '#version': '_v',
+        },
+        ExpressionAttributeValues: {
+          ':createdAt': now.getTime(),
+          ':entity': 'UserSession',
+          ':expires': now.getTime() + 1000 * 60 * 60 * 24 * 30,
+          ':publicId': idGenerator(),
+          ':session': {foo: 'foo'},
+          ':sessionId': sessionId,
+          ':updatedAt': now.getTime(),
+          ':version': 0,
+        },
+        Key: {pk: `USER_SESSION#${sessionId}`},
+        ReturnConsumedCapacity: 'INDEXES',
+        ReturnItemCollectionMetrics: 'SIZE',
+        ReturnValues: 'ALL_NEW',
+        TableName: tableName,
+        UpdateExpression: `SET #entity = :entity, #expires = :expires, #session = :session, #sessionId = :sessionId, #updatedAt = :updatedAt, #version = :version, #createdAt = :createdAt, #publicId = :publicId`,
+      })
+    );
+
+    try {
+      const readResult = await readUserSession({sessionId});
+
+      expect(readResult.item.computedField).toMatchInlineSnapshot(
+        `"a computed value"`
+      );
+    } finally {
+      await deleteUserSession({sessionId});
     }
   });
 });

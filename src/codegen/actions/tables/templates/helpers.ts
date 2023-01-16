@@ -82,12 +82,11 @@ export function objectToString(obj: Record<string, string>): string {
 /**
  * Helper function for building a field unmarshaller
  */
-export function unmarshallField({
+export function unmarshallFieldValue({
   columnName,
-  fieldName,
   isDateType,
   isRequired,
-}: Field) {
+}: Field): string {
   let out = `item.${columnName}`;
 
   if (columnName === 'ttl') {
@@ -101,6 +100,13 @@ export function unmarshallField({
       out = `${out} ? new Date(${out}) : null`;
     }
   }
+  return out;
+}
+/**
+ * Helper function for building a field unmarshaller
+ */
+export function unmarshallField(field: Field) {
+  const out = unmarshallFieldValue(field);
 
-  return `${fieldName}: ${out}`;
+  return `${field.fieldName}: ${out}`;
 }
