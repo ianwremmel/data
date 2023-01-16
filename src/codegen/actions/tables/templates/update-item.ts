@@ -1,3 +1,4 @@
+import {filterNull} from '../../../common/filters';
 import type {TTLConfig} from '../../../parser';
 
 import {ensureTableTemplate} from './ensure-table';
@@ -31,7 +32,7 @@ export function updateItemTpl({
     hasPublicId && 'publicId',
     ttlConfig?.fieldName,
   ]
-    .filter(Boolean)
+    .filter(filterNull)
     .filter((fieldName) => !primaryKeyFields.includes(fieldName as string))
     .map((f) => `'${f}'`)
     .sort();
