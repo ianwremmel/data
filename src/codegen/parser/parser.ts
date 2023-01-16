@@ -10,6 +10,7 @@ import {
 } from 'graphql';
 import {snakeCase} from 'lodash';
 
+import {filterNull} from '../common/filters';
 import {resolveDependenciesModuleId} from '../common/paths';
 
 import {extractChangeDataCaptureConfig} from './extractors/cdc';
@@ -163,6 +164,9 @@ export function parse<T extends {dependenciesModuleId: string}>(
     });
 
   return {
+    additionalImports: models
+      .flatMap((model) => model.fields.map((field) => field.computeFunction))
+      .filter(filterNull),
     dependenciesModuleId,
     models,
     tables,
@@ -217,8 +221,16 @@ function extractFields(
   const fields = type.getFields();
   return Object.keys(fields).map((fieldName) => {
     const field = fields[fieldName];
+    const computed = getOptionalDirective('computed', field);
+    const importDetails = computed
+      ? {
+          importName: getArgStringValue('importName', computed),
+          importPath: getArgStringValue('importPath', computed),
+        }
+      : undefined;
     return {
       columnName: getAliasForField(field) ?? snakeCase(fieldName),
+      computeFunction: importDetails,
       ean: `:${fieldName}`,
       eav: `#${fieldName}`,
       fieldName,

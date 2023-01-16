@@ -29,6 +29,7 @@ import {
 import Base64 from 'base64url';
 
 import {ddbDocClient, idGenerator} from '../../dependencies';
+import {computeField} from '../compute-functions';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends {[key: string]: unknown}> = {[K in keyof T]: T[K]};
@@ -142,6 +143,7 @@ export type UserSession = Model &
   Versioned & {
     __typename?: 'UserSession';
     aliasedField?: Maybe<Scalars['String']>;
+    computedField?: Maybe<Scalars['String']>;
     createdAt: Scalars['Date'];
     expires?: Maybe<Scalars['Date']>;
     id: Scalars['ID'];
@@ -1516,14 +1518,37 @@ export type MarshallUserSessionInput = Required<
   Pick<UserSession, 'session' | 'sessionId'>
 > &
   Partial<
-    Pick<UserSession, 'aliasedField' | 'expires' | 'optionalField' | 'version'>
+    Pick<
+      UserSession,
+      'aliasedField' | 'computedField' | 'expires' | 'optionalField' | 'version'
+    >
   >;
 
 /** Marshalls a DynamoDB record into a UserSession object */
 export function marshallUserSession(
-  input: MarshallUserSessionInput,
+  _input: MarshallUserSessionInput,
   now = new Date()
 ): MarshallUserSessionOutput {
+  // Make a copy so that if we have to define fields, we don't modify the
+  // original input.
+  const input = {..._input};
+
+  const computedFieldInitialValue = input.computedField;
+  let computedFieldComputedValue: any;
+  Object.defineProperty(input, 'computedField', {
+    enumerable: true,
+    /** getter */
+    get() {
+      if (typeof computedFieldComputedValue === 'undefined') {
+        computedFieldComputedValue = computeField(
+          computedFieldInitialValue,
+          this
+        );
+      }
+      return computedFieldComputedValue;
+    },
+  });
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#session = :session',
@@ -1553,6 +1578,12 @@ export function marshallUserSession(
     ean['#aliasedField'] = 'renamedField';
     eav[':aliasedField'] = input.aliasedField;
     updateExpression.push('#aliasedField = :aliasedField');
+  }
+
+  if ('computedField' in input && typeof input.computedField !== 'undefined') {
+    ean['#computedField'] = 'computed_field';
+    eav[':computedField'] = input.computedField;
+    updateExpression.push('#computedField = :computedField');
   }
 
   if ('optionalField' in input && typeof input.optionalField !== 'undefined') {
@@ -1652,6 +1683,13 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
     result = {
       ...result,
       aliasedField: item.renamedField,
+    };
+  }
+
+  if ('computed_field' in item) {
+    result = {
+      ...result,
+      computedField: item.computed_field,
     };
   }
 

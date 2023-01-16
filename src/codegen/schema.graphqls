@@ -173,6 +173,14 @@ directive @table(
 ) on OBJECT
 
 """
+Computes the value of a field using the specified function.
+"""
+directive @computed(
+  importName: String!
+  importPath: String!
+) on FIELD_DEFINITION
+
+"""
 Indicates the field will be configured as the DynamoDB ttl field for this type.
 Always gets saved to a column named "ttl" to avoid conflicts in single-table
 entities that all might use different names

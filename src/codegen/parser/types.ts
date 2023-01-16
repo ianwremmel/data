@@ -1,7 +1,13 @@
 export interface IntermediateRepresentation {
   readonly dependenciesModuleId: string;
+  readonly additionalImports: readonly Import[];
   readonly models: readonly Model[];
   readonly tables: readonly Table[];
+}
+
+export interface Import {
+  readonly importName: string;
+  readonly importPath: string;
 }
 
 export interface Table {
@@ -47,6 +53,7 @@ export interface Model {
 
 export interface Field {
   readonly columnName: string;
+  readonly computeFunction: Import | undefined;
   readonly ean: string;
   readonly eav: string;
   readonly fieldName: string;

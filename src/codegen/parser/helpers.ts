@@ -122,11 +122,20 @@ export function getDirective(
 /** Gets the specified directive from the given field. */
 export function getOptionalDirective(
   name: string,
-  nodeOrType: FieldDefinitionNode | ObjectTypeDefinitionNode | GraphQLObjectType
+  nodeOrType:
+    | FieldDefinitionNode
+    | ObjectTypeDefinitionNode
+    | GraphQLObjectType
+    | GraphQLField<unknown, unknown>
 ): ConstDirectiveNode | undefined {
   if ('getFields' in nodeOrType) {
     assert(nodeOrType.astNode, 'Expected type to have an AST node');
     nodeOrType = nodeOrType.astNode;
+  }
+
+  if ('astNode' in nodeOrType) {
+    assert(nodeOrType.astNode);
+    return nodeOrType.astNode.directives?.find((d) => d.name.value === name);
   }
   return nodeOrType.directives?.find((d) => d.name.value === name);
 }

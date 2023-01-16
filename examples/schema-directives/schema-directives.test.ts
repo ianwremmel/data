@@ -5,6 +5,7 @@ import {faker} from '@faker-js/faker';
 import Base64 from 'base64url';
 
 import {ddbDocClient} from '../dependencies';
+import {load} from '../test-helpers';
 
 import {
   createRepository,
@@ -63,6 +64,7 @@ describe('optionalFields', () => {
             "WriteCapacityUnits": undefined,
           },
           "item": {
+            "computedField": "a computed value",
             "createdAt": Any<Date>,
             "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
             "publicId": Any<String>,
@@ -107,6 +109,7 @@ describe('optionalFields', () => {
             "WriteCapacityUnits": undefined,
           },
           "item": {
+            "computedField": "a computed value",
             "createdAt": Any<Date>,
             "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
             "publicId": Any<String>,
@@ -142,6 +145,7 @@ describe('optionalFields', () => {
             "WriteCapacityUnits": undefined,
           },
           "item": {
+            "computedField": "a computed value",
             "createdAt": Any<Date>,
             "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
             "publicId": Any<String>,
@@ -198,6 +202,7 @@ describe('optional ttl', () => {
           "WriteCapacityUnits": undefined,
         },
         "item": {
+          "computedField": "a computed value",
           "createdAt": Any<Date>,
           "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "publicId": Any<String>,
@@ -256,6 +261,7 @@ describe('optional ttl', () => {
           "WriteCapacityUnits": undefined,
         },
         "item": {
+          "computedField": "a computed value",
           "createdAt": Any<Date>,
           "expires": Any<Date>,
           "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
@@ -368,5 +374,36 @@ describe('@simpleIndex', () => {
 
     expect(queryResult.items).toHaveLength(1);
     expect(queryResult.items[0]).toStrictEqual(createResult.item);
+  });
+});
+
+describe('@computed', () => {
+  it("computes a field's value on write", async () => {
+    const createResult = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
+
+    try {
+      const tableName = process.env.TABLE_USER_SESSIONS;
+      assert(tableName, 'TABLE_USER_SESSIONS is not set');
+
+      const raw = await load({
+        pk: `USER_SESSION#${createResult.item.sessionId}`,
+        tableName,
+      });
+
+      expect(raw.Item?.computed_field).toMatchInlineSnapshot(
+        `"a computed value"`
+      );
+
+      const readResult = await readUserSession(createResult.item);
+
+      expect(readResult.item.computedField).toMatchInlineSnapshot(
+        `"a computed value"`
+      );
+    } finally {
+      await deleteUserSession(createResult.item);
+    }
   });
 });
