@@ -188,6 +188,13 @@ entities that all might use different names
 directive @ttl(duration: String) on FIELD_DEFINITION
 
 """
+Indicates this field should not be written to the database. Useful for scenarios
+where you want to use a field to compute a value, but don't want to store it in
+the database.
+"""
+directive @virtual on FIELD_DEFINITION
+
+"""
 Models are DynamoDB tables with a key schema that may or may not include a sort
 key. A Model must be decorated with either @partitionKey or @compositeKey.
 

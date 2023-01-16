@@ -19,10 +19,10 @@ export function marshallTpl({
 }: MarshallTplInput): string {
   const requiredFields = fields
     .filter((f) => f.isRequired && f.fieldName !== 'publicId')
-    .filter(({fieldName}) => fieldName !== 'id');
-  const optionalFields = fields.filter(
-    (f) => !f.isRequired && f.fieldName !== 'publicId'
-  );
+    .filter(({isVirtual}) => !isVirtual);
+  const optionalFields = fields
+    .filter((f) => !f.isRequired && f.fieldName !== 'publicId')
+    .filter(({isVirtual}) => !isVirtual);
 
   // These are fields that are required on the object but have overridable
   // default behaviors

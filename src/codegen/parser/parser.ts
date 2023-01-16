@@ -239,6 +239,7 @@ function extractFields(
       isScalarType: isNonNullType(field.type)
         ? isScalarType(field.type.ofType)
         : isScalarType(field.type),
+      isVirtual: fieldName === 'id' || hasDirective('virtual', field),
       typeName: isNonNullType(field.type)
         ? String(field.type.ofType)
         : field.type.name,

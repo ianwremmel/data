@@ -74,6 +74,7 @@ describe('optionalFields', () => {
             "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
             "updatedAt": Any<Date>,
             "version": 1,
+            "virtualComputedField": "a computed value",
           },
           "metrics": undefined,
         }
@@ -119,6 +120,7 @@ describe('optionalFields', () => {
             "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
             "updatedAt": Any<Date>,
             "version": 2,
+            "virtualComputedField": "a computed value",
           },
           "metrics": undefined,
         }
@@ -155,6 +157,7 @@ describe('optionalFields', () => {
             "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
             "updatedAt": Any<Date>,
             "version": 2,
+            "virtualComputedField": "a computed value",
           },
           "metrics": undefined,
         }
@@ -212,6 +215,7 @@ describe('optional ttl', () => {
           "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 1,
+          "virtualComputedField": "a computed value",
         },
         "metrics": undefined,
       }
@@ -272,6 +276,7 @@ describe('optional ttl', () => {
           "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
           "updatedAt": Any<Date>,
           "version": 1,
+          "virtualComputedField": "a computed value",
         },
         "metrics": undefined,
       }
@@ -455,6 +460,59 @@ describe('@computed', () => {
       );
     } finally {
       await deleteUserSession({sessionId});
+    }
+  });
+});
+
+describe('@computed @virtual', () => {
+  it('allows assigning a value without storing it', async () => {
+    const createResult = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
+
+    try {
+      const tableName = process.env.TABLE_USER_SESSIONS;
+      assert(tableName, 'TABLE_USER_SESSIONS is not set');
+
+      const raw = await load({
+        pk: `USER_SESSION#${createResult.item.sessionId}`,
+        tableName,
+      });
+
+      expect(raw.Item?.virtual_computed_field).toBeUndefined();
+      expect(raw.Item).toMatchInlineSnapshot(
+        {
+          _ct: expect.any(Number),
+          _md: expect.any(Number),
+          pk: expect.any(String),
+          publicId: expect.any(String),
+          session_id: expect.any(String),
+        },
+        `
+        {
+          "_ct": Any<Number>,
+          "_et": "UserSession",
+          "_md": Any<Number>,
+          "_v": 1,
+          "computed_field": "a computed value",
+          "pk": Any<String>,
+          "publicId": Any<String>,
+          "session": {
+            "foo": "foo",
+          },
+          "session_id": Any<String>,
+        }
+      `
+      );
+
+      const readResult = await readUserSession(createResult.item);
+
+      expect(readResult.item.virtualComputedField).toMatchInlineSnapshot(
+        `"a computed value"`
+      );
+    } finally {
+      await deleteUserSession(createResult.item);
     }
   });
 });

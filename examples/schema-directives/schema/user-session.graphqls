@@ -32,4 +32,8 @@ type UserSession implements PublicModel & Model & Node & Timestamped & Versioned
 
   computedField: String
     @computed(importName: "computeField", importPath: "../compute-functions")
+
+  virtualComputedField: String
+    @computed(importName: "computeField", importPath: "../compute-functions")
+    @virtual
 }

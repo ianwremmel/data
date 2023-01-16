@@ -60,6 +60,7 @@ export interface Field {
   readonly isDateType: boolean;
   readonly isRequired: boolean;
   readonly isScalarType: boolean;
+  readonly isVirtual: boolean;
   readonly typeName: string;
 }
 

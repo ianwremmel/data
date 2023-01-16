@@ -1,3 +1,5 @@
+import {isDataView} from 'util/types';
+
 import type {Field, Model} from '../../../parser';
 
 import {unmarshallField, unmarshallFieldValue} from './helpers';
@@ -20,8 +22,7 @@ export function unmarshallTpl({
 export function unmarshall${typeName}(item: Record<string, any>): ${typeName} {
 
 ${requiredFields
-  // id is a computed field and therefore never present in the DynamoDB record
-  .filter(({fieldName}) => fieldName !== 'id')
+  .filter(({isVirtual}) => !isVirtual)
   .map(({columnName, fieldName}) => {
     return `
   assert(
@@ -37,20 +38,26 @@ ${requiredFields
   .join('\n')}
 
   let result: ${typeName} = {
-${requiredFields.map((field) => {
-  // This isn't ideal, but it'll work for now. I need a better way to deal
-  // with simple primary keys and Nodes
-  if (field.fieldName === 'id') {
-    if (primaryKey.isComposite) {
-      return `id: Base64.encode(\`${typeName}:\${item.pk}${DIVIDER}\${item.sk}\`)`;
+${requiredFields
+  .map((field) => {
+    // This isn't ideal, but it'll work for now. I need a better way to deal
+    // with simple primary keys and Nodes
+    if (field.fieldName === 'id') {
+      if (primaryKey.isComposite) {
+        return `id: Base64.encode(\`${typeName}:\${item.pk}${DIVIDER}\${item.sk}\`)`;
+      }
+      return `id: Base64.encode(\`${typeName}:\${item.pk}\`)`;
     }
-    return `id: Base64.encode(\`${typeName}:\${item.pk}\`)`;
-  }
-  return unmarshallField(field);
-})}
+    if (field.isVirtual) {
+      return '';
+    }
+    return unmarshallField(field);
+  })
+  .join(',\n')}
   };
 
 ${optionalFields
+  .filter(({isVirtual}) => !isVirtual)
   .map(
     (field) =>
       `

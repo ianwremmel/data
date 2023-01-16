@@ -162,6 +162,7 @@ export type UserSession = Model &
     sessionId: Scalars['String'];
     updatedAt: Scalars['Date'];
     version: Scalars['Int'];
+    virtualComputedField?: Maybe<Scalars['String']>;
   };
 
 /**
@@ -1556,6 +1557,22 @@ export function marshallUserSession(
     },
   });
 
+  const virtualComputedFieldInitialValue = input.virtualComputedField;
+  let virtualComputedFieldComputedValue: any;
+  Object.defineProperty(input, 'virtualComputedField', {
+    enumerable: true,
+    /** getter */
+    get() {
+      if (typeof virtualComputedFieldComputedValue === 'undefined') {
+        virtualComputedFieldComputedValue = computeField(
+          virtualComputedFieldInitialValue,
+          this
+        );
+      }
+      return virtualComputedFieldComputedValue;
+    },
+  });
+
   const updateExpression: string[] = [
     '#entity = :entity',
     '#session = :session',
@@ -1727,6 +1744,22 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
         );
       }
       return computedFieldComputedValue;
+    },
+  });
+
+  const virtualComputedFieldDatabaseValue = item.virtual_computed_field;
+  let virtualComputedFieldComputedValue: any;
+  Object.defineProperty(result, 'virtualComputedField', {
+    enumerable: true,
+    /** getter */
+    get() {
+      if (typeof virtualComputedFieldComputedValue === 'undefined') {
+        virtualComputedFieldComputedValue = computeField(
+          virtualComputedFieldDatabaseValue,
+          this
+        );
+      }
+      return virtualComputedFieldComputedValue;
     },
   });
 
