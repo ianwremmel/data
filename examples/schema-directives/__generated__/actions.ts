@@ -773,7 +773,9 @@ export function marshallAccount(
 ): MarshallAccountOutput {
   // Make a copy so that if we have to define fields, we don't modify the
   // original input.
-  const input: VirtualMarshallAccountInput = {..._input};
+  const input: VirtualMarshallAccountInput = {
+    ..._input,
+  } as VirtualMarshallAccountInput;
 
   let indexedPlanNameComputed = false;
   let indexedPlanNameComputedValue: Account['indexedPlanName'];
@@ -2338,10 +2340,7 @@ export type MarshallUserSessionInput = Required<
   Pick<UserSession, 'session' | 'sessionId'>
 > &
   Partial<
-    Pick<
-      UserSession,
-      'aliasedField' | 'computedField' | 'expires' | 'optionalField' | 'version'
-    >
+    Pick<UserSession, 'aliasedField' | 'expires' | 'optionalField' | 'version'>
   >;
 
 /** Marshalls a DynamoDB record into a UserSession object */
