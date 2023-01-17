@@ -12,9 +12,11 @@ type Repository implements PublicModel & Model & Timestamped & Versioned
     name: "gsi1"
     pkFields: ["vendor", "organization"]
     pkPrefix: "REPOSITORY"
+    projection: KEYS_ONLY
     skFields: ["repo"]
     skPrefix: "REPOSITORY"
   )
+  @public(projection: KEYS_ONLY)
   @simpleIndex(field: "token")
   @table(enableStreaming: true, name: "TableApplicationData") {
   createdAt: Date!

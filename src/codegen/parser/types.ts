@@ -1,3 +1,19 @@
+export interface IntermediateRepresentation {
+  readonly dependenciesModuleId: string;
+  readonly additionalImports: readonly Import[];
+  readonly models: readonly Model[];
+  readonly tables: readonly Table[];
+}
+
+export interface Import {
+  readonly importName: string;
+  readonly importPath: string;
+}
+
+export interface ComputeFunction extends Import {
+  readonly isVirtual: boolean;
+}
+
 export interface Table {
   readonly dependenciesModuleId: string;
   readonly enablePointInTimeRecovery: boolean;
@@ -19,6 +35,7 @@ export interface TableSecondaryIndex {
   readonly isComposite: boolean;
   readonly isSingleField: boolean;
   readonly name: string;
+  readonly projectionType: 'all' | 'keys_only';
   readonly type: 'gsi' | 'lsi';
 }
 
@@ -41,6 +58,7 @@ export interface Model {
 
 export interface Field {
   readonly columnName: string;
+  readonly computeFunction: ComputeFunction | undefined;
   readonly ean: string;
   readonly eav: string;
   readonly fieldName: string;
@@ -84,6 +102,7 @@ export interface LegacyChangeDataCaptureConfig {
 export type GSI = {
   readonly isSingleField: boolean;
   readonly name: string;
+  readonly projectionType: 'all' | 'keys_only';
   readonly type: 'gsi';
 } & (PartitionKey | CompositeKey);
 
@@ -91,6 +110,7 @@ export interface LSI {
   readonly isComposite: true;
   readonly isSingleField: false;
   readonly name: string;
+  readonly projectionType: 'all' | 'keys_only';
   readonly type: 'lsi';
   readonly sortKeyFields: readonly Field[];
   readonly sortKeyPrefix?: string;

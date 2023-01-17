@@ -51,7 +51,7 @@ export interface Scalars {
   JSONObject: Record<string, unknown>;
 }
 
-/** An object to track a user's logins */
+/** A customer account */
 export type Account = Model &
   Node &
   Timestamped &
@@ -97,7 +97,13 @@ export interface Node {
 export type PlanName = 'ENTERPRISE' | 'OPEN_SOURCE' | 'SMALL_TEAM';
 
 /**
- * Like Model, but includes a `publicId` field which, unline `id`, is semantically
+ * INCLUDE is omitted at this time because it drastically complicates the schema
+ * DSL. If a use for it arises, it'll be revisited.
+ */
+export type ProjectionType = 'ALL' | 'KEYS_ONLY';
+
+/**
+ * Like Model, but includes a `publicId` field which, unlike `id`, is semantically
  * meaningless. Types implementing PublicModel will have an additional function,
  * `queryByPublicId`, generated. If any of your models implement PublicModel, then
  * the dependencies module must include an `idGenerator()`.
@@ -121,7 +127,7 @@ export interface QueryNodeArgs {
   id: Scalars['ID'];
 }
 
-/** Represents an email that is schedule to be sent to a user. */
+/** Represents an email that is scheduled to be sent to a user. */
 export type ScheduledEmail = Model &
   Timestamped &
   Versioned & {
@@ -151,7 +157,7 @@ export type SentEmail = Model &
     version: Scalars['Int'];
   };
 
-/** An object to track a user's logins */
+/** A particular subscription change for an account */
 export type Subscription = Model &
   Node &
   Timestamped &
@@ -1472,7 +1478,8 @@ export function marshallScheduledEmail(
       'sendAt was passed but is not a valid date'
     );
     ean['#sendAt'] = 'ttl';
-    eav[':sendAt'] = input.sendAt === null ? null : input.sendAt.getTime();
+    eav[':sendAt'] =
+      input.sendAt === null ? null : Math.floor(input.sendAt.getTime() / 1000);
     updateExpression.push('#sendAt = :sendAt');
   } else {
     ean['#sendAt'] = 'ttl';
@@ -1560,7 +1567,7 @@ export function unmarshallScheduledEmail(
   if ('ttl' in item) {
     result = {
       ...result,
-      sendAt: item.ttl ? new Date(item.ttl) : null,
+      sendAt: item.ttl * 1000 ? new Date(item.ttl * 1000) : null,
     };
   }
 

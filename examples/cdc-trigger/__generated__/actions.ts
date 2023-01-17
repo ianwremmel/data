@@ -78,7 +78,13 @@ export interface Node {
 }
 
 /**
- * Like Model, but includes a `publicId` field which, unline `id`, is semantically
+ * INCLUDE is omitted at this time because it drastically complicates the schema
+ * DSL. If a use for it arises, it'll be revisited.
+ */
+export type ProjectionType = 'ALL' | 'KEYS_ONLY';
+
+/**
+ * Like Model, but includes a `publicId` field which, unlike `id`, is semantically
  * meaningless. Types implementing PublicModel will have an additional function,
  * `queryByPublicId`, generated. If any of your models implement PublicModel, then
  * the dependencies module must include an `idGenerator()`.
@@ -557,7 +563,10 @@ export function marshallUserSession(
       'expires was passed but is not a valid date'
     );
     ean['#expires'] = 'ttl';
-    eav[':expires'] = input.expires === null ? null : input.expires.getTime();
+    eav[':expires'] =
+      input.expires === null
+        ? null
+        : Math.floor(input.expires.getTime() / 1000);
     updateExpression.push('#expires = :expires');
   } else {
     ean['#expires'] = 'ttl';
@@ -632,7 +641,7 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
 
   const result: UserSession = {
     createdAt: new Date(item._ct),
-    expires: new Date(item.ttl),
+    expires: new Date(item.ttl * 1000),
     id: Base64.encode(`UserSession:${item.pk}`),
     session: item.session,
     sessionId: item.session_id,

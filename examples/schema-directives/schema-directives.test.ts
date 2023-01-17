@@ -1,18 +1,22 @@
 import assert from 'assert';
 
-import {GetCommand} from '@aws-sdk/lib-dynamodb';
+import {UpdateCommand, GetCommand} from '@aws-sdk/lib-dynamodb';
 import {faker} from '@faker-js/faker';
 import Base64 from 'base64url';
 
-import {ddbDocClient} from '../dependencies';
+import {ddbDocClient, idGenerator} from '../dependencies';
+import {load} from '../test-helpers';
 
 import {
+  createAccount,
   createRepository,
   createUserSession,
+  deleteAccount,
   deleteUserSession,
   queryRepository,
   queryUserSessionByPublicId,
   readUserSession,
+  updateAccount,
   updateUserSession,
 } from './__generated__/actions';
 
@@ -63,6 +67,7 @@ describe('optionalFields', () => {
             "WriteCapacityUnits": undefined,
           },
           "item": {
+            "computedField": "a computed value",
             "createdAt": Any<Date>,
             "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
             "publicId": Any<String>,
@@ -107,6 +112,7 @@ describe('optionalFields', () => {
             "WriteCapacityUnits": undefined,
           },
           "item": {
+            "computedField": "a computed value",
             "createdAt": Any<Date>,
             "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
             "publicId": Any<String>,
@@ -142,6 +148,7 @@ describe('optionalFields', () => {
             "WriteCapacityUnits": undefined,
           },
           "item": {
+            "computedField": "a computed value",
             "createdAt": Any<Date>,
             "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
             "publicId": Any<String>,
@@ -198,6 +205,7 @@ describe('optional ttl', () => {
           "WriteCapacityUnits": undefined,
         },
         "item": {
+          "computedField": "a computed value",
           "createdAt": Any<Date>,
           "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
           "publicId": Any<String>,
@@ -256,6 +264,7 @@ describe('optional ttl', () => {
           "WriteCapacityUnits": undefined,
         },
         "item": {
+          "computedField": "a computed value",
           "createdAt": Any<Date>,
           "expires": Any<Date>,
           "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
@@ -368,5 +377,150 @@ describe('@simpleIndex', () => {
 
     expect(queryResult.items).toHaveLength(1);
     expect(queryResult.items[0]).toStrictEqual(createResult.item);
+  });
+});
+
+describe('@computed', () => {
+  it("computes a field's value on write", async () => {
+    const createResult = await createUserSession({
+      session: {foo: 'foo'},
+      sessionId: faker.datatype.uuid(),
+    });
+
+    try {
+      const tableName = process.env.TABLE_USER_SESSIONS;
+      assert(tableName, 'TABLE_USER_SESSIONS is not set');
+
+      const raw = await load({
+        pk: `USER_SESSION#${createResult.item.sessionId}`,
+        tableName,
+      });
+
+      expect(raw.Item?.computed_field).toMatchInlineSnapshot(
+        `"a computed value"`
+      );
+
+      const readResult = await readUserSession(createResult.item);
+
+      expect(readResult.item.computedField).toMatchInlineSnapshot(
+        `"a computed value"`
+      );
+    } finally {
+      await deleteUserSession(createResult.item);
+    }
+  });
+
+  it("computes a field's value on read", async () => {
+    const sessionId = faker.datatype.uuid();
+
+    const tableName = process.env.TABLE_USER_SESSIONS;
+    assert(tableName, 'TABLE_USER_SESSIONS is not set');
+    const now = new Date();
+
+    await ddbDocClient.send(
+      new UpdateCommand({
+        ConditionExpression: 'attribute_not_exists(#pk)',
+        ExpressionAttributeNames: {
+          '#createdAt': '_ct',
+          '#entity': '_et',
+          '#expires': 'ttl',
+          '#pk': 'pk',
+          '#publicId': 'publicId',
+          '#session': 'session',
+          '#sessionId': 'session_id',
+          '#updatedAt': '_md',
+          '#version': '_v',
+        },
+        ExpressionAttributeValues: {
+          ':createdAt': now.getTime(),
+          ':entity': 'UserSession',
+          ':expires': now.getTime() + 1000 * 60 * 60 * 24 * 30,
+          ':publicId': idGenerator(),
+          ':session': {foo: 'foo'},
+          ':sessionId': sessionId,
+          ':updatedAt': now.getTime(),
+          ':version': 0,
+        },
+        Key: {pk: `USER_SESSION#${sessionId}`},
+        ReturnConsumedCapacity: 'INDEXES',
+        ReturnItemCollectionMetrics: 'SIZE',
+        ReturnValues: 'ALL_NEW',
+        TableName: tableName,
+        UpdateExpression: `SET #entity = :entity, #expires = :expires, #session = :session, #sessionId = :sessionId, #updatedAt = :updatedAt, #version = :version, #createdAt = :createdAt, #publicId = :publicId`,
+      })
+    );
+
+    try {
+      const readResult = await readUserSession({sessionId});
+
+      expect(readResult.item.computedField).toMatchInlineSnapshot(
+        `"a computed value"`
+      );
+    } finally {
+      await deleteUserSession({sessionId});
+    }
+  });
+
+  it('uses a virtual fields to support indexes without writing them to the database', async () => {
+    const createResult = await createAccount({
+      cancelled: false,
+      effectiveDate: faker.date.past(),
+      externalId: String(faker.datatype.number()),
+      hasEverSubscribed: true,
+      onFreeTrial: false,
+      planName: 'ENTERPRISE',
+      vendor: 'GITHUB',
+    });
+    try {
+      const tableName = process.env.TABLE_ACCOUNT;
+      assert(tableName, 'TABLE_ACCOUNT is not set');
+
+      const rawCreateResult = await load({
+        pk: `ACCOUNT#${createResult.item.vendor}#${createResult.item.externalId}`,
+        sk: `SUMMARY`,
+        tableName,
+      });
+
+      expect(rawCreateResult.Item?.indexed_plan_name).toBeUndefined();
+      expect(rawCreateResult.Item?.gsi1sk).toMatchInlineSnapshot(
+        `"PLAN#false#ENTERPRISE"`
+      );
+
+      const updateResult = await updateAccount({
+        ...createResult.item,
+        planName: 'OPEN_SOURCE',
+      });
+
+      const rawUpdateResult = await load({
+        pk: `ACCOUNT#${createResult.item.vendor}#${createResult.item.externalId}`,
+        sk: `SUMMARY`,
+        tableName,
+      });
+
+      expect(rawUpdateResult.Item?.indexed_plan_name).toBeUndefined();
+      expect(rawUpdateResult.Item?.gsi1sk).toMatchInlineSnapshot(
+        `"PLAN#false#OPEN_SOURCE"`
+      );
+
+      await updateAccount({
+        ...updateResult.item,
+        cancelled: true,
+        lastPlanName: 'OPEN_SOURCE',
+        planName: null,
+      });
+
+      const rawUpdate2Result = await load({
+        pk: `ACCOUNT#${createResult.item.vendor}#${createResult.item.externalId}`,
+        sk: `SUMMARY`,
+        tableName,
+      });
+
+      expect(rawUpdate2Result.Item?.indexed_plan_name).toBeUndefined();
+      expect(rawUpdate2Result.Item?.gsi1sk).toMatchInlineSnapshot(
+        `"PLAN#true#OPEN_SOURCE"`
+      );
+    } finally {
+      await deleteAccount(createResult.item);
+    }
   });
 });

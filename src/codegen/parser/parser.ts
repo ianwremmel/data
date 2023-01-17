@@ -1,21 +1,30 @@
 import assert from 'assert';
-import path from 'path';
 
 import type {Types} from '@graphql-codegen/plugin-helpers/typings/types';
+import type {
+  ConstDirectiveNode,
+  GraphQLField,
+  GraphQLObjectType,
+  GraphQLSchema,
+} from 'graphql';
 import {
   assertObjectType,
   isNonNullType,
   isObjectType,
   isScalarType,
 } from 'graphql';
-import type {GraphQLObjectType, GraphQLSchema, GraphQLField} from 'graphql';
 import {snakeCase} from 'lodash';
+
+import {filterNull} from '../common/filters';
+import {resolveDependenciesModuleId} from '../common/paths';
 
 import {extractChangeDataCaptureConfig} from './extractors/cdc';
 import {
+  getArg,
   getArgStringArrayValue,
   getArgStringValue,
   getDirective,
+  getOptionalArg,
   getOptionalArgBooleanValue,
   getOptionalArgStringValue,
   getOptionalDirective,
@@ -25,13 +34,14 @@ import {
 } from './helpers';
 import type {
   Field,
+  GSI,
+  IntermediateRepresentation,
+  Model,
   PrimaryKeyConfig,
   SecondaryIndex,
-  Model,
-  TTLConfig,
   Table,
   TableSecondaryIndex,
-  GSI,
+  TTLConfig,
 } from './types';
 
 export interface Info {
@@ -52,12 +62,17 @@ export function parse<T extends {dependenciesModuleId: string}>(
   documents: Types.DocumentFile[],
   config: T,
   info?: Info
-): {models: readonly Model[]; tables: readonly Table[]} {
+): IntermediateRepresentation {
   const outputFile = info?.outputFile;
   assert(outputFile, 'outputFile is required');
 
+  const dependenciesModuleId = resolveDependenciesModuleId(
+    outputFile,
+    config.dependenciesModuleId
+  );
+
   const typesMap = schema.getTypeMap();
-  const models = Object.keys(typesMap)
+  const models: Model[] = Object.keys(typesMap)
     .filter((typeName) => {
       const type = schema.getTypeMap()[typeName];
       return isObjectType(type) && hasInterface('Model', type);
@@ -72,10 +87,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
       return {
         changeDataCaptureConfig: extractChangeDataCaptureConfig(schema, type),
         consistent: hasDirective('consistent', type),
-        dependenciesModuleId: path.relative(
-          path.resolve(process.cwd(), path.dirname(outputFile)),
-          path.resolve(process.cwd(), config.dependenciesModuleId)
-        ),
+        dependenciesModuleId,
         fields,
         isLedger: hasDirective('ledger', type),
         isPublicModel: hasInterface('PublicModel', type),
@@ -118,7 +130,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
           );
 
           return {
-            dependenciesModuleId: model.dependenciesModuleId,
+            dependenciesModuleId,
             enablePointInTimeRecovery:
               acc.enablePointInTimeRecovery || model.enablePointInTimeRecovery,
             enableStreaming: acc.enableStreaming || model.enableStreaming,
@@ -134,7 +146,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
           };
         },
         {
-          dependenciesModuleId: firstModel.dependenciesModuleId,
+          dependenciesModuleId,
           enablePointInTimeRecovery: firstModel.enablePointInTimeRecovery,
           enableStreaming: firstModel.enableStreaming,
           hasCdc: !!firstModel.changeDataCaptureConfig,
@@ -145,11 +157,12 @@ export function parse<T extends {dependenciesModuleId: string}>(
             isComposite: firstModel.primaryKey.isComposite,
           },
           secondaryIndexes: firstModel.secondaryIndexes.map(
-            ({isComposite, name, type, ...rest}) => ({
+            ({isComposite, name, type, projectionType, ...rest}) => ({
               isComposite,
               isSingleField:
                 'isSingleField' in rest ? rest.isSingleField : false,
               name,
+              projectionType,
               type,
             })
           ),
@@ -158,7 +171,14 @@ export function parse<T extends {dependenciesModuleId: string}>(
       );
     });
 
-  return {models, tables};
+  return {
+    additionalImports: models
+      .flatMap((model) => model.fields.map((field) => field.computeFunction))
+      .filter(filterNull),
+    dependenciesModuleId,
+    models,
+    tables,
+  };
 }
 
 /** helper */
@@ -194,6 +214,11 @@ function compareIndexes(
         longIndex.type,
         `Please check the secondary index ${name} for the table ${tableName}. All indexes of the same name must be of the same type (either gsi or lsi).`
       );
+      assert.equal(
+        index.projectionType,
+        longIndex.projectionType,
+        `Please check the secondary index ${name} for the table ${tableName}. All indexes of the same name must be of the same projection type (either "all"" or "keys_only").`
+      );
     } else {
       long.set(name, index);
     }
@@ -209,8 +234,17 @@ function extractFields(
   const fields = type.getFields();
   return Object.keys(fields).map((fieldName) => {
     const field = fields[fieldName];
+    const computed = getOptionalDirective('computed', field);
+    const importDetails = computed
+      ? {
+          importName: getArgStringValue('importName', computed),
+          importPath: getArgStringValue('importPath', computed),
+          isVirtual: !!getOptionalArgBooleanValue('virtual', computed),
+        }
+      : undefined;
     return {
       columnName: getAliasForField(field) ?? snakeCase(fieldName),
+      computeFunction: importDetails,
       ean: `:${fieldName}`,
       eav: `#${fieldName}`,
       fieldName,
@@ -225,6 +259,7 @@ function extractFields(
     };
   });
 }
+
 /** helper */
 function getFieldFromFieldMap(
   fieldMap: Record<string, Field>,
@@ -277,6 +312,26 @@ function extractPrimaryKey(
 }
 
 /** helper */
+function getProjectionType(directive: ConstDirectiveNode): 'all' | 'keys_only' {
+  const arg = getOptionalArg('projection', directive);
+  if (!arg) {
+    return 'all';
+  }
+
+  assert(
+    arg.value.kind === 'EnumValue',
+    `Expected projection to be an enum value`
+  );
+  const type = arg.value.value.toLowerCase();
+
+  assert(
+    type === 'all' || type === 'keys_only',
+    `Invalid projection type ${type}`
+  );
+  return type;
+}
+
+/** helper */
 function extractSecondaryIndexes(
   type: GraphQLObjectType<unknown, unknown>,
   fieldMap: Record<string, Field>
@@ -303,6 +358,7 @@ function extractSecondaryIndexes(
               'pkPrefix',
               directive
             ),
+            projectionType: getProjectionType(directive),
             sortKeyFields: getArgStringArrayValue('skFields', directive).map(
               (fieldName) => getFieldFromFieldMap(fieldMap, fieldName)
             ),
@@ -318,6 +374,7 @@ function extractSecondaryIndexes(
             isSingleField: true,
             name,
             partitionKeyFields: [getFieldFromFieldMap(fieldMap, name)],
+            projectionType: getProjectionType(directive),
             type: 'gsi',
           };
         }
@@ -328,6 +385,7 @@ function extractSecondaryIndexes(
           isComposite: true,
           isSingleField: false,
           name: getArgStringValue('name', directive),
+          projectionType: getProjectionType(directive),
           sortKeyFields: getArgStringArrayValue('fields', directive).map(
             (fieldName) => getFieldFromFieldMap(fieldMap, fieldName)
           ),
@@ -342,6 +400,9 @@ function extractSecondaryIndexes(
       isSingleField: true,
       name: 'publicId',
       partitionKeyFields: [getFieldFromFieldMap(fieldMap, 'publicId')],
+      projectionType: hasDirective('public', type)
+        ? getProjectionType(getDirective('public', type))
+        : 'all',
       type: 'gsi',
     };
 

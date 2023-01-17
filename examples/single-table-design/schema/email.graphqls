@@ -1,5 +1,5 @@
 """
-Represents an email that is schedule to be sent to a user.
+Represents an email that is scheduled to be sent to a user.
 """
 type ScheduledEmail implements Model & Timestamped & Versioned
   @compositeKey(

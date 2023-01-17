@@ -7,6 +7,7 @@ import type {
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
 
+import {filterNull} from '../common/filters';
 import {parse} from '../parser';
 
 import type {ActionPluginConfig} from './config';
@@ -39,7 +40,12 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
   info
 ) => {
   try {
-    const {tables, models} = parse(schema, documents, config, info);
+    const {additionalImports, dependenciesModuleId, tables, models} = parse(
+      schema,
+      documents,
+      config,
+      info
+    );
     const content = `
 
 ${models
@@ -68,7 +74,7 @@ ${models
       marshallTpl({table}),
       unmarshallTpl({table}),
     ]
-      .filter(Boolean)
+      .filter(filterNull)
       .join('\n\n');
   })
   .join('\n')}`;
@@ -83,7 +89,7 @@ ${models
       'ddbDocClient',
       hasPublicModels && 'idGenerator',
     ]
-      .filter(Boolean)
+      .filter(filterNull)
       .join(', ');
 
     return {
@@ -104,10 +110,11 @@ ${models
         `import {NativeAttributeValue} from '@aws-sdk/util-dynamodb';`,
         `import Base64 from 'base64url';`,
         `import {assert, DataIntegrityError, MultiResultType, NotFoundError, OptimisticLockingError, ResultType, QueryOptions, UnexpectedAwsError, UnexpectedError} from '${runtimeModuleId}';`,
-        `import {${importFromDependencies}} from "${resolveDependenciesPath(
-          info.outputFile,
-          config.dependenciesModuleId
-        )}";`,
+        `import {${importFromDependencies}} from "${dependenciesModuleId}";`,
+        ...additionalImports.map(
+          ({importName, importPath}) =>
+            `import {${importName}} from '${importPath}';`
+        ),
       ],
     };
   } catch (err) {
@@ -116,19 +123,3 @@ ${models
     throw err;
   }
 };
-
-/** helper */
-function resolveDependenciesPath(outputFile: string, depsModuleId: string) {
-  if (depsModuleId.startsWith('.')) {
-    const fullPathToOutputFile = path.resolve(
-      process.cwd(),
-      path.dirname(outputFile)
-    );
-    const fullPathToDependenciesFile = path.resolve(
-      process.cwd(),
-      depsModuleId
-    );
-    return path.relative(fullPathToOutputFile, fullPathToDependenciesFile);
-  }
-  return depsModuleId;
-}

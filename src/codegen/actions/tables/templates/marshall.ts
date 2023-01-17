@@ -1,5 +1,6 @@
 import assert from 'assert';
 
+import {filterNull} from '../../../common/filters';
 import type {Field, Model, TTLConfig} from '../../../parser';
 
 import {makeKeyTemplate, marshallField} from './helpers';
@@ -7,9 +8,26 @@ import {makeKeyTemplate, marshallField} from './helpers';
 export interface MarshallTplInput {
   readonly table: Model;
 }
+
 /** helper */
 function wrapFieldNameWithQuotes({fieldName}: Field): string {
   return `'${fieldName}'`;
+}
+
+/** helper */
+function makeTypeDefinition(
+  typeName: string,
+  requiredFields: readonly Field[],
+  optionalFields: readonly Field[]
+) {
+  const rf = requiredFields.map(wrapFieldNameWithQuotes).sort().join('|');
+  const of = optionalFields.map(wrapFieldNameWithQuotes).sort().join('|');
+
+  let marshallType = `Required<Pick<${typeName}, ${rf}>>`;
+  if (of.length) {
+    marshallType += ` & Partial<Pick<${typeName}, ${of}>>`;
+  }
+  return marshallType;
 }
 
 /** Generates the marshall function for a table */
@@ -18,17 +36,18 @@ export function marshallTpl({
 }: MarshallTplInput): string {
   const requiredFields = fields
     .filter((f) => f.isRequired && f.fieldName !== 'publicId')
-    .filter(({fieldName}) => fieldName !== 'id');
-  const optionalFields = fields.filter(
-    (f) => !f.isRequired && f.fieldName !== 'publicId'
-  );
+    .filter(({fieldName}) => fieldName !== 'id')
+    .filter(({computeFunction}) => !computeFunction?.isVirtual);
+  const optionalFields = fields
+    .filter((f) => !f.isRequired && f.fieldName !== 'publicId')
+    .filter(({computeFunction}) => !computeFunction?.isVirtual);
 
   // These are fields that are required on the object but have overridable
   // default behaviors
   const requiredFieldsWithDefaultBehaviorsNames = [
     'version',
     ttlConfig?.fieldName,
-  ].filter(Boolean) as string[];
+  ].filter(filterNull);
   const requiredFieldsWithDefaultBehaviors = requiredFields.filter(
     ({fieldName}) => requiredFieldsWithDefaultBehaviorsNames.includes(fieldName)
   );
@@ -43,17 +62,38 @@ export function marshallTpl({
       !builtinDateFieldNames.includes(fieldName)
   );
 
-  const rf = normalRequiredFields.map(wrapFieldNameWithQuotes).sort().join('|');
-  const of = [
-    ...optionalFields.map(wrapFieldNameWithQuotes).sort(),
-    ...requiredFieldsWithDefaultBehaviors.map(wrapFieldNameWithQuotes).sort(),
-  ].join('|');
-  let marshallType = `Required<Pick<${typeName}, ${rf}>>`;
-  if (of.length) {
-    marshallType += ` & Partial<Pick<${typeName}, ${of}>>`;
-  }
+  const marshallType = makeTypeDefinition(typeName, normalRequiredFields, [
+    ...optionalFields,
+    ...requiredFieldsWithDefaultBehaviors,
+  ]);
+
+  const virtualRequiredFields = fields
+    .filter(({isRequired}) => isRequired)
+    .filter(({computeFunction}) => computeFunction?.isVirtual);
+
+  const virtualOptionalFields = fields
+    .filter(({isRequired}) => !isRequired)
+    .filter(({computeFunction}) => computeFunction?.isVirtual);
+
+  const hasVirtualFields =
+    virtualRequiredFields.length > 0 || virtualOptionalFields.length > 0;
+
+  const virtualType = makeTypeDefinition(
+    typeName,
+    [...normalRequiredFields, ...virtualRequiredFields],
+    [
+      ...optionalFields,
+      ...requiredFieldsWithDefaultBehaviors,
+      ...virtualOptionalFields,
+    ]
+  );
 
   const inputTypeName = `Marshall${typeName}Input`;
+  const virtualTypeName = `VirtualMarshall${typeName}Input`;
+
+  const hasComputedFields = fields.some(
+    ({computeFunction}) => !!computeFunction
+  );
 
   return `
 export interface Marshall${typeName}Output {
@@ -64,8 +104,25 @@ export interface Marshall${typeName}Output {
 
 export type ${inputTypeName} = ${marshallType};
 
+${hasVirtualFields ? `type ${virtualTypeName} = ${virtualType};` : ''}
+
 /** Marshalls a DynamoDB record into a ${typeName} object */
-export function marshall${typeName}(input: ${inputTypeName}, now = new Date()): Marshall${typeName}Output {
+export function marshall${typeName}(${
+    hasComputedFields ? '_input' : 'input'
+  }: ${inputTypeName}, now = new Date()): Marshall${typeName}Output {
+
+  ${
+    hasComputedFields
+      ? `
+      // Make a copy so that if we have to define fields, we don't modify the
+      // original input.
+      const input: ${
+        hasVirtualFields ? virtualTypeName : inputTypeName
+      } = {..._input}`
+      : ``
+  }
+  ${defineComputedFields(fields, typeName)}
+
   const updateExpression: string[] = [
   "#entity = :entity",
   ${requiredFields
@@ -114,10 +171,7 @@ ${secondaryIndexes
   const eav: Record<string, unknown> = {
     ":entity": "${typeName}",
     ${normalRequiredFields
-      .map(
-        ({fieldName, isDateType}) =>
-          `':${fieldName}': ${marshallField(fieldName, isDateType)},`
-      )
+      .map((field) => `':${field.fieldName}': ${marshallField(field)},`)
       .join('\n')}
     ':updatedAt': now.getTime(),
     ${requiredFieldsWithDefaultBehaviors
@@ -133,7 +187,7 @@ ${secondaryIndexes
 
         throw new Error(`No default behavior for field \`${fieldName}\``);
       })
-      .filter(Boolean)
+      .filter(filterNull)
       .join('\n')}
 ${secondaryIndexes
   .filter(({name}) => name !== 'publicId')
@@ -174,11 +228,13 @@ ${secondaryIndexes
     // the TTL field will always be handled by renderTTL
     .filter(({fieldName}) => fieldName !== ttlConfig?.fieldName)
     .map(
-      ({columnName, fieldName, isDateType}) => `
-  if ('${fieldName}' in input && typeof input.${fieldName} !== 'undefined') {
-    ean['#${fieldName}'] = '${columnName}';
-    eav[':${fieldName}'] = ${marshallField(fieldName, isDateType)};
-    updateExpression.push('#${fieldName} = :${fieldName}');
+      (field) => `
+  if ('${field.fieldName}' in input && typeof input.${
+        field.fieldName
+      } !== 'undefined') {
+    ean['#${field.fieldName}'] = '${field.columnName}';
+    eav[':${field.fieldName}'] = ${marshallField(field)};
+    updateExpression.push('#${field.fieldName} = :${field.fieldName}');
   }
   `
     )
@@ -212,7 +268,6 @@ function renderTTL(
   const field = fields.find(({fieldName: f}) => f === fieldName);
   assert(field, `Field ${fieldName} not found`);
 
-  const {isDateType} = field;
   const out = `
   if ('${fieldName}' in input && typeof input.${fieldName} !== 'undefined') {
     assert(!Number.isNaN(input.${fieldName}${
@@ -221,7 +276,7 @@ function renderTTL(
     ean['#${fieldName}'] = 'ttl';
     eav[':${fieldName}'] = input.${fieldName} === null
       ? null
-      : ${marshallField(fieldName, isDateType)};
+      : ${marshallField(field)};
     updateExpression.push('#${fieldName} = :${fieldName}');
   }
   `;
@@ -240,4 +295,30 @@ function renderTTL(
   );
 
   return out;
+}
+
+/**
+ * Uses Object.defineProperty to add computed fields to `input` so that
+ * order-of-access doesn't matter.
+ */
+function defineComputedFields(fields: readonly Field[], typeName: string) {
+  return fields
+    .filter(({computeFunction}) => !!computeFunction)
+    .map(({fieldName, computeFunction}) => {
+      return `
+        let ${fieldName}Computed = false;
+        let ${fieldName}ComputedValue: ${typeName}['${fieldName}'];
+        Object.defineProperty(input, '${fieldName}', {
+          enumerable: true,
+          /** getter */
+          get() {
+            if (!${fieldName}Computed) {
+              ${fieldName}Computed = true
+              ${fieldName}ComputedValue = ${computeFunction?.importName}(this);
+            }
+            return ${fieldName}ComputedValue;
+          }
+        })`;
+    })
+    .join('\n');
 }

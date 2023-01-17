@@ -1,9 +1,11 @@
-import type {TTLConfig} from '../../../parser';
+import {filterNull} from '../../../common/filters';
+import type {Field, TTLConfig} from '../../../parser';
 
 import {ensureTableTemplate} from './ensure-table';
 import {objectToString} from './helpers';
 
 export interface BlindWriteTplInput {
+  readonly fields: readonly Field[];
   readonly hasPublicId: boolean;
   readonly key: Record<string, string>;
   readonly tableName: string;
@@ -13,6 +15,7 @@ export interface BlindWriteTplInput {
 
 /** template */
 export function blindWriteTpl({
+  fields,
   hasPublicId,
   key,
   tableName,
@@ -27,8 +30,11 @@ export function blindWriteTpl({
     'version',
     hasPublicId && 'publicId',
     ttlConfig?.fieldName,
+    ...fields
+      .filter(({computeFunction}) => !!computeFunction)
+      .map(({fieldName}) => fieldName),
   ]
-    .filter(Boolean)
+    .filter(filterNull)
     .map((f) => `'${f}'`)
     .sort();
   const outputTypeName = `BlindWrite${typeName}Output`;

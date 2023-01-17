@@ -14,6 +14,7 @@ import {updateItemTpl} from './templates/update-item';
  */
 export function createItemTemplate(model: Model) {
   return createItemTpl({
+    fields: model.fields,
     hasPublicId: model.isPublicModel,
     key: makeKey(model.primaryKey),
     tableName: model.tableName,
@@ -27,6 +28,7 @@ export function createItemTemplate(model: Model) {
  */
 export function blindWriteTemplate(model: Model) {
   return blindWriteTpl({
+    fields: model.fields,
     hasPublicId: model.isPublicModel,
     key: makeKeyForBlind(model.primaryKey),
     tableName: model.tableName,
@@ -130,6 +132,7 @@ export function touchItemTemplate(model: Model) {
  */
 export function updateItemTemplate(model: Model) {
   return updateItemTpl({
+    fields: model.fields,
     hasPublicId: model.isPublicModel,
     key: makeKeyForRead(model.primaryKey),
     marshallPrimaryKey: objectToString(

@@ -1,6 +1,8 @@
-import type {Model} from '../../../parser';
+import assert from 'assert';
 
-import {unmarshallField} from './helpers';
+import type {Field, Model} from '../../../parser';
+
+import {unmarshallField, unmarshallFieldValue} from './helpers';
 
 export const DIVIDER = '#:#';
 
@@ -12,8 +14,12 @@ export interface UnmarshallTplInput {
 export function unmarshallTpl({
   table: {fields, primaryKey, typeName},
 }: UnmarshallTplInput): string {
-  const requiredFields = fields.filter((f) => f.isRequired);
-  const optionalFields = fields.filter((f) => !f.isRequired);
+  const requiredFields = fields
+    .filter((f) => f.isRequired)
+    .filter(({computeFunction}) => !computeFunction?.isVirtual);
+  const optionalFields = fields
+    .filter((f) => !f.isRequired)
+    .filter(({computeFunction}) => !computeFunction?.isVirtual);
 
   return `
 /** Unmarshalls a DynamoDB record into a ${typeName} object */
@@ -64,7 +70,48 @@ ${optionalFields
   )
   .join('\n')}
 
+  ${defineComputedFields(fields, typeName)}
+
   return result;
 }
 `;
+}
+
+/**
+ * Uses Object.defineProperty to add computes fields to the database result  so
+ * that order-of-access doesn't matter.
+ */
+function defineComputedFields(
+  fields: readonly Field[],
+  typeName: string
+): string {
+  return fields
+    .filter(({computeFunction}) => !!computeFunction)
+    .map((field) => {
+      const {fieldName, computeFunction} = field;
+      assert(computeFunction);
+      const {importName} = computeFunction;
+      return `
+      let ${fieldName}Computed = false;
+      const ${fieldName}DatabaseValue = ${unmarshallFieldValue(field)};
+      let ${fieldName}ComputedValue: ${typeName}['${fieldName}'];
+      Object.defineProperty(result, '${fieldName}', {
+          enumerable: true,
+          /** getter */
+          get() {
+            if (!${fieldName}Computed) {
+              ${fieldName}Computed = true
+              if (typeof ${fieldName}DatabaseValue !== 'undefined') {
+                ${fieldName}ComputedValue = ${fieldName}DatabaseValue;
+              }
+              else {
+                ${fieldName}ComputedValue = ${importName}(this);
+              }
+            }
+            return ${fieldName}ComputedValue;
+          }
+        })
+      `;
+    })
+    .join('\n');
 }

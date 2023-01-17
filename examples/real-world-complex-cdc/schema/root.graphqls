@@ -1,6 +1,0 @@
-"""
-Not used. Just here to satisfy ESLint.
-"""
-type Query {
-  model(id: ID!): Model
-}

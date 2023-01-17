@@ -1,9 +1,11 @@
-import type {TTLConfig} from '../../../parser';
+import {filterNull} from '../../../common/filters';
+import type {Field, TTLConfig} from '../../../parser';
 
 import {ensureTableTemplate} from './ensure-table';
 import {objectToString} from './helpers';
 
 export interface UpdateItemTplInput {
+  readonly fields: readonly Field[];
   readonly hasPublicId: boolean;
   readonly key: Record<string, string>;
   readonly marshallPrimaryKey: string;
@@ -15,6 +17,7 @@ export interface UpdateItemTplInput {
 
 /** template */
 export function updateItemTpl({
+  fields,
   hasPublicId,
   marshallPrimaryKey,
   key,
@@ -30,8 +33,11 @@ export function updateItemTpl({
     'updatedAt',
     hasPublicId && 'publicId',
     ttlConfig?.fieldName,
+    ...fields
+      .filter(({computeFunction}) => !!computeFunction)
+      .map(({fieldName}) => fieldName),
   ]
-    .filter(Boolean)
+    .filter(filterNull)
     .filter((fieldName) => !primaryKeyFields.includes(fieldName as string))
     .map((f) => `'${f}'`)
     .sort();

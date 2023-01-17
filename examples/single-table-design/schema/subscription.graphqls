@@ -1,5 +1,5 @@
 """
-An object to track a user's logins
+A particular subscription change for an account
 """
 type Subscription implements Model & Node & Timestamped & Versioned
   @compositeKey(

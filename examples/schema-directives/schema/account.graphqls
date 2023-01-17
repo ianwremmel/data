@@ -8,12 +8,26 @@ type Account implements Model & Node & Timestamped & Versioned
     skPrefix: "SUMMARY"
     skFields: []
   )
-  @secondaryIndex(name: "lsi1", fields: ["createdAt"], prefix: "INSTANCE") {
+  @compositeIndex(
+    name: "gsi1"
+    pkFields: ["hasEverSubscribed"]
+    pkPrefix: "PLAN"
+    skFields: ["cancelled", "indexedPlanName"]
+    skPrefix: "PLAN"
+  ) {
   cancelled: Boolean
   createdAt: Date!
   effectiveDate: Date!
   externalId: String!
+  hasEverSubscribed: Boolean!
+  indexedPlanName: String
+    @computed(
+      importName: "computeIndexedPlanName"
+      importPath: "../compute-functions"
+      virtual: true
+    )
   id: ID!
+  lastPlanName: PlanName
   onFreeTrial: Boolean
   planName: PlanName
   updatedAt: Date!

@@ -94,7 +94,7 @@ export function defineTable({
         IndexName: index.name,
         KeySchema: gsiKeySchema,
         Projection: {
-          ProjectionType: 'ALL',
+          ProjectionType: index.projectionType.toUpperCase(),
         },
       });
     } else if (index.type === 'lsi') {
@@ -116,7 +116,7 @@ export function defineTable({
         IndexName: index.name,
         KeySchema: lsiKeySchema,
         Projection: {
-          ProjectionType: 'ALL',
+          ProjectionType: index.projectionType.toUpperCase(),
         },
       });
     }

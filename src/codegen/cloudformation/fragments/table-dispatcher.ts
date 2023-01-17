@@ -1,5 +1,4 @@
-import path from 'path';
-
+import {increasePathDepth} from '../../common/paths';
 import type {CloudFormationFragment} from '../types';
 
 import {combineFragments} from './combine-fragments';
@@ -24,11 +23,7 @@ export function makeTableDispatcher({
   tableName,
   timeout = 60,
 }: TableDispatcherInput): CloudFormationFragment {
-  // Account for the fact that the parser only knows the module id, not produced
-  // directory layout
-  dependenciesModuleId = dependenciesModuleId.startsWith('.')
-    ? path.join('..', dependenciesModuleId)
-    : dependenciesModuleId;
+  dependenciesModuleId = increasePathDepth(dependenciesModuleId);
 
   writeLambda(
     outputPath,
