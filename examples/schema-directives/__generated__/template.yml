@@ -138,7 +138,7 @@ Resources:
             - AttributeName: publicId
               KeyType: HASH
           Projection:
-            ProjectionType: ALL
+            ProjectionType: KEYS_ONLY
       KeySchema:
         - AttributeName: pk
           KeyType: HASH

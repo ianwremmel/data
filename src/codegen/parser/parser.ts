@@ -400,7 +400,9 @@ function extractSecondaryIndexes(
       isSingleField: true,
       name: 'publicId',
       partitionKeyFields: [getFieldFromFieldMap(fieldMap, 'publicId')],
-      projectionType: 'all',
+      projectionType: hasDirective('public', type)
+        ? getProjectionType(getDirective('public', type))
+        : 'all',
       type: 'gsi',
     };
 

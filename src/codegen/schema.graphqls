@@ -213,6 +213,11 @@ entities that all might use different names
 directive @ttl(duration: String) on FIELD_DEFINITION
 
 """
+Allows configuring the ProjectionType for the publicId index of PublicModels
+"""
+directive @public(projection: ProjectionType!) on OBJECT
+
+"""
 Models are DynamoDB tables with a key schema that may or may not include a sort
 key. A Model must be decorated with either @partitionKey or @compositeKey.
 

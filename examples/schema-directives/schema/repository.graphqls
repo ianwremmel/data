@@ -16,6 +16,7 @@ type Repository implements PublicModel & Model & Timestamped & Versioned
     skFields: ["repo"]
     skPrefix: "REPOSITORY"
   )
+  @public(projection: KEYS_ONLY)
   @simpleIndex(field: "token")
   @table(enableStreaming: true, name: "TableApplicationData") {
   createdAt: Date!
