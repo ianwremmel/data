@@ -101,6 +101,12 @@ export interface Node {
 export type PlanName = 'ENTERPRISE' | 'OPEN_SOURCE' | 'SMALL_TEAM';
 
 /**
+ * INCLUDE is omitted at this time because it drastically complicates the schema
+ * DSL. If a use for it arises, it'll be revisited.
+ */
+export type ProjectionType = 'ALL' | 'KEYS_ONLY';
+
+/**
  * Like Model, but includes a `publicId` field which, unlike `id`, is semantically
  * meaningless. Types implementing PublicModel will have an additional function,
  * `queryByPublicId`, generated. If any of your models implement PublicModel, then

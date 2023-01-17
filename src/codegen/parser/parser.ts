@@ -1,7 +1,12 @@
 import assert from 'assert';
 
 import type {Types} from '@graphql-codegen/plugin-helpers/typings/types';
-import type {GraphQLField, GraphQLObjectType, GraphQLSchema} from 'graphql';
+import type {
+  ConstDirectiveNode,
+  GraphQLField,
+  GraphQLObjectType,
+  GraphQLSchema,
+} from 'graphql';
 import {
   assertObjectType,
   isNonNullType,
@@ -15,9 +20,11 @@ import {resolveDependenciesModuleId} from '../common/paths';
 
 import {extractChangeDataCaptureConfig} from './extractors/cdc';
 import {
+  getArg,
   getArgStringArrayValue,
   getArgStringValue,
   getDirective,
+  getOptionalArg,
   getOptionalArgBooleanValue,
   getOptionalArgStringValue,
   getOptionalDirective,
@@ -65,7 +72,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
   );
 
   const typesMap = schema.getTypeMap();
-  const models = Object.keys(typesMap)
+  const models: Model[] = Object.keys(typesMap)
     .filter((typeName) => {
       const type = schema.getTypeMap()[typeName];
       return isObjectType(type) && hasInterface('Model', type);
@@ -150,11 +157,12 @@ export function parse<T extends {dependenciesModuleId: string}>(
             isComposite: firstModel.primaryKey.isComposite,
           },
           secondaryIndexes: firstModel.secondaryIndexes.map(
-            ({isComposite, name, type, ...rest}) => ({
+            ({isComposite, name, type, projectionType, ...rest}) => ({
               isComposite,
               isSingleField:
                 'isSingleField' in rest ? rest.isSingleField : false,
               name,
+              projectionType,
               type,
             })
           ),
@@ -205,6 +213,11 @@ function compareIndexes(
         index.type,
         longIndex.type,
         `Please check the secondary index ${name} for the table ${tableName}. All indexes of the same name must be of the same type (either gsi or lsi).`
+      );
+      assert.equal(
+        index.projectionType,
+        longIndex.projectionType,
+        `Please check the secondary index ${name} for the table ${tableName}. All indexes of the same name must be of the same projection type (either "all"" or "keys_only").`
       );
     } else {
       long.set(name, index);
@@ -299,6 +312,26 @@ function extractPrimaryKey(
 }
 
 /** helper */
+function getProjectionType(directive: ConstDirectiveNode): 'all' | 'keys_only' {
+  const arg = getOptionalArg('projection', directive);
+  if (!arg) {
+    return 'all';
+  }
+
+  assert(
+    arg.value.kind === 'EnumValue',
+    `Expected projection to be an enum value`
+  );
+  const type = arg.value.value.toLowerCase();
+
+  assert(
+    type === 'all' || type === 'keys_only',
+    `Invalid projection type ${type}`
+  );
+  return type;
+}
+
+/** helper */
 function extractSecondaryIndexes(
   type: GraphQLObjectType<unknown, unknown>,
   fieldMap: Record<string, Field>
@@ -325,6 +358,7 @@ function extractSecondaryIndexes(
               'pkPrefix',
               directive
             ),
+            projectionType: getProjectionType(directive),
             sortKeyFields: getArgStringArrayValue('skFields', directive).map(
               (fieldName) => getFieldFromFieldMap(fieldMap, fieldName)
             ),
@@ -340,6 +374,7 @@ function extractSecondaryIndexes(
             isSingleField: true,
             name,
             partitionKeyFields: [getFieldFromFieldMap(fieldMap, name)],
+            projectionType: getProjectionType(directive),
             type: 'gsi',
           };
         }
@@ -350,6 +385,7 @@ function extractSecondaryIndexes(
           isComposite: true,
           isSingleField: false,
           name: getArgStringValue('name', directive),
+          projectionType: getProjectionType(directive),
           sortKeyFields: getArgStringArrayValue('fields', directive).map(
             (fieldName) => getFieldFromFieldMap(fieldMap, fieldName)
           ),
@@ -364,6 +400,7 @@ function extractSecondaryIndexes(
       isSingleField: true,
       name: 'publicId',
       partitionKeyFields: [getFieldFromFieldMap(fieldMap, 'publicId')],
+      projectionType: 'all',
       type: 'gsi',
     };
 

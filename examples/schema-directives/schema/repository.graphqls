@@ -12,6 +12,7 @@ type Repository implements PublicModel & Model & Timestamped & Versioned
     name: "gsi1"
     pkFields: ["vendor", "organization"]
     pkPrefix: "REPOSITORY"
+    projection: KEYS_ONLY
     skFields: ["repo"]
     skPrefix: "REPOSITORY"
   )

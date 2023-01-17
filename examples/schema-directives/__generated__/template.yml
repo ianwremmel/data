@@ -126,7 +126,7 @@ Resources:
             - AttributeName: gsi1sk
               KeyType: RANGE
           Projection:
-            ProjectionType: ALL
+            ProjectionType: KEYS_ONLY
         - IndexName: token
           KeySchema:
             - AttributeName: token

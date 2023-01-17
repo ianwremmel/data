@@ -35,6 +35,7 @@ export interface TableSecondaryIndex {
   readonly isComposite: boolean;
   readonly isSingleField: boolean;
   readonly name: string;
+  readonly projectionType: 'all' | 'keys_only';
   readonly type: 'gsi' | 'lsi';
 }
 
@@ -101,6 +102,7 @@ export interface LegacyChangeDataCaptureConfig {
 export type GSI = {
   readonly isSingleField: boolean;
   readonly name: string;
+  readonly projectionType: 'all' | 'keys_only';
   readonly type: 'gsi';
 } & (PartitionKey | CompositeKey);
 
@@ -108,6 +110,7 @@ export interface LSI {
   readonly isComposite: true;
   readonly isSingleField: false;
   readonly name: string;
+  readonly projectionType: 'all' | 'keys_only';
   readonly type: 'lsi';
   readonly sortKeyFields: readonly Field[];
   readonly sortKeyPrefix?: string;

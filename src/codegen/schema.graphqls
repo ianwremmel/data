@@ -103,6 +103,15 @@ directive @compositeKey(
 ) on OBJECT
 
 """
+INCLUDE is omitted at this time because it drastically complicates the schema
+DSL. If a use for it arises, it'll be revisited.
+"""
+enum ProjectionType {
+  ALL
+  KEYS_ONLY
+}
+
+"""
 Indicates this Model has a composite Global Secondary Index. May be specified
 more than once.
 """
@@ -116,6 +125,7 @@ directive @compositeIndex(
   name: String!
   pkFields: [String!]!
   pkPrefix: String
+  projection: ProjectionType
   skFields: [String!]!
   skPrefix: String
 ) repeatable on OBJECT
@@ -130,7 +140,10 @@ directive @ledger on OBJECT
 Creates a Global Secondary Index on a single field with the same name as the
 field
 """
-directive @simpleIndex(field: String!) repeatable on OBJECT
+directive @simpleIndex(
+  field: String!
+  projection: ProjectionType
+) repeatable on OBJECT
 
 """
 Indicates this Model has a Local Secondary Index. May be specified more than
@@ -146,6 +159,7 @@ directive @secondaryIndex(
   """
   name: String!
   prefix: String
+  projection: ProjectionType
 ) repeatable on OBJECT
 
 """
