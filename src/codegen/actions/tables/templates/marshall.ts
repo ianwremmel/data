@@ -62,10 +62,13 @@ export function marshallTpl({
       !builtinDateFieldNames.includes(fieldName)
   );
 
-  const marshallType = makeTypeDefinition(typeName, normalRequiredFields, [
-    ...optionalFields,
-    ...requiredFieldsWithDefaultBehaviors,
-  ]);
+  const marshallType = makeTypeDefinition(
+    typeName,
+    normalRequiredFields.filter(({computeFunction}) => !computeFunction),
+    [...optionalFields, ...requiredFieldsWithDefaultBehaviors].filter(
+      ({computeFunction}) => !computeFunction
+    )
+  );
 
   const virtualRequiredFields = fields
     .filter(({isRequired}) => isRequired)
@@ -118,7 +121,7 @@ export function marshall${typeName}(${
       // original input.
       const input: ${
         hasVirtualFields ? virtualTypeName : inputTypeName
-      } = {..._input}`
+      } = {..._input}${hasVirtualFields ? `as ${virtualTypeName}` : ''}`
       : ``
   }
   ${defineComputedFields(fields, typeName)}
