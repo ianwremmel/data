@@ -31,11 +31,19 @@ export function marshallField({
   columnName,
   fieldName,
   isDateType,
+  isRequired,
 }: Field): string {
   if (columnName === 'ttl') {
     return `Math.floor(input.${fieldName}.getTime()/1000)`;
   }
-  return isDateType ? `input.${fieldName}.getTime()` : `input.${fieldName}`;
+
+  if (isDateType) {
+    if (isRequired) {
+      return `input.${fieldName}.getTime()`;
+    }
+    return `input.${fieldName}?.getTime()`;
+  }
+  return `input.${fieldName}`;
 }
 
 /** Generates the template for producing the desired primary key or index column */
