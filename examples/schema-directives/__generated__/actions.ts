@@ -218,12 +218,30 @@ export type CreateAccountInput = Omit<
 export type CreateAccountOutput = ResultType<Account>;
 /**  */
 export async function createAccount(
-  input: Readonly<CreateAccountInput>
+  _input: Readonly<CreateAccountInput>
 ): Promise<Readonly<CreateAccountOutput>> {
   const tableName = process.env.TABLE_ACCOUNT;
   assert(tableName, 'TABLE_ACCOUNT is not set');
 
   const now = new Date();
+
+  // This has to be cast because we're adding computed fields on the next
+  // lines.
+  const input: MarshallAccountInput = {..._input} as MarshallAccountInput;
+
+  let indexedPlanNameComputed = false;
+  let indexedPlanNameComputedValue: Account['indexedPlanName'];
+  Object.defineProperty(input, 'indexedPlanName', {
+    enumerable: true,
+    /** getter */
+    get() {
+      if (!indexedPlanNameComputed) {
+        indexedPlanNameComputed = true;
+        indexedPlanNameComputedValue = computeIndexedPlanName(this);
+      }
+      return indexedPlanNameComputedValue;
+    },
+  });
 
   const {
     ExpressionAttributeNames,
@@ -285,11 +303,30 @@ export type BlindWriteAccountInput = Omit<
 export type BlindWriteAccountOutput = ResultType<Account>;
 /** */
 export async function blindWriteAccount(
-  input: Readonly<BlindWriteAccountInput>
+  _input: Readonly<BlindWriteAccountInput>
 ): Promise<Readonly<BlindWriteAccountOutput>> {
   const tableName = process.env.TABLE_ACCOUNT;
   assert(tableName, 'TABLE_ACCOUNT is not set');
   const now = new Date();
+
+  // This has to be cast because we're adding computed fields on the next
+  // lines.
+  const input: MarshallAccountInput = {..._input} as MarshallAccountInput;
+
+  let indexedPlanNameComputed = false;
+  let indexedPlanNameComputedValue: Account['indexedPlanName'];
+  Object.defineProperty(input, 'indexedPlanName', {
+    enumerable: true,
+    /** getter */
+    get() {
+      if (!indexedPlanNameComputed) {
+        indexedPlanNameComputed = true;
+        indexedPlanNameComputedValue = computeIndexedPlanName(this);
+      }
+      return indexedPlanNameComputedValue;
+    },
+  });
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -498,10 +535,29 @@ export type UpdateAccountOutput = ResultType<Account>;
 
 /**  */
 export async function updateAccount(
-  input: Readonly<UpdateAccountInput>
+  _input: Readonly<UpdateAccountInput>
 ): Promise<Readonly<UpdateAccountOutput>> {
   const tableName = process.env.TABLE_ACCOUNT;
   assert(tableName, 'TABLE_ACCOUNT is not set');
+
+  // This has to be cast because we're adding computed fields on the next
+  // lines.
+  const input: MarshallAccountInput = {..._input} as MarshallAccountInput;
+
+  let indexedPlanNameComputed = false;
+  let indexedPlanNameComputedValue: Account['indexedPlanName'];
+  Object.defineProperty(input, 'indexedPlanName', {
+    enumerable: true,
+    /** getter */
+    get() {
+      if (!indexedPlanNameComputed) {
+        indexedPlanNameComputed = true;
+        indexedPlanNameComputedValue = computeIndexedPlanName(this);
+      }
+      return indexedPlanNameComputedValue;
+    },
+  });
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -747,16 +803,6 @@ export type MarshallAccountInput = Required<
   Partial<
     Pick<
       Account,
-      'cancelled' | 'lastPlanName' | 'onFreeTrial' | 'planName' | 'version'
-    >
-  >;
-
-type VirtualMarshallAccountInput = Required<
-  Pick<Account, 'effectiveDate' | 'externalId' | 'hasEverSubscribed' | 'vendor'>
-> &
-  Partial<
-    Pick<
-      Account,
       | 'cancelled'
       | 'indexedPlanName'
       | 'lastPlanName'
@@ -768,29 +814,9 @@ type VirtualMarshallAccountInput = Required<
 
 /** Marshalls a DynamoDB record into a Account object */
 export function marshallAccount(
-  _input: MarshallAccountInput,
+  input: MarshallAccountInput,
   now = new Date()
 ): MarshallAccountOutput {
-  // Make a copy so that if we have to define fields, we don't modify the
-  // original input.
-  const input: VirtualMarshallAccountInput = {
-    ..._input,
-  } as VirtualMarshallAccountInput;
-
-  let indexedPlanNameComputed = false;
-  let indexedPlanNameComputedValue: Account['indexedPlanName'];
-  Object.defineProperty(input, 'indexedPlanName', {
-    enumerable: true,
-    /** getter */
-    get() {
-      if (!indexedPlanNameComputed) {
-        indexedPlanNameComputed = true;
-        indexedPlanNameComputedValue = computeIndexedPlanName(this);
-      }
-      return indexedPlanNameComputedValue;
-    },
-  });
-
   const updateExpression: string[] = [
     '#entity = :entity',
     '#effectiveDate = :effectiveDate',
@@ -1075,6 +1101,7 @@ export async function blindWriteRepository(
   const tableName = process.env.TABLE_APPLICATION_DATA;
   assert(tableName, 'TABLE_APPLICATION_DATA is not set');
   const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -1302,6 +1329,7 @@ export async function updateRepository(
 ): Promise<Readonly<UpdateRepositoryOutput>> {
   const tableName = process.env.TABLE_APPLICATION_DATA;
   assert(tableName, 'TABLE_APPLICATION_DATA is not set');
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -1814,12 +1842,32 @@ export type CreateUserSessionInput = Omit<
 export type CreateUserSessionOutput = ResultType<UserSession>;
 /**  */
 export async function createUserSession(
-  input: Readonly<CreateUserSessionInput>
+  _input: Readonly<CreateUserSessionInput>
 ): Promise<Readonly<CreateUserSessionOutput>> {
   const tableName = process.env.TABLE_USER_SESSIONS;
   assert(tableName, 'TABLE_USER_SESSIONS is not set');
 
   const now = new Date();
+
+  // This has to be cast because we're adding computed fields on the next
+  // lines.
+  const input: MarshallUserSessionInput = {
+    ..._input,
+  } as MarshallUserSessionInput;
+
+  let computedFieldComputed = false;
+  let computedFieldComputedValue: UserSession['computedField'];
+  Object.defineProperty(input, 'computedField', {
+    enumerable: true,
+    /** getter */
+    get() {
+      if (!computedFieldComputed) {
+        computedFieldComputed = true;
+        computedFieldComputedValue = computeField(this);
+      }
+      return computedFieldComputedValue;
+    },
+  });
 
   const {
     ExpressionAttributeNames,
@@ -1890,11 +1938,32 @@ export type BlindWriteUserSessionInput = Omit<
 export type BlindWriteUserSessionOutput = ResultType<UserSession>;
 /** */
 export async function blindWriteUserSession(
-  input: Readonly<BlindWriteUserSessionInput>
+  _input: Readonly<BlindWriteUserSessionInput>
 ): Promise<Readonly<BlindWriteUserSessionOutput>> {
   const tableName = process.env.TABLE_USER_SESSIONS;
   assert(tableName, 'TABLE_USER_SESSIONS is not set');
   const now = new Date();
+
+  // This has to be cast because we're adding computed fields on the next
+  // lines.
+  const input: MarshallUserSessionInput = {
+    ..._input,
+  } as MarshallUserSessionInput;
+
+  let computedFieldComputed = false;
+  let computedFieldComputedValue: UserSession['computedField'];
+  Object.defineProperty(input, 'computedField', {
+    enumerable: true,
+    /** getter */
+    get() {
+      if (!computedFieldComputed) {
+        computedFieldComputed = true;
+        computedFieldComputedValue = computeField(this);
+      }
+      return computedFieldComputedValue;
+    },
+  });
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -2107,10 +2176,31 @@ export type UpdateUserSessionOutput = ResultType<UserSession>;
 
 /**  */
 export async function updateUserSession(
-  input: Readonly<UpdateUserSessionInput>
+  _input: Readonly<UpdateUserSessionInput>
 ): Promise<Readonly<UpdateUserSessionOutput>> {
   const tableName = process.env.TABLE_USER_SESSIONS;
   assert(tableName, 'TABLE_USER_SESSIONS is not set');
+
+  // This has to be cast because we're adding computed fields on the next
+  // lines.
+  const input: MarshallUserSessionInput = {
+    ..._input,
+  } as MarshallUserSessionInput;
+
+  let computedFieldComputed = false;
+  let computedFieldComputedValue: UserSession['computedField'];
+  Object.defineProperty(input, 'computedField', {
+    enumerable: true,
+    /** getter */
+    get() {
+      if (!computedFieldComputed) {
+        computedFieldComputed = true;
+        computedFieldComputedValue = computeField(this);
+      }
+      return computedFieldComputedValue;
+    },
+  });
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -2340,32 +2430,17 @@ export type MarshallUserSessionInput = Required<
   Pick<UserSession, 'session' | 'sessionId'>
 > &
   Partial<
-    Pick<UserSession, 'aliasedField' | 'expires' | 'optionalField' | 'version'>
+    Pick<
+      UserSession,
+      'aliasedField' | 'computedField' | 'expires' | 'optionalField' | 'version'
+    >
   >;
 
 /** Marshalls a DynamoDB record into a UserSession object */
 export function marshallUserSession(
-  _input: MarshallUserSessionInput,
+  input: MarshallUserSessionInput,
   now = new Date()
 ): MarshallUserSessionOutput {
-  // Make a copy so that if we have to define fields, we don't modify the
-  // original input.
-  const input: MarshallUserSessionInput = {..._input};
-
-  let computedFieldComputed = false;
-  let computedFieldComputedValue: UserSession['computedField'];
-  Object.defineProperty(input, 'computedField', {
-    enumerable: true,
-    /** getter */
-    get() {
-      if (!computedFieldComputed) {
-        computedFieldComputed = true;
-        computedFieldComputedValue = computeField(this);
-      }
-      return computedFieldComputedValue;
-    },
-  });
-
   const updateExpression: string[] = [
     '#entity = :entity',
     '#session = :session',

@@ -49,30 +49,30 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
     const content = `
 
 ${models
-  .map((table) => {
+  .map((model) => {
     return [
-      `export interface ${table.typeName}PrimaryKey ${objectToString(
+      `export interface ${model.typeName}PrimaryKey ${objectToString(
         Object.fromEntries(
-          (table.primaryKey.isComposite
+          (model.primaryKey.isComposite
             ? [
-                ...table.primaryKey.partitionKeyFields,
-                ...table.primaryKey.sortKeyFields,
+                ...model.primaryKey.partitionKeyFields,
+                ...model.primaryKey.sortKeyFields,
               ]
-            : table.primaryKey.partitionKeyFields
+            : model.primaryKey.partitionKeyFields
           )
             .map(getTypeScriptTypeForField)
             .sort()
         )
       )}`,
-      createItemTemplate(table),
-      !table.isLedger && blindWriteTemplate(table),
-      !table.isLedger && deleteItemTemplate(table),
-      readItemTemplate(table),
-      !table.isLedger && touchItemTemplate(table),
-      !table.isLedger && updateItemTemplate(table),
-      queryTemplate(table),
-      marshallTpl({table}),
-      unmarshallTpl({table}),
+      createItemTemplate(model),
+      !model.isLedger && blindWriteTemplate(model),
+      !model.isLedger && deleteItemTemplate(model),
+      readItemTemplate(model),
+      !model.isLedger && touchItemTemplate(model),
+      !model.isLedger && updateItemTemplate(model),
+      queryTemplate(model),
+      marshallTpl({model}),
+      unmarshallTpl({model}),
     ]
       .filter(filterNull)
       .join('\n\n');

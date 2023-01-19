@@ -17,6 +17,7 @@ export function createItemTemplate(model: Model) {
     fields: model.fields,
     hasPublicId: model.isPublicModel,
     key: makeKey(model.primaryKey),
+    model,
     tableName: model.tableName,
     ttlConfig: model.ttlConfig,
     typeName: model.typeName,
@@ -31,6 +32,7 @@ export function blindWriteTemplate(model: Model) {
     fields: model.fields,
     hasPublicId: model.isPublicModel,
     key: makeKeyForBlind(model.primaryKey),
+    model,
     tableName: model.tableName,
     ttlConfig: model.ttlConfig,
     typeName: model.typeName,
@@ -149,6 +151,7 @@ export function updateItemTemplate(model: Model) {
           .map((fieldName) => [fieldName, `input.${fieldName}`])
       )
     ),
+    model,
     primaryKeyFields: (model.primaryKey.isComposite
       ? [
           ...model.primaryKey.partitionKeyFields,

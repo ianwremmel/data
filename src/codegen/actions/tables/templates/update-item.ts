@@ -1,5 +1,6 @@
 import {filterNull} from '../../../common/filters';
-import type {Field, TTLConfig} from '../../../parser';
+import type {Field, TTLConfig, Model} from '../../../parser';
+import {defineComputedInputFields, inputName} from '../computed-fields';
 
 import {ensureTableTemplate} from './ensure-table';
 import {objectToString} from './helpers';
@@ -9,6 +10,7 @@ export interface UpdateItemTplInput {
   readonly hasPublicId: boolean;
   readonly key: Record<string, string>;
   readonly marshallPrimaryKey: string;
+  readonly model: Model;
   readonly primaryKeyFields: string[];
   readonly tableName: string;
   readonly ttlConfig: TTLConfig | undefined;
@@ -19,8 +21,9 @@ export interface UpdateItemTplInput {
 export function updateItemTpl({
   fields,
   hasPublicId,
-  marshallPrimaryKey,
   key,
+  marshallPrimaryKey,
+  model,
   primaryKeyFields,
   tableName,
   ttlConfig,
@@ -52,8 +55,11 @@ export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join(
 export type ${outputTypeName} = ResultType<${typeName}>
 
 /**  */
-export async function update${typeName}(input: Readonly<${inputTypeName}>): Promise<Readonly<${outputTypeName}>> {
+export async function update${typeName}(${inputName(
+    model
+  )}: Readonly<${inputTypeName}>): Promise<Readonly<${outputTypeName}>> {
 ${ensureTableTemplate(tableName)}
+  ${defineComputedInputFields(fields, typeName)}
   const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${typeName}(input);
   try {
     const commandInput: UpdateCommandInput = {

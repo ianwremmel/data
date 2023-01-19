@@ -6,7 +6,7 @@ import type {Field, Model, TTLConfig} from '../../../parser';
 import {makeKeyTemplate, marshallField} from './helpers';
 
 export interface MarshallTplInput {
-  readonly table: Model;
+  readonly model: Model;
 }
 
 /** helper */
@@ -32,15 +32,14 @@ function makeTypeDefinition(
 
 /** Generates the marshall function for a table */
 export function marshallTpl({
-  table: {fields, secondaryIndexes, ttlConfig, typeName},
+  model: {fields, secondaryIndexes, ttlConfig, typeName},
 }: MarshallTplInput): string {
   const requiredFields = fields
     .filter((f) => f.isRequired && f.fieldName !== 'publicId')
-    .filter(({fieldName}) => fieldName !== 'id')
-    .filter(({computeFunction}) => !computeFunction?.isVirtual);
-  const optionalFields = fields
-    .filter((f) => !f.isRequired && f.fieldName !== 'publicId')
-    .filter(({computeFunction}) => !computeFunction?.isVirtual);
+    .filter(({fieldName}) => fieldName !== 'id');
+  const optionalFields = fields.filter(
+    (f) => !f.isRequired && f.fieldName !== 'publicId'
+  );
 
   // These are fields that are required on the object but have overridable
   // default behaviors
@@ -62,41 +61,12 @@ export function marshallTpl({
       !builtinDateFieldNames.includes(fieldName)
   );
 
-  const marshallType = makeTypeDefinition(
-    typeName,
-    normalRequiredFields.filter(({computeFunction}) => !computeFunction),
-    [...optionalFields, ...requiredFieldsWithDefaultBehaviors].filter(
-      ({computeFunction}) => !computeFunction
-    )
-  );
-
-  const virtualRequiredFields = fields
-    .filter(({isRequired}) => isRequired)
-    .filter(({computeFunction}) => computeFunction?.isVirtual);
-
-  const virtualOptionalFields = fields
-    .filter(({isRequired}) => !isRequired)
-    .filter(({computeFunction}) => computeFunction?.isVirtual);
-
-  const hasVirtualFields =
-    virtualRequiredFields.length > 0 || virtualOptionalFields.length > 0;
-
-  const virtualType = makeTypeDefinition(
-    typeName,
-    [...normalRequiredFields, ...virtualRequiredFields],
-    [
-      ...optionalFields,
-      ...requiredFieldsWithDefaultBehaviors,
-      ...virtualOptionalFields,
-    ]
-  );
+  const marshallType = makeTypeDefinition(typeName, normalRequiredFields, [
+    ...optionalFields,
+    ...requiredFieldsWithDefaultBehaviors,
+  ]);
 
   const inputTypeName = `Marshall${typeName}Input`;
-  const virtualTypeName = `VirtualMarshall${typeName}Input`;
-
-  const hasComputedFields = fields.some(
-    ({computeFunction}) => !!computeFunction
-  );
 
   return `
 export interface Marshall${typeName}Output {
@@ -107,25 +77,9 @@ export interface Marshall${typeName}Output {
 
 export type ${inputTypeName} = ${marshallType};
 
-${hasVirtualFields ? `type ${virtualTypeName} = ${virtualType};` : ''}
 
 /** Marshalls a DynamoDB record into a ${typeName} object */
-export function marshall${typeName}(${
-    hasComputedFields ? '_input' : 'input'
-  }: ${inputTypeName}, now = new Date()): Marshall${typeName}Output {
-
-  ${
-    hasComputedFields
-      ? `
-      // Make a copy so that if we have to define fields, we don't modify the
-      // original input.
-      const input: ${
-        hasVirtualFields ? virtualTypeName : inputTypeName
-      } = {..._input}${hasVirtualFields ? `as ${virtualTypeName}` : ''}`
-      : ``
-  }
-  ${defineComputedFields(fields, typeName)}
-
+export function marshall${typeName}(input: ${inputTypeName}, now = new Date()): Marshall${typeName}Output {
   const updateExpression: string[] = [
   "#entity = :entity",
   ${requiredFields
@@ -230,6 +184,7 @@ ${secondaryIndexes
   ${optionalFields
     // the TTL field will always be handled by renderTTL
     .filter(({fieldName}) => fieldName !== ttlConfig?.fieldName)
+    .filter(({computeFunction}) => !computeFunction?.isVirtual)
     .map(
       (field) => `
   if ('${field.fieldName}' in input && typeof input.${
@@ -298,30 +253,4 @@ function renderTTL(
   );
 
   return out;
-}
-
-/**
- * Uses Object.defineProperty to add computed fields to `input` so that
- * order-of-access doesn't matter.
- */
-function defineComputedFields(fields: readonly Field[], typeName: string) {
-  return fields
-    .filter(({computeFunction}) => !!computeFunction)
-    .map(({fieldName, computeFunction}) => {
-      return `
-        let ${fieldName}Computed = false;
-        let ${fieldName}ComputedValue: ${typeName}['${fieldName}'];
-        Object.defineProperty(input, '${fieldName}', {
-          enumerable: true,
-          /** getter */
-          get() {
-            if (!${fieldName}Computed) {
-              ${fieldName}Computed = true
-              ${fieldName}ComputedValue = ${computeFunction?.importName}(this);
-            }
-            return ${fieldName}ComputedValue;
-          }
-        })`;
-    })
-    .join('\n');
 }

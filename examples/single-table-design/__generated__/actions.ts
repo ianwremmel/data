@@ -283,6 +283,7 @@ export async function blindWriteAccount(
   const tableName = process.env.TABLE_ACCOUNTS;
   assert(tableName, 'TABLE_ACCOUNTS is not set');
   const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -495,6 +496,7 @@ export async function updateAccount(
 ): Promise<Readonly<UpdateAccountOutput>> {
   const tableName = process.env.TABLE_ACCOUNTS;
   assert(tableName, 'TABLE_ACCOUNTS is not set');
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -972,6 +974,7 @@ export async function blindWriteScheduledEmail(
   const tableName = process.env.TABLE_EMAIL;
   assert(tableName, 'TABLE_EMAIL is not set');
   const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -1200,6 +1203,7 @@ export async function updateScheduledEmail(
 ): Promise<Readonly<UpdateScheduledEmailOutput>> {
   const tableName = process.env.TABLE_EMAIL;
   assert(tableName, 'TABLE_EMAIL is not set');
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -1663,6 +1667,7 @@ export async function blindWriteSentEmail(
   const tableName = process.env.TABLE_EMAIL;
   assert(tableName, 'TABLE_EMAIL is not set');
   const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -1884,6 +1889,7 @@ export async function updateSentEmail(
 ): Promise<Readonly<UpdateSentEmailOutput>> {
   const tableName = process.env.TABLE_EMAIL;
   assert(tableName, 'TABLE_EMAIL is not set');
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -2342,6 +2348,7 @@ export async function blindWriteSubscription(
   const tableName = process.env.TABLE_ACCOUNTS;
   assert(tableName, 'TABLE_ACCOUNTS is not set');
   const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -2566,6 +2573,7 @@ export async function updateSubscription(
 ): Promise<Readonly<UpdateSubscriptionOutput>> {
   const tableName = process.env.TABLE_ACCOUNTS;
   assert(tableName, 'TABLE_ACCOUNTS is not set');
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,

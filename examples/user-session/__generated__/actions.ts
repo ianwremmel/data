@@ -233,6 +233,7 @@ export async function blindWriteUserSession(
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
   const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -449,6 +450,7 @@ export async function updateUserSession(
 ): Promise<Readonly<UpdateUserSessionOutput>> {
   const tableName = process.env.TABLE_USER_SESSION;
   assert(tableName, 'TABLE_USER_SESSION is not set');
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
