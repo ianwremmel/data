@@ -1,5 +1,8 @@
+import {type} from 'os';
+
 import {filterNull} from '../../../common/filters';
-import type {Field, TTLConfig} from '../../../parser';
+import type {Field, Model, TTLConfig} from '../../../parser';
+import {defineComputedInputFields, inputName} from '../computed-fields';
 
 import {ensureTableTemplate} from './ensure-table';
 import {objectToString} from './helpers';
@@ -8,6 +11,7 @@ export interface CreateItemTplInput {
   readonly fields: readonly Field[];
   readonly hasPublicId: boolean;
   readonly key: Record<string, string>;
+  readonly model: Model;
   readonly tableName: string;
   readonly ttlConfig: TTLConfig | undefined;
   readonly typeName: string;
@@ -17,9 +21,10 @@ export interface CreateItemTplInput {
 export function createItemTpl({
   fields,
   hasPublicId,
-  ttlConfig,
   key,
+  model,
   tableName,
+  ttlConfig,
   typeName,
 }: CreateItemTplInput) {
   const inputTypeName = `Create${typeName}Input`;
@@ -45,11 +50,14 @@ export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join('|')}>${
   };
 export type ${outputTypeName} = ResultType<${typeName}>
 /**  */
-export async function create${typeName}(input: Readonly<Create${typeName}Input>): Promise<Readonly<${outputTypeName}>> {
+export async function create${typeName}(${inputName(
+    model
+  )}: Readonly<Create${typeName}Input>): Promise<Readonly<${outputTypeName}>> {
 ${ensureTableTemplate(tableName)}
 
   const now = new Date();
 
+  ${defineComputedInputFields(fields, typeName)}
   const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${typeName}(input, now);
 
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand

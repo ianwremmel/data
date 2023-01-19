@@ -233,6 +233,7 @@ export async function blindWriteUserLogin(
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
   const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -457,6 +458,7 @@ export async function updateUserLogin(
 ): Promise<Readonly<UpdateUserLoginOutput>> {
   const tableName = process.env.TABLE_USER_LOGIN;
   assert(tableName, 'TABLE_USER_LOGIN is not set');
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,

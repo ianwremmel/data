@@ -1,5 +1,6 @@
 import {filterNull} from '../../../common/filters';
-import type {Field, TTLConfig} from '../../../parser';
+import type {Field, TTLConfig, Model} from '../../../parser';
+import {defineComputedInputFields, inputName} from '../computed-fields';
 
 import {ensureTableTemplate} from './ensure-table';
 import {objectToString} from './helpers';
@@ -8,6 +9,7 @@ export interface BlindWriteTplInput {
   readonly fields: readonly Field[];
   readonly hasPublicId: boolean;
   readonly key: Record<string, string>;
+  readonly model: Model;
   readonly tableName: string;
   readonly ttlConfig: TTLConfig | undefined;
   readonly typeName: string;
@@ -18,6 +20,7 @@ export function blindWriteTpl({
   fields,
   hasPublicId,
   key,
+  model,
   tableName,
   ttlConfig,
   typeName,
@@ -47,9 +50,12 @@ export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join(
   };
 export type ${outputTypeName} = ResultType<${typeName}>;
 /** */
-export async function blindWrite${typeName}(input: Readonly<${inputTypeName}>): Promise<Readonly<${outputTypeName}>> {
+export async function blindWrite${typeName}(${inputName(
+    model
+  )}: Readonly<${inputTypeName}>): Promise<Readonly<${outputTypeName}>> {
 ${ensureTableTemplate(tableName)}
   const now = new Date();
+  ${defineComputedInputFields(fields, typeName)}
   const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${typeName}(input, now);
 
   delete ExpressionAttributeNames['#pk'];

@@ -253,6 +253,7 @@ export async function blindWriteAccount(
   const tableName = process.env.TABLE_ACCOUNT;
   assert(tableName, 'TABLE_ACCOUNT is not set');
   const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -465,6 +466,7 @@ export async function updateAccount(
 ): Promise<Readonly<UpdateAccountOutput>> {
   const tableName = process.env.TABLE_ACCOUNT;
   assert(tableName, 'TABLE_ACCOUNT is not set');
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,

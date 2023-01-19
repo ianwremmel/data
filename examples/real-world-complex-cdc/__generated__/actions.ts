@@ -278,6 +278,7 @@ export async function blindWriteCaseInstance(
   const tableName = process.env.TABLE_CASE_INSTANCE;
   assert(tableName, 'TABLE_CASE_INSTANCE is not set');
   const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -502,6 +503,7 @@ export async function updateCaseInstance(
 ): Promise<Readonly<UpdateCaseInstanceOutput>> {
   const tableName = process.env.TABLE_CASE_INSTANCE;
   assert(tableName, 'TABLE_CASE_INSTANCE is not set');
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -1263,6 +1265,7 @@ export async function blindWriteCaseSummary(
   const tableName = process.env.TABLE_CASE_SUMMARY;
   assert(tableName, 'TABLE_CASE_SUMMARY is not set');
   const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -1487,6 +1490,7 @@ export async function updateCaseSummary(
 ): Promise<Readonly<UpdateCaseSummaryOutput>> {
   const tableName = process.env.TABLE_CASE_SUMMARY;
   assert(tableName, 'TABLE_CASE_SUMMARY is not set');
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -2057,6 +2061,7 @@ export async function blindWriteFileTiming(
   const tableName = process.env.TABLE_FILE_TIMING;
   assert(tableName, 'TABLE_FILE_TIMING is not set');
   const now = new Date();
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
@@ -2281,6 +2286,7 @@ export async function updateFileTiming(
 ): Promise<Readonly<UpdateFileTimingOutput>> {
   const tableName = process.env.TABLE_FILE_TIMING;
   assert(tableName, 'TABLE_FILE_TIMING is not set');
+
   const {
     ExpressionAttributeNames,
     ExpressionAttributeValues,
