@@ -6,7 +6,7 @@ import type {Field, Model, TTLConfig} from '../../../parser';
 import {makeKeyTemplate, marshallField} from './helpers';
 
 export interface MarshallTplInput {
-  readonly table: Model;
+  readonly model: Model;
 }
 
 /** helper */
@@ -32,7 +32,7 @@ function makeTypeDefinition(
 
 /** Generates the marshall function for a table */
 export function marshallTpl({
-  table: {fields, secondaryIndexes, ttlConfig, typeName},
+  model: {fields, secondaryIndexes, ttlConfig, typeName},
 }: MarshallTplInput): string {
   const requiredFields = fields
     .filter((f) => f.isRequired && f.fieldName !== 'publicId')

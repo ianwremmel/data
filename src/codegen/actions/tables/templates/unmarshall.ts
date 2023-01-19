@@ -7,12 +7,12 @@ import {unmarshallField, unmarshallFieldValue} from './helpers';
 export const DIVIDER = '#:#';
 
 export interface UnmarshallTplInput {
-  readonly table: Model;
+  readonly model: Model;
 }
 
 /** Generates the unmarshall function for a table */
 export function unmarshallTpl({
-  table: {fields, primaryKey, typeName},
+  model: {fields, primaryKey, typeName},
 }: UnmarshallTplInput): string {
   const requiredFields = fields
     .filter((f) => f.isRequired)
