@@ -1,6 +1,6 @@
 import path from 'path';
 
-import {kebabCase} from 'lodash';
+import {camelCase, kebabCase, upperFirst} from 'lodash';
 
 import {increasePathDepth, resolveActionsModule} from '../../common/paths';
 import type {Model} from '../../parser';
@@ -31,8 +31,10 @@ export function defineTriggerCdc(
     tableName,
   } = model;
 
-  const handlerFileName = `handler-${kebabCase(sourceModelName)}`;
-  const handlerFunctionName = `${sourceModelName}CDCHandler`;
+  const handlerFileName = `trigger--${kebabCase(
+    sourceModelName
+  )}--${event.toLowerCase()}`;
+  const handlerFunctionName = `Fn${upperFirst(camelCase(handlerFileName))}`;
   const handlerOutputPath = path.join(
     path.dirname(outputFile),
     handlerFileName

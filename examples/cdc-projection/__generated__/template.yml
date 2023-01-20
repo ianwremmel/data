@@ -50,7 +50,7 @@ Parameters:
     Description: The name of the stage
     Type: String
 Resources:
-  SubscriptionCDCHandler:
+  FnEnricherSubscriptionInsertAccount:
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -60,11 +60,11 @@ Resources:
         Sourcemap: true
         Target: es2020
     Properties:
-      CodeUri: handler-subscription
+      CodeUri: enricher--subscription--insert--account
       DeadLetterQueue:
         TargetArn:
           Fn::GetAtt:
-            - SubscriptionCDCHandlerEventBridgeDLQ
+            - FnEnricherSubscriptionInsertAccountEventBridgeDLQ
             - Arn
         Type: SQS
       Events:
@@ -73,7 +73,7 @@ Resources:
             DeadLetterConfig:
               Arn:
                 Fn::GetAtt:
-                  - SubscriptionCDCHandlerDLQ
+                  - FnEnricherSubscriptionInsertAccountDLQ
                   - Arn
             EventBusName: default
             Pattern:
@@ -104,21 +104,21 @@ Resources:
         - SQSSendMessagePolicy:
             QueueName:
               Fn::GetAtt:
-                - SubscriptionCDCHandlerDLQ
+                - FnEnricherSubscriptionInsertAccountDLQ
                 - QueueName
     Type: AWS::Serverless::Function
-  SubscriptionCDCHandlerDLQ:
+  FnEnricherSubscriptionInsertAccountDLQ:
     Properties:
       KmsMasterKeyId: alias/aws/sqs
     Type: AWS::SQS::Queue
-  SubscriptionCDCHandlerEventBridgeDLQ:
+  FnEnricherSubscriptionInsertAccountEventBridgeDLQ:
     Properties:
       KmsMasterKeyId: alias/aws/sqs
     Type: AWS::SQS::Queue
-  SubscriptionCDCHandlerLogGroup:
+  FnEnricherSubscriptionInsertAccountLogGroup:
     Properties:
       LogGroupName:
-        Fn::Sub: /aws/lambda/${SubscriptionCDCHandler}
+        Fn::Sub: /aws/lambda/${FnEnricherSubscriptionInsertAccount}
       RetentionInDays:
         Ref: LogRetentionInDays
     Type: AWS::Logs::LogGroup

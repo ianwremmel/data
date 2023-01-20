@@ -1,6 +1,6 @@
 import path from 'path';
 
-import {kebabCase} from 'lodash';
+import {camelCase, kebabCase, upperFirst} from 'lodash';
 
 import {increasePathDepth, resolveActionsModule} from '../../common/paths';
 import type {Model} from '../../parser';
@@ -31,11 +31,12 @@ export function defineModelEnricher(
     dependenciesModuleId,
     libImportPath,
     tableName,
-    typeName,
   } = model;
 
-  const handlerFileName = `handler-${kebabCase(typeName)}`;
-  const handlerFunctionName = `${typeName}CDCHandler`;
+  const handlerFileName = `enricher--${kebabCase(
+    sourceModelName
+  )}--${event.toLowerCase()}--${kebabCase(targetModelName)}`;
+  const handlerFunctionName = `Fn${upperFirst(camelCase(handlerFileName))}`;
   const handlerOutputPath = path.join(
     path.dirname(outputFile),
     handlerFileName

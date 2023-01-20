@@ -23,7 +23,7 @@ describe('@triggers', () => {
       const event = await waitFor(async () => {
         const logGroups = await cwc.send(
           new DescribeLogGroupsCommand({
-            logGroupNamePrefix: '/aws/lambda/CdcTrigger-UserSessionCDCHandler',
+            logGroupNamePrefix: '/aws/lambda/CdcTrigger-FnTrigger',
           })
         );
 
