@@ -1,6 +1,7 @@
+import crypto from 'crypto';
 import path from 'path';
 
-import {camelCase, kebabCase, upperFirst} from 'lodash';
+import {camelCase, kebabCase, snakeCase, upperFirst} from 'lodash';
 
 import {increasePathDepth, resolveActionsModule} from '../../common/paths';
 import type {Model} from '../../parser';
@@ -36,7 +37,21 @@ export function defineModelEnricher(
   const handlerFileName = `enricher--${kebabCase(
     sourceModelName
   )}--${event.toLowerCase()}--${kebabCase(targetModelName)}`;
-  const handlerFunctionName = `Fn${upperFirst(camelCase(handlerFileName))}`;
+  const handlerFunctionName = `Fn${upperFirst(
+    camelCase(
+      `handler--${snakeCase(sourceModelName)
+        .split('_')
+        .map((c) => c[0])
+        .join('-')}--${event}--${snakeCase(targetModelName)
+        .split('_')
+        .map((c) => c[0])
+        .join('-')}}`
+    )
+  )}${crypto
+    .createHash('sha1')
+    .update(sourceModelName + event + targetModelName)
+    .digest('hex')
+    .slice(0, 8)}`;
   const handlerOutputPath = path.join(
     path.dirname(outputFile),
     handlerFileName
