@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+PREFIX=$1
+INDEX=$2
+
+LOG_GROUPS=$(awslocal logs describe-log-groups --log-group-name-prefix "$PREFIX")
+LOG_GROUP=$(echo "$LOG_GROUPS" | jq ".logGroups[$INDEX].logGroupName" -r)
+LOG_STREAMS=$(awslocal logs describe-log-streams --log-group-name "$LOG_GROUP")
+LOG_STREAM=$(echo "$LOG_STREAMS" | jq ".logStreams[0].logStreamName" -r)
+awslocal logs get-log-events --log-group-name "$LOG_GROUP" --log-stream-name "$LOG_STREAM" | jq '.events[] | [.timestamp, .message ] | @tsv' -r
