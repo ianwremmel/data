@@ -39,6 +39,76 @@ Parameters:
     Description: The name of the stage
     Type: String
 Resources:
+  FnTriggerUserSessionUpsert:
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - ./index
+        Minify: false
+        Sourcemap: true
+        Target: es2020
+    Properties:
+      CodeUri: trigger--user-session--upsert
+      DeadLetterQueue:
+        TargetArn:
+          Fn::GetAtt:
+            - FnTriggerUserSessionUpsertEventBridgeDLQ
+            - Arn
+        Type: SQS
+      Events:
+        UPSERT:
+          Properties:
+            DeadLetterConfig:
+              Arn:
+                Fn::GetAtt:
+                  - FnTriggerUserSessionUpsertDLQ
+                  - Arn
+            EventBusName: default
+            Pattern:
+              detail:
+                dynamodb:
+                  NewImage:
+                    _et:
+                      S:
+                        - UserSession
+              detail-type:
+                - INSERT
+                - MODIFY
+              resources:
+                - Fn::GetAtt:
+                    - TableUserSession
+                    - Arn
+              source:
+                - TableUserSession.UserSession
+          Type: EventBridgeRule
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSLambda_ReadOnlyAccess
+        - AWSXrayWriteOnlyAccess
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+        - CloudWatchPutMetricPolicy: {}
+        - SQSSendMessagePolicy:
+            QueueName:
+              Fn::GetAtt:
+                - FnTriggerUserSessionUpsertDLQ
+                - QueueName
+    Type: AWS::Serverless::Function
+  FnTriggerUserSessionUpsertDLQ:
+    Properties:
+      KmsMasterKeyId: alias/aws/sqs
+    Type: AWS::SQS::Queue
+  FnTriggerUserSessionUpsertEventBridgeDLQ:
+    Properties:
+      KmsMasterKeyId: alias/aws/sqs
+    Type: AWS::SQS::Queue
+  FnTriggerUserSessionUpsertLogGroup:
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${FnTriggerUserSessionUpsert}
+      RetentionInDays:
+        Ref: LogRetentionInDays
+    Type: AWS::Logs::LogGroup
   TableUserSession:
     Properties:
       AttributeDefinitions:
@@ -111,76 +181,6 @@ Resources:
     Properties:
       LogGroupName:
         Fn::Sub: /aws/lambda/${TableUserSessionCDCDispatcher}
-      RetentionInDays:
-        Ref: LogRetentionInDays
-    Type: AWS::Logs::LogGroup
-  UserSessionCDCHandler:
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        EntryPoints:
-          - ./index
-        Minify: false
-        Sourcemap: true
-        Target: es2020
-    Properties:
-      CodeUri: handler-user-session
-      DeadLetterQueue:
-        TargetArn:
-          Fn::GetAtt:
-            - UserSessionCDCHandlerEventBridgeDLQ
-            - Arn
-        Type: SQS
-      Events:
-        UPSERT:
-          Properties:
-            DeadLetterConfig:
-              Arn:
-                Fn::GetAtt:
-                  - UserSessionCDCHandlerDLQ
-                  - Arn
-            EventBusName: default
-            Pattern:
-              detail:
-                dynamodb:
-                  NewImage:
-                    _et:
-                      S:
-                        - UserSession
-              detail-type:
-                - INSERT
-                - MODIFY
-              resources:
-                - Fn::GetAtt:
-                    - TableUserSession
-                    - Arn
-              source:
-                - TableUserSession.UserSession
-          Type: EventBridgeRule
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - AWSLambda_ReadOnlyAccess
-        - AWSXrayWriteOnlyAccess
-        - CloudWatchLambdaInsightsExecutionRolePolicy
-        - CloudWatchPutMetricPolicy: {}
-        - SQSSendMessagePolicy:
-            QueueName:
-              Fn::GetAtt:
-                - UserSessionCDCHandlerDLQ
-                - QueueName
-    Type: AWS::Serverless::Function
-  UserSessionCDCHandlerDLQ:
-    Properties:
-      KmsMasterKeyId: alias/aws/sqs
-    Type: AWS::SQS::Queue
-  UserSessionCDCHandlerEventBridgeDLQ:
-    Properties:
-      KmsMasterKeyId: alias/aws/sqs
-    Type: AWS::SQS::Queue
-  UserSessionCDCHandlerLogGroup:
-    Properties:
-      LogGroupName:
-        Fn::Sub: /aws/lambda/${UserSessionCDCHandler}
       RetentionInDays:
         Ref: LogRetentionInDays
     Type: AWS::Logs::LogGroup
