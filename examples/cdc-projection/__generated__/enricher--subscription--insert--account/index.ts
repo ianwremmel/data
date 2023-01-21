@@ -1,28 +1,13 @@
 // This file is generated. Do not edit by hand.
 
-import {makeEnricher} from '@ianwremmel/data';
+// esbuild and otel instrumentations both attempt to use Object.defineProperty
+// to define the `handler` property transforming ESM to CJS. The workaround is
+// to write the entry point (this file) as CJS.
+// See https://github.com/aws-observability/aws-otel-lambda/issues/99
+// And https://github.com/open-telemetry/opentelemetry-js-contrib/issues/647
 
-import * as dependencies from '../../../dependencies';
-import {create, load, update} from '../../handler';
-import type {
-  Subscription,
-  Account,
-  CreateAccountInput,
-  UpdateAccountInput,
-} from '../actions';
-import {createAccount, unmarshallSubscription, updateAccount} from '../actions';
-
-export const handler = makeEnricher<
-  Subscription,
-  Account,
-  CreateAccountInput,
-  UpdateAccountInput
->(
-  dependencies,
-  {create, load, update},
-  {
-    createTargetModel: createAccount,
-    unmarshallSourceModel: unmarshallSubscription,
-    updateTargetModel: updateAccount,
-  }
-);
+// @ts-ignore - tsc sees every function's index.ts as a shared namespace for
+// some reason
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const {handler} = require('./handler');
+exports.handler = handler;
