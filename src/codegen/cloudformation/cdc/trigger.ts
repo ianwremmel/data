@@ -1,6 +1,8 @@
+import assert from 'assert';
+import crypto from 'crypto';
 import path from 'path';
 
-import {camelCase, kebabCase, upperFirst} from 'lodash';
+import {camelCase, kebabCase, snakeCase, upperFirst} from 'lodash';
 
 import {increasePathDepth, resolveActionsModule} from '../../common/paths';
 import type {Model} from '../../parser';
@@ -34,7 +36,22 @@ export function defineTriggerCdc(
   const handlerFileName = `trigger--${kebabCase(
     sourceModelName
   )}--${event.toLowerCase()}`;
-  const handlerFunctionName = `Fn${upperFirst(camelCase(handlerFileName))}`;
+  const handlerFunctionName = `Fn${upperFirst(
+    camelCase(
+      `trigger--${snakeCase(sourceModelName)
+        .split('_')
+        .map((c) => c[0])
+        .join('-')}--${event}`
+    )
+  )}${crypto
+    .createHash('sha1')
+    .update(sourceModelName + event)
+    .digest('hex')
+    .slice(0, 8)}`;
+  assert(
+    handlerFunctionName.length <= 64,
+    `Handler function name must be less than 64 characters: ${handlerFunctionName}`
+  );
   const handlerOutputPath = path.join(
     path.dirname(outputFile),
     handlerFileName

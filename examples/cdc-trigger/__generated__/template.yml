@@ -39,7 +39,7 @@ Parameters:
     Description: The name of the stage
     Type: String
 Resources:
-  FnTriggerUserSessionUpsert:
+  FnTriggerUSUpsert7d1674e2:
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -53,7 +53,7 @@ Resources:
       DeadLetterQueue:
         TargetArn:
           Fn::GetAtt:
-            - FnTriggerUserSessionUpsertEventBridgeDLQ
+            - FnTriggerUSUpsert7d1674e2EventBridgeDLQ
             - Arn
         Type: SQS
       Events:
@@ -62,7 +62,7 @@ Resources:
             DeadLetterConfig:
               Arn:
                 Fn::GetAtt:
-                  - FnTriggerUserSessionUpsertDLQ
+                  - FnTriggerUSUpsert7d1674e2DLQ
                   - Arn
             EventBusName: default
             Pattern:
@@ -91,21 +91,21 @@ Resources:
         - SQSSendMessagePolicy:
             QueueName:
               Fn::GetAtt:
-                - FnTriggerUserSessionUpsertDLQ
+                - FnTriggerUSUpsert7d1674e2DLQ
                 - QueueName
     Type: AWS::Serverless::Function
-  FnTriggerUserSessionUpsertDLQ:
+  FnTriggerUSUpsert7d1674e2DLQ:
     Properties:
       KmsMasterKeyId: alias/aws/sqs
     Type: AWS::SQS::Queue
-  FnTriggerUserSessionUpsertEventBridgeDLQ:
+  FnTriggerUSUpsert7d1674e2EventBridgeDLQ:
     Properties:
       KmsMasterKeyId: alias/aws/sqs
     Type: AWS::SQS::Queue
-  FnTriggerUserSessionUpsertLogGroup:
+  FnTriggerUSUpsert7d1674e2LogGroup:
     Properties:
       LogGroupName:
-        Fn::Sub: /aws/lambda/${FnTriggerUserSessionUpsert}
+        Fn::Sub: /aws/lambda/${FnTriggerUSUpsert7d1674e2}
       RetentionInDays:
         Ref: LogRetentionInDays
     Type: AWS::Logs::LogGroup
