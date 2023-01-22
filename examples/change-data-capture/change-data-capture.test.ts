@@ -30,7 +30,7 @@ export async function deleteSubscription(
       },
       Key: {
         pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-        sk: `SUBSCRIPTION#${input.effectiveDate.getTime()}`,
+        sk: `SUBSCRIPTION#${input.effectiveDate.toISOString()}`,
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
