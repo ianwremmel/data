@@ -1,5 +1,6 @@
 import assert from 'assert';
 
+import {SpanKind} from '@opentelemetry/api';
 import type {DynamoDBRecord, EventBridgeHandler} from 'aws-lambda';
 
 import type {WithTelemetry} from '../../dependencies';
@@ -62,6 +63,7 @@ export function makeEnricher<
     captureAsyncFunction(
       `${event.resources[0]} process`,
       makeLambdaOTelAttributes(context),
+      SpanKind.CONSUMER,
       async () => {
         const ddbRecord = event.detail;
         const unmarshalledRecord = unmarshallRecord(ddbRecord);

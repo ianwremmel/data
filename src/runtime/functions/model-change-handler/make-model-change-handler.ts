@@ -1,3 +1,4 @@
+import {SpanKind} from '@opentelemetry/api';
 import type {Context, DynamoDBRecord, EventBridgeHandler} from 'aws-lambda';
 
 import type {WithTelemetry} from '../../dependencies';
@@ -26,6 +27,7 @@ export function makeModelChangeHandler(
     captureAsyncFunction(
       `${event.resources[0]} process`,
       makeLambdaOTelAttributes(context),
+      SpanKind.CONSUMER,
       async () => {
         const ddbRecord = event.detail;
         const unmarshalledRecord = unmarshallRecord(ddbRecord);

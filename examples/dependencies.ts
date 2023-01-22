@@ -6,6 +6,7 @@ import {CloudWatchLogsClient} from '@aws-sdk/client-cloudwatch-logs';
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
 import {EventBridgeClient} from '@aws-sdk/client-eventbridge';
 import {DynamoDBDocumentClient} from '@aws-sdk/lib-dynamodb';
+import type {SpanKind} from '@opentelemetry/api';
 import {
   captureAWSv3Client,
   captureHTTPsGlobal,
@@ -83,6 +84,7 @@ export function captureException(err: unknown) {
 export async function captureAsyncFunction<R>(
   name: string,
   attributes: Record<string, boolean | number | string | undefined>,
+  kind: SpanKind,
   fn: () => Promise<R>
 ): Promise<R> {
   return captureAsyncFunc(name, async (subsegment) => {
