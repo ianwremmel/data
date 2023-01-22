@@ -48,8 +48,25 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
     );
     const content = `
 
+
 ${models
   .map((model) => {
+    const hasPublicIdInPrimaryKey =
+      model.primaryKey.partitionKeyFields.some(
+        (field) => field.fieldName === 'publicId'
+      ) ||
+      ('sortKeyFields' in model.primaryKey
+        ? model.primaryKey.sortKeyFields.some(
+            (field) => field.fieldName === 'publicId'
+          )
+        : false);
+
+    if (hasPublicIdInPrimaryKey) {
+      console.warn(
+        `Model ${model.typeName} has a publicId in its primary key and therefore blindWrite is not supported.`
+      );
+    }
+
     return [
       `export interface ${model.typeName}PrimaryKey ${objectToString(
         Object.fromEntries(
@@ -65,7 +82,7 @@ ${models
         )
       )}`,
       createItemTemplate(model),
-      !model.isLedger && blindWriteTemplate(model),
+      !model.isLedger && !hasPublicIdInPrimaryKey && blindWriteTemplate(model),
       !model.isLedger && deleteItemTemplate(model),
       readItemTemplate(model),
       !model.isLedger && touchItemTemplate(model),

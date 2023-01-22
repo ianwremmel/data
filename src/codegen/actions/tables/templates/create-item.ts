@@ -60,6 +60,7 @@ ${ensureTableTemplate(tableName)}
   ${defineComputedInputFields(fields, typeName)}
   const {ExpressionAttributeNames, ExpressionAttributeValues, UpdateExpression} = marshall${typeName}(input, now);
 
+  ${hasPublicId ? `const publicId = idGenerator();` : ''}
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const commandInput: UpdateCommandInput = {
@@ -72,7 +73,7 @@ ${ensureTableTemplate(tableName)}
     ExpressionAttributeValues: {
       ...ExpressionAttributeValues,
       ':createdAt': now.getTime(),
-      ${hasPublicId ? "':publicId': idGenerator()," : ''}
+      ${hasPublicId ? "':publicId': publicId," : ''}
     },
     Key: ${objectToString(key)},
     ReturnConsumedCapacity: 'INDEXES',
