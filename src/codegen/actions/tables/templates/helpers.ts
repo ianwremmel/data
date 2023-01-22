@@ -39,9 +39,9 @@ export function marshallField({
 
   if (isDateType) {
     if (isRequired) {
-      return `input.${fieldName}.getTime()`;
+      return `input.${fieldName}.toISOString()`;
     }
-    return `input.${fieldName}?.getTime()`;
+    return `input.${fieldName}?.toISOString()`;
   }
   return `input.${fieldName}`;
 }

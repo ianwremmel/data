@@ -844,7 +844,7 @@ export function marshallAccount(
 
   const eav: Record<string, unknown> = {
     ':entity': 'Account',
-    ':effectiveDate': input.effectiveDate.getTime(),
+    ':effectiveDate': input.effectiveDate.toISOString(),
     ':externalId': input.externalId,
     ':hasEverSubscribed': input.hasEverSubscribed,
     ':vendor': input.vendor,
