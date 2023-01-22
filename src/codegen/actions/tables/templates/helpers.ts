@@ -75,6 +75,13 @@ export function makeKeyTemplate(
         // eslint-disable-next-line no-template-curly-in-string
         return '${now.getTime()}';
       }
+      // The create template sets a local variable "publicId" so we only
+      // generate it once for both the Key and ExpressionAttributeValues.
+      if (fieldName === 'publicId') {
+        if (mode === 'create') {
+          return 'publicId';
+        }
+      }
       return `\${${marshallField(field)}}`;
     }),
   ]

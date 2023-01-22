@@ -3,7 +3,7 @@ import type {CloudFormationFragment} from '../types';
 
 import {combineFragments} from './combine-fragments';
 import type {LambdaDynamoDBEventInput, LambdaInput} from './lambda';
-import {metadata, writeLambda} from './lambda';
+import {writeLambda} from './lambda';
 import {makeLogGroup} from './log-group';
 
 export interface TableDispatcherInput
@@ -13,6 +13,7 @@ export interface TableDispatcherInput
 /** cloudformation generator */
 export function makeTableDispatcher({
   batchSize = 10,
+  buildProperties,
   dependenciesModuleId,
   codeUri,
   functionName,
@@ -46,7 +47,10 @@ export const handler = makeDynamoDBStreamDispatcher({
     {
       resources: {
         [functionName]: {
-          Metadata: metadata,
+          Metadata: {
+            BuildMethod: 'esbuild',
+            BuildProperties: buildProperties,
+          },
           Properties: {
             CodeUri: codeUri,
             Events: {

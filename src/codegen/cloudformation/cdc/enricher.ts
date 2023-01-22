@@ -7,6 +7,7 @@ import {increasePathDepth, resolveActionsModule} from '../../common/paths';
 import type {Model} from '../../parser';
 import type {CloudformationPluginConfig} from '../config';
 import {combineFragments} from '../fragments/combine-fragments';
+import {buildPropertiesWithDefaults} from '../fragments/lambda';
 import type {CloudFormationFragment} from '../types';
 
 import {makeHandler} from './lambdas';
@@ -99,6 +100,7 @@ Update${targetModelName}Input
 
   return combineFragments(
     makeHandler({
+      buildProperties: buildPropertiesWithDefaults(config.buildProperties),
       codeUri: handlerFileName,
       dependenciesModuleId,
       event,

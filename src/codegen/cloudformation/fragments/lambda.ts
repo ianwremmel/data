@@ -1,7 +1,18 @@
 import fs from 'fs';
 import path from 'path';
 
+import type {CloudformationPluginConfig} from '../config';
+
+export interface BuildProperties {
+  readonly EntryPoints: readonly string[];
+  readonly External?: readonly string[];
+  readonly Minify: boolean;
+  readonly Sourcemap: boolean;
+  readonly Target: string;
+}
+
 export interface LambdaInput {
+  readonly buildProperties: BuildProperties;
   readonly codeUri: string;
   readonly dependenciesModuleId: string;
   readonly functionName: string;
@@ -39,12 +50,15 @@ exports.handler = handler;
   fs.writeFileSync(path.join(directory, 'index.ts'), index);
 }
 
-export const metadata = {
-  BuildMethod: 'esbuild',
-  BuildProperties: {
+/** helper */
+export function buildPropertiesWithDefaults(
+  buildProperties: CloudformationPluginConfig['buildProperties']
+): BuildProperties {
+  return {
     EntryPoints: ['./index'],
-    Minify: false,
-    Sourcemap: true,
-    Target: 'es2020',
-  },
-};
+    External: buildProperties?.external ?? ['@aws-sdk/*'],
+    Minify: buildProperties?.minify ?? false,
+    Sourcemap: buildProperties?.sourcemap ?? true,
+    Target: buildProperties?.target ?? 'es2020',
+  };
+}

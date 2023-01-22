@@ -1037,6 +1037,7 @@ export async function createRepository(
     UpdateExpression,
   } = marshallRepository(input, now);
 
+  const publicId = idGenerator();
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const commandInput: UpdateCommandInput = {
@@ -1049,7 +1050,7 @@ export async function createRepository(
     ExpressionAttributeValues: {
       ...ExpressionAttributeValues,
       ':createdAt': now.getTime(),
-      ':publicId': idGenerator(),
+      ':publicId': publicId,
     },
     Key: {
       pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
@@ -1875,6 +1876,7 @@ export async function createUserSession(
     UpdateExpression,
   } = marshallUserSession(input, now);
 
+  const publicId = idGenerator();
   // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
   // cannot return the newly written values.
   const commandInput: UpdateCommandInput = {
@@ -1887,7 +1889,7 @@ export async function createUserSession(
     ExpressionAttributeValues: {
       ...ExpressionAttributeValues,
       ':createdAt': now.getTime(),
-      ':publicId': idGenerator(),
+      ':publicId': publicId,
     },
     Key: {pk: `USER_SESSION#${input.sessionId}`},
     ReturnConsumedCapacity: 'INDEXES',

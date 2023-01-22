@@ -1,4 +1,5 @@
 import {PutEventsCommand} from '@aws-sdk/client-eventbridge';
+import {SpanKind} from '@opentelemetry/api';
 import type {Context, DynamoDBRecord, DynamoDBStreamHandler} from 'aws-lambda';
 
 import type {
@@ -63,8 +64,9 @@ export function makeDynamoDBStreamDispatcher(
   const {captureAsyncFunction} = dependencies;
   return async (event, context) =>
     captureAsyncFunction(
-      'aws:dynamodb process record',
+      'aws:dynamodb process',
       makeLambdaOTelAttributes(context),
+      SpanKind.CONSUMER,
       async () => {
         const batchItemFailures: string[] = [];
 
@@ -81,6 +83,7 @@ export function makeDynamoDBStreamDispatcher(
                   record.dynamodb?.ApproximateCreationDateTime,
                 'faas.trigger': 'datasource',
               },
+              SpanKind.CONSUMER,
               () =>
                 handleRecord(dependencies, record, context, batchItemFailures)
             )

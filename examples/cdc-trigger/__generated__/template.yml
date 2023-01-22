@@ -45,6 +45,8 @@ Resources:
       BuildProperties:
         EntryPoints:
           - ./index
+        External:
+          - '@aws-sdk/*'
         Minify: false
         Sourcemap: true
         Target: es2020
@@ -148,6 +150,8 @@ Resources:
       BuildProperties:
         EntryPoints:
           - ./index
+        External:
+          - '@aws-sdk/*'
         Minify: false
         Sourcemap: true
         Target: es2020
