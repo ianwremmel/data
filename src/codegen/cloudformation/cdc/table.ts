@@ -5,6 +5,7 @@ import {kebabCase} from 'lodash';
 import type {Table} from '../../parser';
 import type {CloudformationPluginConfig} from '../config';
 import {combineFragments} from '../fragments/combine-fragments';
+import {buildPropertiesWithDefaults} from '../fragments/lambda';
 import {makeTableDispatcher} from '../fragments/table-dispatcher';
 import type {CloudFormationFragment} from '../types';
 
@@ -29,6 +30,7 @@ export function defineTableCdc(
 
   return combineFragments(
     makeTableDispatcher({
+      buildProperties: buildPropertiesWithDefaults(config.buildProperties),
       codeUri: dispatcherFileName,
       dependenciesModuleId,
       functionName: dispatcherFunctionName,

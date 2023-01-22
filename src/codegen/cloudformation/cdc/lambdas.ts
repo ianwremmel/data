@@ -2,7 +2,7 @@ import {filterNull} from '../../common/filters';
 import type {ChangeDataCaptureEvent} from '../../parser';
 import {combineFragments} from '../fragments/combine-fragments';
 import type {LambdaInput} from '../fragments/lambda';
-import {metadata, writeLambda} from '../fragments/lambda';
+import {writeLambda} from '../fragments/lambda';
 import {makeLogGroup} from '../fragments/log-group';
 
 export interface MakeHandlerOptions extends LambdaInput {
@@ -15,6 +15,7 @@ export interface MakeHandlerOptions extends LambdaInput {
 
 /** generate the dispatcher lambda function */
 export function makeHandler({
+  buildProperties,
   codeUri,
   event,
   functionName,
@@ -41,7 +42,10 @@ export function makeHandler({
         Type: 'AWS::SQS::Queue',
       },
       [functionName]: {
-        Metadata: metadata,
+        Metadata: {
+          BuildMethod: 'esbuild',
+          BuildProperties: buildProperties,
+        },
         Properties: {
           CodeUri: codeUri,
           DeadLetterQueue: {
