@@ -79,7 +79,9 @@ export function makeKeyTemplate(
       // generate it once for both the Key and ExpressionAttributeValues.
       if (fieldName === 'publicId') {
         if (mode === 'create') {
-          return 'publicId';
+          // this template gets passed through so it's available in the output.
+          // eslint-disable-next-line no-template-curly-in-string
+          return '${publicId}';
         }
       }
       return `\${${marshallField(field)}}`;
