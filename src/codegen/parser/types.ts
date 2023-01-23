@@ -40,7 +40,7 @@ export interface TableSecondaryIndex {
 }
 
 export interface Model {
-  readonly changeDataCaptureConfig?: ChangeDataCaptureConfig;
+  readonly changeDataCaptureConfig: readonly ChangeDataCaptureConfig[];
   readonly consistent: boolean;
   readonly dependenciesModuleId: string;
   readonly enablePointInTimeRecovery: boolean;

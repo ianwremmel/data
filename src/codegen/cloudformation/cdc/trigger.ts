@@ -5,7 +5,7 @@ import path from 'path';
 import {camelCase, kebabCase, snakeCase, upperFirst} from 'lodash';
 
 import {increasePathDepth, resolveActionsModule} from '../../common/paths';
-import type {Model} from '../../parser';
+import type {ChangeDataCaptureTriggerConfig, Model} from '../../parser';
 import type {CloudformationPluginConfig} from '../config';
 import {combineFragments} from '../fragments/combine-fragments';
 import {buildPropertiesWithDefaults} from '../fragments/lambda';
@@ -16,23 +16,11 @@ import {makeHandler} from './lambdas';
 /** Generates CDC config for a model */
 export function defineTriggerCdc(
   model: Model,
+  {handlerModuleId, event, sourceModelName}: ChangeDataCaptureTriggerConfig,
   config: CloudformationPluginConfig,
   {outputFile}: {outputFile: string}
 ): CloudFormationFragment {
-  if (!model.changeDataCaptureConfig) {
-    return {};
-  }
-
-  if (model.changeDataCaptureConfig.type !== 'TRIGGER') {
-    return {};
-  }
-
-  const {
-    changeDataCaptureConfig: {handlerModuleId, event, sourceModelName},
-    dependenciesModuleId,
-    libImportPath,
-    tableName,
-  } = model;
+  const {dependenciesModuleId, libImportPath, tableName} = model;
 
   const handlerFileName = `trigger--${kebabCase(
     sourceModelName

@@ -21,7 +21,7 @@ jobs:
             ${{ runner.os }}-
       - run: npm ci && npm i -g esbuild
       - run: make clean
-      - run: make -j 4 build
+      - run: make -j 8 build
       - run: ./scripts/diff-lint
 
   lint:
@@ -44,7 +44,7 @@ jobs:
             ${{ runner.os }}-
       - run: npm ci && npm i -g esbuild
       - run: make clean
-      - run: make -j 4 build
+      - run: make -j 8 build
       - run: npm run lint
         env:
           ESLINT_FORMAT_OPTIONS:
@@ -83,7 +83,7 @@ jobs:
             ${{ runner.os }}-
       - run: npm ci && npm i -g esbuild
       - run: make clean
-      - run: make -j 4 build
+      - run: make -j 8 build
       - run: scripts/deploy-examples-to-localstack
       - run: TEST_MODE=localstack npm test
       - uses: check-run-reporter/action@v2.11.1
@@ -114,7 +114,7 @@ jobs:
             ${{ runner.os }}-
       - run: npm ci && npm i -g esbuild
       - run: make clean
-      - run: make -j 4 build
+      - run: make -j 8 build
       - run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
