@@ -8,7 +8,7 @@ import type {
 import {assertObjectType} from 'graphql';
 
 import {filterNull} from '../../common/filters';
-import {getArgStringValue, getDirective} from '../helpers';
+import {getArgStringValue} from '../helpers';
 import {extractTableName} from '../parser';
 import type {
   ChangeDataCaptureConfig,
@@ -26,13 +26,13 @@ export function extractChangeDataCaptureConfig(
     type.astNode?.directives
       ?.map((directive) => {
         if (directive.name.value === 'enriches') {
-          return extractEnricherConfig(schema, type);
+          return extractEnricherConfig(schema, type, directive);
         }
         if (directive.name.value === 'triggers') {
-          return extractTriggersConfig(schema, type);
+          return extractTriggersConfig(schema, type, directive);
         }
         if (directive.name.value === 'cdc') {
-          return extractLegacyConfig(schema, type);
+          return extractLegacyConfig(schema, type, directive);
         }
         return null;
       })
@@ -57,9 +57,9 @@ function getTargetTable(
 /** helper */
 function extractEnricherConfig(
   schema: GraphQLSchema,
-  type: GraphQLObjectType<unknown, unknown>
+  type: GraphQLObjectType<unknown, unknown>,
+  directive: ConstDirectiveNode
 ): ChangeDataCaptureEnricherConfig {
-  const directive = getDirective('enriches', type);
   const event = getEvent(type, directive);
   const handlerModuleId = getArgStringValue('handler', directive);
 
@@ -77,10 +77,9 @@ function extractEnricherConfig(
 /** helper */
 function extractLegacyConfig(
   schema: GraphQLSchema,
-  type: GraphQLObjectType<unknown, unknown>
+  type: GraphQLObjectType<unknown, unknown>,
+  directive: ConstDirectiveNode
 ): LegacyChangeDataCaptureConfig {
-  const directive = getDirective('cdc', type);
-
   const event = getEvent(type, directive);
 
   const handlerModuleId = getArgStringValue('handler', directive);
@@ -103,9 +102,9 @@ function extractLegacyConfig(
 /** helper */
 function extractTriggersConfig(
   schema: GraphQLSchema,
-  type: GraphQLObjectType<unknown, unknown>
+  type: GraphQLObjectType<unknown, unknown>,
+  directive: ConstDirectiveNode
 ): ChangeDataCaptureTriggerConfig {
-  const directive = getDirective('triggers', type);
   const event = getEvent(type, directive);
   const handlerModuleId = getArgStringValue('handler', directive);
 
