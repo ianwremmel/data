@@ -20,7 +20,6 @@ import {resolveDependenciesModuleId} from '../common/paths';
 
 import {extractChangeDataCaptureConfig} from './extractors/cdc';
 import {
-  getArg,
   getArgStringArrayValue,
   getArgStringValue,
   getDirective,
@@ -48,6 +47,7 @@ export interface Info {
   [key: string]: unknown;
   outputFile?: string;
   allPlugins?: Types.ConfiguredPlugin[];
+
   pluginContext?: {
     [key: string]: unknown;
   };
@@ -134,7 +134,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
             enablePointInTimeRecovery:
               acc.enablePointInTimeRecovery || model.enablePointInTimeRecovery,
             enableStreaming: acc.enableStreaming || model.enableStreaming,
-            hasCdc: acc.hasCdc || !!model.changeDataCaptureConfig,
+            hasCdc: acc.hasCdc || model.changeDataCaptureConfig.length > 0,
             hasPublicModels: acc.hasPublicModels || model.isPublicModel,
             hasTtl: acc.hasTtl || !!model.ttlConfig,
             libImportPath: model.libImportPath,
@@ -149,7 +149,7 @@ export function parse<T extends {dependenciesModuleId: string}>(
           dependenciesModuleId,
           enablePointInTimeRecovery: firstModel.enablePointInTimeRecovery,
           enableStreaming: firstModel.enableStreaming,
-          hasCdc: !!firstModel.changeDataCaptureConfig,
+          hasCdc: firstModel.changeDataCaptureConfig.length > 0,
           hasPublicModels: firstModel.isPublicModel,
           hasTtl: !!firstModel.ttlConfig,
           libImportPath: firstModel.libImportPath,

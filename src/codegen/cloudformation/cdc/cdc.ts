@@ -3,7 +3,7 @@ import path from 'path';
 import {kebabCase} from 'lodash';
 
 import {increasePathDepth, resolveActionsModule} from '../../common/paths';
-import type {Model} from '../../parser';
+import type {LegacyChangeDataCaptureConfig, Model} from '../../parser';
 import type {CloudformationPluginConfig} from '../config';
 import {combineFragments} from '../fragments/combine-fragments';
 import {buildPropertiesWithDefaults} from '../fragments/lambda';
@@ -14,28 +14,16 @@ import {makeHandler} from './lambdas';
 /** Generates CDC config for a model */
 export function defineModelCdc(
   model: Model,
+  {
+    handlerModuleId,
+    event,
+    sourceModelName,
+    targetTable,
+  }: LegacyChangeDataCaptureConfig,
   config: CloudformationPluginConfig,
   {outputFile}: {outputFile: string}
 ): CloudFormationFragment {
-  if (!model.changeDataCaptureConfig) {
-    return {};
-  }
-
-  if (model.changeDataCaptureConfig.type !== 'CDC') {
-    return {};
-  }
-
-  const {
-    changeDataCaptureConfig: {
-      handlerModuleId,
-      event,
-      sourceModelName,
-      targetTable,
-    },
-    dependenciesModuleId,
-    libImportPath,
-    tableName,
-  } = model;
+  const {dependenciesModuleId, libImportPath, tableName} = model;
 
   const handlerFileName = `handler-${kebabCase(sourceModelName)}`;
   const handlerFunctionName = `${sourceModelName}CDCHandler`;

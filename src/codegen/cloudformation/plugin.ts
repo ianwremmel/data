@@ -9,6 +9,7 @@ import type {
 import yml from 'js-yaml';
 import {CLOUDFORMATION_SCHEMA} from 'js-yaml-cloudformation-schema';
 
+import {filterNull} from '../common/filters';
 import {parse} from '../parser';
 
 import {defineModelCdc, defineTableCdc} from './cdc';
@@ -61,9 +62,33 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
         defineTable(table)
       )
     ),
-    ...models.map((model) => defineModelCdc(model, config, {outputFile})),
-    ...models.map((model) => defineModelEnricher(model, config, {outputFile})),
-    ...models.map((model) => defineTriggerCdc(model, config, {outputFile}))
+    ...models.flatMap((model) =>
+      model.changeDataCaptureConfig
+        .map((cdcConfig) =>
+          cdcConfig.type === 'CDC'
+            ? defineModelCdc(model, cdcConfig, config, {outputFile})
+            : null
+        )
+        .filter(filterNull)
+    ),
+    ...models.flatMap((model) =>
+      model.changeDataCaptureConfig
+        .map((cdcConfig) =>
+          cdcConfig.type === 'ENRICHER'
+            ? defineModelEnricher(model, cdcConfig, config, {outputFile})
+            : null
+        )
+        .filter(filterNull)
+    ),
+    ...models.flatMap((model) =>
+      model.changeDataCaptureConfig
+        .map((cdcConfig) =>
+          cdcConfig.type === 'TRIGGER'
+            ? defineTriggerCdc(model, cdcConfig, config, {outputFile})
+            : null
+        )
+        .filter(filterNull)
+    )
   );
 
   const initialTemplate = getInitialTemplate(config);

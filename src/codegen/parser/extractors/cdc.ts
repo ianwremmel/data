@@ -7,54 +7,37 @@ import type {
 } from 'graphql';
 import {assertObjectType} from 'graphql';
 
-import {
-  getArgStringValue,
-  getDirective,
-  getOptionalDirective,
-  hasDirective,
-} from '../helpers';
+import {filterNull} from '../../common/filters';
+import {getArgStringValue, getDirective} from '../helpers';
 import {extractTableName} from '../parser';
 import type {
   ChangeDataCaptureConfig,
   ChangeDataCaptureEnricherConfig,
   ChangeDataCaptureTriggerConfig,
+  LegacyChangeDataCaptureConfig,
 } from '../types';
 
 /** Extracts CDC config for a type */
 export function extractChangeDataCaptureConfig(
   schema: GraphQLSchema,
   type: GraphQLObjectType<unknown, unknown>
-): ChangeDataCaptureConfig | undefined {
-  if (hasDirective('enriches', type)) {
-    return extractEnricherConfig(schema, type);
-  }
-
-  if (hasDirective('triggers', type)) {
-    return extractTriggersConfig(schema, type);
-  }
-
-  const directive = getOptionalDirective('cdc', type);
-  if (!directive) {
-    return undefined;
-  }
-
-  const event = getEvent(type, directive);
-
-  const handlerModuleId = getArgStringValue('handler', directive);
-
-  const targetTable = getTargetTable(
-    schema,
-    type.name,
-    getArgStringValue('produces', directive)
+): ChangeDataCaptureConfig[] {
+  return (
+    type.astNode?.directives
+      ?.map((directive) => {
+        if (directive.name.value === 'enriches') {
+          return extractEnricherConfig(schema, type);
+        }
+        if (directive.name.value === 'triggers') {
+          return extractTriggersConfig(schema, type);
+        }
+        if (directive.name.value === 'cdc') {
+          return extractLegacyConfig(schema, type);
+        }
+        return null;
+      })
+      .filter(filterNull) ?? []
   );
-
-  return {
-    event,
-    handlerModuleId,
-    sourceModelName: type.name,
-    targetTable,
-    type: 'CDC',
-  };
 }
 
 /** helper */
@@ -88,6 +71,32 @@ function extractEnricherConfig(
     targetModelName,
     targetTable: getTargetTable(schema, type.name, targetModelName),
     type: 'ENRICHER',
+  };
+}
+
+/** helper */
+function extractLegacyConfig(
+  schema: GraphQLSchema,
+  type: GraphQLObjectType<unknown, unknown>
+): LegacyChangeDataCaptureConfig {
+  const directive = getDirective('cdc', type);
+
+  const event = getEvent(type, directive);
+
+  const handlerModuleId = getArgStringValue('handler', directive);
+
+  const targetTable = getTargetTable(
+    schema,
+    type.name,
+    getArgStringValue('produces', directive)
+  );
+
+  return {
+    event,
+    handlerModuleId,
+    sourceModelName: type.name,
+    targetTable,
+    type: 'CDC',
   };
 }
 
