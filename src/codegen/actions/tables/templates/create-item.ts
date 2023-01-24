@@ -1,5 +1,3 @@
-import {type} from 'os';
-
 import {filterNull} from '../../../common/filters';
 import type {Field, Model, TTLConfig} from '../../../parser';
 import {defineComputedInputFields, inputName} from '../computed-fields';
