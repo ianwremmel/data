@@ -1,4 +1,5 @@
 import type {PrimaryKeyConfig, Model} from '../../parser';
+import type {ActionPluginConfig} from '../config';
 
 import {blindWriteTpl} from './templates/blind-write';
 import {createItemTpl} from './templates/create-item';
@@ -12,11 +13,11 @@ import {updateItemTpl} from './templates/update-item';
 /**
  * Generates the createItem function for a table
  */
-export function createItemTemplate(model: Model) {
+export function createItemTemplate(model: Model, config: ActionPluginConfig) {
   return createItemTpl({
     fields: model.fields,
     hasPublicId: model.isPublicModel,
-    key: makeKey(model.primaryKey),
+    key: makeKey(model.primaryKey, config),
     model,
     tableName: model.tableName,
     ttlConfig: model.ttlConfig,
@@ -27,11 +28,11 @@ export function createItemTemplate(model: Model) {
 /**
  * Generates the createItem function for a table
  */
-export function blindWriteTemplate(model: Model) {
+export function blindWriteTemplate(model: Model, config: ActionPluginConfig) {
   return blindWriteTpl({
     fields: model.fields,
     hasPublicId: model.isPublicModel,
-    key: makeKeyForBlind(model.primaryKey),
+    key: makeKeyForBlind(model.primaryKey, config),
     model,
     tableName: model.tableName,
     ttlConfig: model.ttlConfig,
@@ -42,9 +43,9 @@ export function blindWriteTemplate(model: Model) {
 /**
  * Generates the deleteItem function for a table
  */
-export function deleteItemTemplate(model: Model) {
+export function deleteItemTemplate(model: Model, config: ActionPluginConfig) {
   return deleteItemTpl({
-    key: makeKeyForRead(model.primaryKey),
+    key: makeKeyForRead(model.primaryKey, config),
     tableName: model.tableName,
     typeName: model.typeName,
   });
@@ -79,10 +80,10 @@ export function queryTemplate(model: Model) {
 /**
  * Generates the readItem function for a table
  */
-export function readItemTemplate(model: Model) {
+export function readItemTemplate(model: Model, config: ActionPluginConfig) {
   return readItemTpl({
     consistent: model.consistent,
-    key: makeKeyForRead(model.primaryKey),
+    key: makeKeyForRead(model.primaryKey, config),
     tableName: model.tableName,
     typeName: model.typeName,
   });
@@ -91,7 +92,7 @@ export function readItemTemplate(model: Model) {
 /**
  * Generates the updateItem function for a table
  */
-export function touchItemTemplate(model: Model) {
+export function touchItemTemplate(model: Model, config: ActionPluginConfig) {
   const ean: string[] = [];
   const eav: string[] = [];
   const updateExpressions: string[] = [];
@@ -122,7 +123,7 @@ export function touchItemTemplate(model: Model) {
   return touchItemTpl({
     ean,
     eav,
-    key: makeKeyForBlind(model.primaryKey),
+    key: makeKeyForBlind(model.primaryKey, config),
     tableName: model.tableName,
     typeName: model.typeName,
     updateExpressions,
@@ -132,11 +133,11 @@ export function touchItemTemplate(model: Model) {
 /**
  * Generates the updateItem function for a table
  */
-export function updateItemTemplate(model: Model) {
+export function updateItemTemplate(model: Model, config: ActionPluginConfig) {
   return updateItemTpl({
     fields: model.fields,
     hasPublicId: model.isPublicModel,
-    key: makeKeyForRead(model.primaryKey),
+    key: makeKeyForRead(model.primaryKey, config),
     marshallPrimaryKey: objectToString(
       Object.fromEntries(
         (model.primaryKey.isComposite
@@ -166,19 +167,24 @@ export function updateItemTemplate(model: Model) {
 }
 
 /** helper */
-function makeKey(key: PrimaryKeyConfig): Record<string, string> {
+function makeKey(
+  key: PrimaryKeyConfig,
+  config: ActionPluginConfig
+): Record<string, string> {
   if (key.isComposite) {
+    const doLegacy =
+      config.legacyEmptySortFieldBehavior && key.sortKeyFields.length === 0;
     return {
       pk: `\`${makeKeyTemplate(
         key.partitionKeyPrefix,
         key.partitionKeyFields,
         'create'
       )}\``,
-      sk: `\`${makeKeyTemplate(
-        key.sortKeyPrefix,
-        key.sortKeyFields,
-        'create'
-      )}\``,
+      sk: `\`${
+        doLegacy
+          ? `${key.sortKeyPrefix}#0`
+          : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'create')
+      }\``,
     };
   }
 
@@ -192,19 +198,24 @@ function makeKey(key: PrimaryKeyConfig): Record<string, string> {
 }
 
 /** helper */
-function makeKeyForBlind(key: PrimaryKeyConfig): Record<string, string> {
+function makeKeyForBlind(
+  key: PrimaryKeyConfig,
+  config: ActionPluginConfig
+): Record<string, string> {
   if (key.isComposite) {
+    const doLegacy =
+      config.legacyEmptySortFieldBehavior && key.sortKeyFields.length === 0;
     return {
       pk: `\`${makeKeyTemplate(
         key.partitionKeyPrefix,
         key.partitionKeyFields,
         'blind'
       )}\``,
-      sk: `\`${makeKeyTemplate(
-        key.sortKeyPrefix,
-        key.sortKeyFields,
-        'blind'
-      )}\``,
+      sk: `\`${
+        doLegacy
+          ? `${key.sortKeyPrefix}#0`
+          : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'blind')
+      }\``,
     };
   }
 
@@ -218,19 +229,24 @@ function makeKeyForBlind(key: PrimaryKeyConfig): Record<string, string> {
 }
 
 /** helper */
-function makeKeyForRead(key: PrimaryKeyConfig): Record<string, string> {
+function makeKeyForRead(
+  key: PrimaryKeyConfig,
+  config: ActionPluginConfig
+): Record<string, string> {
   if (key.isComposite) {
+    const doLegacy =
+      config.legacyEmptySortFieldBehavior && key.sortKeyFields.length === 0;
     return {
       pk: `\`${makeKeyTemplate(
         key.partitionKeyPrefix,
         key.partitionKeyFields,
         'read'
       )}\``,
-      sk: `\`${makeKeyTemplate(
-        key.sortKeyPrefix,
-        key.sortKeyFields,
-        'read'
-      )}\``,
+      sk: `\`${
+        doLegacy
+          ? `${key.sortKeyPrefix}#0`
+          : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'read')
+      }\``,
     };
   }
 

@@ -81,12 +81,14 @@ ${models
             .sort()
         )
       )}`,
-      createItemTemplate(model),
-      !model.isLedger && !hasPublicIdInPrimaryKey && blindWriteTemplate(model),
-      !model.isLedger && deleteItemTemplate(model),
-      readItemTemplate(model),
-      !model.isLedger && touchItemTemplate(model),
-      !model.isLedger && updateItemTemplate(model),
+      createItemTemplate(model, config),
+      !model.isLedger &&
+        !hasPublicIdInPrimaryKey &&
+        blindWriteTemplate(model, config),
+      !model.isLedger && deleteItemTemplate(model, config),
+      readItemTemplate(model, config),
+      !model.isLedger && touchItemTemplate(model, config),
+      !model.isLedger && updateItemTemplate(model, config),
       queryTemplate(model),
       marshallTpl({model}),
       unmarshallTpl({model}),
