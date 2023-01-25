@@ -95,6 +95,7 @@ jobs:
 
   release:
     needs:
+      - diff
       - lint
       - test
     runs-on: ubuntu-latest
