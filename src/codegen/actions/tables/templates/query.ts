@@ -85,7 +85,7 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>, {
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === '${typeName}', () => new DataIntegrityError('TODO'));
+      assert(item._et === '${typeName}', () => new DataIntegrityError(\`Query result included at item with type \${item._et}. Only ${typeName} was expected.\`));
       return unmarshall${typeName}(item);
     }),
     nextToken: lastEvaluatedKey

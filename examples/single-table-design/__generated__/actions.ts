@@ -688,7 +688,13 @@ export async function queryAccount(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'Account', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'Account',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only Account was expected.`
+          )
+      );
       return unmarshallAccount(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -1389,7 +1395,10 @@ export async function queryScheduledEmail(
     items: items.map((item) => {
       assert(
         item._et === 'ScheduledEmail',
-        () => new DataIntegrityError('TODO')
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only ScheduledEmail was expected.`
+          )
       );
       return unmarshallScheduledEmail(item);
     }),
@@ -2080,7 +2089,13 @@ export async function querySentEmail(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'SentEmail', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'SentEmail',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only SentEmail was expected.`
+          )
+      );
       return unmarshallSentEmail(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -2755,7 +2770,13 @@ export async function querySubscription(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'Subscription', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'Subscription',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only Subscription was expected.`
+          )
+      );
       return unmarshallSubscription(item);
     }),
     nextToken: lastEvaluatedKey,

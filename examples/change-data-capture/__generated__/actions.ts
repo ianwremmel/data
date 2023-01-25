@@ -658,7 +658,13 @@ export async function queryAccount(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'Account', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'Account',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only Account was expected.`
+          )
+      );
       return unmarshallAccount(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -1079,7 +1085,13 @@ export async function querySubscription(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'Subscription', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'Subscription',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only Subscription was expected.`
+          )
+      );
       return unmarshallSubscription(item);
     }),
     nextToken: lastEvaluatedKey,

@@ -886,7 +886,13 @@ export async function queryCaseInstance(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'CaseInstance', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'CaseInstance',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only CaseInstance was expected.`
+          )
+      );
       return unmarshallCaseInstance(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -1748,7 +1754,13 @@ export async function queryCaseSummary(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'CaseSummary', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'CaseSummary',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only CaseSummary was expected.`
+          )
+      );
       return unmarshallCaseSummary(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -2533,7 +2545,13 @@ export async function queryFileTiming(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'FileTiming', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'FileTiming',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only FileTiming was expected.`
+          )
+      );
       return unmarshallFileTiming(item);
     }),
     nextToken: lastEvaluatedKey,

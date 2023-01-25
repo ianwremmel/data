@@ -758,7 +758,13 @@ export async function queryAccount(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'Account', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'Account',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only Account was expected.`
+          )
+      );
       return unmarshallAccount(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -1541,7 +1547,13 @@ export async function queryRepository(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'Repository', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'Repository',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only Repository was expected.`
+          )
+      );
       return unmarshallRepository(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -2369,7 +2381,13 @@ export async function queryUserSession(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'UserSession', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'UserSession',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only UserSession was expected.`
+          )
+      );
       return unmarshallUserSession(item);
     }),
     nextToken: lastEvaluatedKey,

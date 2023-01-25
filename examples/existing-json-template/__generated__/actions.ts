@@ -661,7 +661,13 @@ export async function queryUserLogin(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'UserLogin', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'UserLogin',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only UserLogin was expected.`
+          )
+      );
       return unmarshallUserLogin(item);
     }),
     nextToken: lastEvaluatedKey,
