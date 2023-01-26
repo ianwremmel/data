@@ -20,6 +20,8 @@ import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
 import type {MultiResultType, ResultType, QueryOptions} from '@ianwremmel/data';
 import {
   assert,
+  unmarshallRequiredField,
+  unmarshallOptionalField,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
@@ -767,68 +769,31 @@ export function marshallUserLogin(
 
 /** Unmarshalls a DynamoDB record into a UserLogin object */
 export function unmarshallUserLogin(item: Record<string, any>): UserLogin {
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.external_id !== null,
-    () => new DataIntegrityError('Expected externalId to be non-null')
-  );
-  assert(
-    typeof item.external_id !== 'undefined',
-    () => new DataIntegrityError('Expected externalId to be defined')
-  );
-
-  assert(
-    item.login !== null,
-    () => new DataIntegrityError('Expected login to be non-null')
-  );
-  assert(
-    typeof item.login !== 'undefined',
-    () => new DataIntegrityError('Expected login to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item.vendor !== null,
-    () => new DataIntegrityError('Expected vendor to be non-null')
-  );
-  assert(
-    typeof item.vendor !== 'undefined',
-    () => new DataIntegrityError('Expected vendor to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   const result: UserLogin = {
-    createdAt: new Date(item._ct),
-    externalId: item.external_id,
+    createdAt: unmarshallRequiredField(
+      item,
+      '_ct',
+      'ct',
+      'ct',
+      (v) => new Date(v)
+    ),
+    externalId: unmarshallRequiredField(
+      item,
+      'external_id',
+      'external_id',
+      'externalId'
+    ),
     id: Base64.encode(`UserLogin:${item.pk}#:#${item.sk}`),
-    login: item.login,
-    updatedAt: new Date(item._md),
-    vendor: item.vendor,
-    version: item._v,
+    login: unmarshallRequiredField(item, 'login', 'login', 'login'),
+    updatedAt: unmarshallRequiredField(
+      item,
+      '_md',
+      'md',
+      'md',
+      (v) => new Date(v)
+    ),
+    vendor: unmarshallRequiredField(item, 'vendor', 'vendor', 'vendor'),
+    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
   };
 
   return result;

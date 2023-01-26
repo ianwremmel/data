@@ -20,6 +20,8 @@ import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
 import type {MultiResultType, ResultType, QueryOptions} from '@ianwremmel/data';
 import {
   assert,
+  unmarshallRequiredField,
+  unmarshallOptionalField,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
@@ -772,88 +774,72 @@ export function marshallAccount(
 
 /** Unmarshalls a DynamoDB record into a Account object */
 export function unmarshallAccount(item: Record<string, any>): Account {
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.effective_date !== null,
-    () => new DataIntegrityError('Expected effectiveDate to be non-null')
-  );
-  assert(
-    typeof item.effective_date !== 'undefined',
-    () => new DataIntegrityError('Expected effectiveDate to be defined')
-  );
-
-  assert(
-    item.external_id !== null,
-    () => new DataIntegrityError('Expected externalId to be non-null')
-  );
-  assert(
-    typeof item.external_id !== 'undefined',
-    () => new DataIntegrityError('Expected externalId to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item.vendor !== null,
-    () => new DataIntegrityError('Expected vendor to be non-null')
-  );
-  assert(
-    typeof item.vendor !== 'undefined',
-    () => new DataIntegrityError('Expected vendor to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   let result: Account = {
-    createdAt: new Date(item._ct),
-    effectiveDate: new Date(item.effective_date),
-    externalId: item.external_id,
+    createdAt: unmarshallRequiredField(
+      item,
+      '_ct',
+      'ct',
+      'ct',
+      (v) => new Date(v)
+    ),
+    effectiveDate: unmarshallRequiredField(
+      item,
+      'effective_date',
+      'effective_date',
+      'effectiveDate',
+      (v) => new Date(v)
+    ),
+    externalId: unmarshallRequiredField(
+      item,
+      'external_id',
+      'external_id',
+      'externalId'
+    ),
     id: Base64.encode(`Account:${item.pk}#:#${item.sk}`),
-    updatedAt: new Date(item._md),
-    vendor: item.vendor,
-    version: item._v,
+    updatedAt: unmarshallRequiredField(
+      item,
+      '_md',
+      'md',
+      'md',
+      (v) => new Date(v)
+    ),
+    vendor: unmarshallRequiredField(item, 'vendor', 'vendor', 'vendor'),
+    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
   };
 
   if ('cancelled' in item) {
     result = {
       ...result,
-      cancelled: item.cancelled,
+      cancelled: unmarshallOptionalField(
+        item,
+        'cancelled',
+        'cancelled',
+        'cancelled'
+      ),
     };
   }
 
   if ('on_free_trial' in item) {
     result = {
       ...result,
-      onFreeTrial: item.on_free_trial,
+      onFreeTrial: unmarshallOptionalField(
+        item,
+        'on_free_trial',
+        'on_free_trial',
+        'onFreeTrial'
+      ),
     };
   }
 
   if ('plan_name' in item) {
     result = {
       ...result,
-      planName: item.plan_name,
+      planName: unmarshallOptionalField(
+        item,
+        'plan_name',
+        'plan_name',
+        'planName'
+      ),
     };
   }
 
@@ -1206,88 +1192,72 @@ export function marshallSubscription(
 export function unmarshallSubscription(
   item: Record<string, any>
 ): Subscription {
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.effective_date !== null,
-    () => new DataIntegrityError('Expected effectiveDate to be non-null')
-  );
-  assert(
-    typeof item.effective_date !== 'undefined',
-    () => new DataIntegrityError('Expected effectiveDate to be defined')
-  );
-
-  assert(
-    item.external_id !== null,
-    () => new DataIntegrityError('Expected externalId to be non-null')
-  );
-  assert(
-    typeof item.external_id !== 'undefined',
-    () => new DataIntegrityError('Expected externalId to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item.vendor !== null,
-    () => new DataIntegrityError('Expected vendor to be non-null')
-  );
-  assert(
-    typeof item.vendor !== 'undefined',
-    () => new DataIntegrityError('Expected vendor to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   let result: Subscription = {
-    createdAt: new Date(item._ct),
-    effectiveDate: new Date(item.effective_date),
-    externalId: item.external_id,
+    createdAt: unmarshallRequiredField(
+      item,
+      '_ct',
+      'ct',
+      'ct',
+      (v) => new Date(v)
+    ),
+    effectiveDate: unmarshallRequiredField(
+      item,
+      'effective_date',
+      'effective_date',
+      'effectiveDate',
+      (v) => new Date(v)
+    ),
+    externalId: unmarshallRequiredField(
+      item,
+      'external_id',
+      'external_id',
+      'externalId'
+    ),
     id: Base64.encode(`Subscription:${item.pk}#:#${item.sk}`),
-    updatedAt: new Date(item._md),
-    vendor: item.vendor,
-    version: item._v,
+    updatedAt: unmarshallRequiredField(
+      item,
+      '_md',
+      'md',
+      'md',
+      (v) => new Date(v)
+    ),
+    vendor: unmarshallRequiredField(item, 'vendor', 'vendor', 'vendor'),
+    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
   };
 
   if ('cancelled' in item) {
     result = {
       ...result,
-      cancelled: item.cancelled,
+      cancelled: unmarshallOptionalField(
+        item,
+        'cancelled',
+        'cancelled',
+        'cancelled'
+      ),
     };
   }
 
   if ('on_free_trial' in item) {
     result = {
       ...result,
-      onFreeTrial: item.on_free_trial,
+      onFreeTrial: unmarshallOptionalField(
+        item,
+        'on_free_trial',
+        'on_free_trial',
+        'onFreeTrial'
+      ),
     };
   }
 
   if ('plan_name' in item) {
     result = {
       ...result,
-      planName: item.plan_name,
+      planName: unmarshallOptionalField(
+        item,
+        'plan_name',
+        'plan_name',
+        'planName'
+      ),
     };
   }
 

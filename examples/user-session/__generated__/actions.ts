@@ -20,6 +20,8 @@ import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
 import type {ResultType} from '@ianwremmel/data';
 import {
   assert,
+  unmarshallRequiredField,
+  unmarshallOptionalField,
   DataIntegrityError,
   MultiResultType,
   NotFoundError,
@@ -587,68 +589,37 @@ export function marshallUserSession(
 
 /** Unmarshalls a DynamoDB record into a UserSession object */
 export function unmarshallUserSession(item: Record<string, any>): UserSession {
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.ttl !== null,
-    () => new DataIntegrityError('Expected expires to be non-null')
-  );
-  assert(
-    typeof item.ttl !== 'undefined',
-    () => new DataIntegrityError('Expected expires to be defined')
-  );
-
-  assert(
-    item.session !== null,
-    () => new DataIntegrityError('Expected session to be non-null')
-  );
-  assert(
-    typeof item.session !== 'undefined',
-    () => new DataIntegrityError('Expected session to be defined')
-  );
-
-  assert(
-    item.session_id !== null,
-    () => new DataIntegrityError('Expected sessionId to be non-null')
-  );
-  assert(
-    typeof item.session_id !== 'undefined',
-    () => new DataIntegrityError('Expected sessionId to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   const result: UserSession = {
-    createdAt: new Date(item._ct),
-    expires: new Date(item.ttl * 1000),
+    createdAt: unmarshallRequiredField(
+      item,
+      '_ct',
+      'ct',
+      'ct',
+      (v) => new Date(v)
+    ),
+    expires: unmarshallRequiredField(
+      item,
+      'ttl',
+      'ttl',
+      'ttl',
+      (v) => new Date(v * 1000)
+    ),
     id: Base64.encode(`UserSession:${item.pk}`),
-    session: item.session,
-    sessionId: item.session_id,
-    updatedAt: new Date(item._md),
-    version: item._v,
+    session: unmarshallRequiredField(item, 'session', 'session', 'session'),
+    sessionId: unmarshallRequiredField(
+      item,
+      'session_id',
+      'session_id',
+      'sessionId'
+    ),
+    updatedAt: unmarshallRequiredField(
+      item,
+      '_md',
+      'md',
+      'md',
+      (v) => new Date(v)
+    ),
+    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
   };
 
   return result;
