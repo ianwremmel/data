@@ -117,16 +117,18 @@ function getTransformString(field: Field): string {
 export function unmarshallFieldValue(field: Field): string {
   const transformString = getTransformString(field);
 
-  const {columnName} = field;
+  const func = field.isRequired
+    ? 'unmarshallRequiredField'
+    : 'unmarshallOptionalField';
 
-  const snakeName = snakeCase(columnName);
-  const camelName = camelCase(columnName);
+  const args = [
+    'item',
+    `'${field.fieldName}'`,
+    `[${field.columnNamesForRead.map((c) => `'${c}'`).join(',')}]`,
+    transformString,
+  ];
 
-  if (field.isRequired) {
-    return `unmarshallRequiredField(item, '${columnName}', '${snakeName}', '${camelName}', ${transformString})`;
-  }
-
-  return `unmarshallOptionalField(item, '${columnName}', '${snakeName}', '${camelName}', ${transformString})`;
+  return `${func}(${args.join(', ')})`;
 }
 /**
  * Helper function for building a field unmarshaller

@@ -595,34 +595,29 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
   const result: UserSession = {
     createdAt: unmarshallRequiredField(
       item,
-      '_ct',
-      'ct',
-      'ct',
+      'createdAt',
+      ['_ct'],
       (v) => new Date(v)
     ),
     expires: unmarshallRequiredField(
       item,
-      'ttl',
-      'ttl',
-      'ttl',
+      'expires',
+      ['ttl'],
       (v) => new Date(v * 1000)
     ),
     id: Base64.encode(`UserSession:${item.pk}`),
-    session: unmarshallRequiredField(item, 'session', 'session', 'session'),
-    sessionId: unmarshallRequiredField(
-      item,
+    session: unmarshallRequiredField(item, 'session', ['session', 'session']),
+    sessionId: unmarshallRequiredField(item, 'sessionId', [
       'session_id',
-      'session_id',
-      'sessionId'
-    ),
+      'sessionId',
+    ]),
     updatedAt: unmarshallRequiredField(
       item,
-      '_md',
-      'md',
-      'md',
+      'updatedAt',
+      ['_md'],
       (v) => new Date(v)
     ),
-    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
   return result;

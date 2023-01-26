@@ -29,32 +29,17 @@ function unmarshallRawRequiredValue<T, R>(
  **/
 export function unmarshallRequiredField(
   item: Record<string, any>,
-  columnName: string,
-  snakeCaseName: string,
-  camelCaseName: string,
+  fieldName: string,
+  possibleColumnNames: readonly string[],
   transform: (value: any) => any = identity
 ) {
-  if (columnName in item) {
-    return unmarshallRawRequiredValue(item[columnName], columnName, transform);
+  for (const name of possibleColumnNames) {
+    if (name in item) {
+      return unmarshallRawRequiredValue(item[name], name, transform);
+    }
   }
 
-  if (camelCaseName in item) {
-    return unmarshallRawRequiredValue(
-      item[camelCaseName],
-      columnName,
-      transform
-    );
-  }
-
-  if (snakeCaseName in item) {
-    return unmarshallRawRequiredValue(
-      item[snakeCaseName],
-      columnName,
-      transform
-    );
-  }
-
-  throw new DataIntegrityError(`Expected ${columnName} to be defined`);
+  throw new DataIntegrityError(`Expected ${fieldName} to be defined`);
 }
 
 /**
@@ -63,22 +48,19 @@ export function unmarshallRequiredField(
  */
 export function unmarshallOptionalField(
   item: Record<string, any>,
-  columnName: string,
-  snakeCaseName: string,
-  camelCaseName: string,
+  /**
+   * fieldName isn't used here, but keeping this function consistent with
+   * unmarshallRequiredField makes other things easier
+   */
+  fieldName: string,
+  possibleColumnNames: readonly string[],
   transform: (value: any) => any = identity
 ) {
-  if (columnName in item) {
-    return transform(item[columnName]);
+  for (const name of possibleColumnNames) {
+    if (name in item) {
+      return transform(item[name]);
+    }
   }
 
-  if (camelCaseName in item) {
-    return transform(item[camelCaseName]);
-  }
-
-  if (snakeCaseName in item) {
-    return transform(item[snakeCaseName]);
-  }
-
-  return null;
+  return undefined;
 }

@@ -1059,69 +1059,57 @@ export function unmarshallCaseInstance(
   item: Record<string, any>
 ): CaseInstance {
   let result: CaseInstance = {
-    branchName: unmarshallRequiredField(
-      item,
+    branchName: unmarshallRequiredField(item, 'branchName', [
       'branch_name',
-      'branch_name',
-      'branchName'
-    ),
-    conclusion: unmarshallRequiredField(
-      item,
+      'branchName',
+    ]),
+    conclusion: unmarshallRequiredField(item, 'conclusion', [
       'conclusion',
       'conclusion',
-      'conclusion'
-    ),
+    ]),
     createdAt: unmarshallRequiredField(
       item,
-      '_ct',
-      'ct',
-      'ct',
+      'createdAt',
+      ['_ct'],
       (v) => new Date(v)
     ),
     id: Base64.encode(`CaseInstance:${item.pk}#:#${item.sk}`),
-    lineage: unmarshallRequiredField(item, 'lineage', 'lineage', 'lineage'),
-    repoId: unmarshallRequiredField(item, 'repo_id', 'repo_id', 'repoId'),
-    retry: unmarshallRequiredField(item, 'retry', 'retry', 'retry'),
-    sha: unmarshallRequiredField(item, 'sha', 'sha', 'sha'),
+    lineage: unmarshallRequiredField(item, 'lineage', ['lineage', 'lineage']),
+    repoId: unmarshallRequiredField(item, 'repoId', ['repo_id', 'repoId']),
+    retry: unmarshallRequiredField(item, 'retry', ['retry', 'retry']),
+    sha: unmarshallRequiredField(item, 'sha', ['sha', 'sha']),
     updatedAt: unmarshallRequiredField(
       item,
-      '_md',
-      'md',
-      'md',
+      'updatedAt',
+      ['_md'],
       (v) => new Date(v)
     ),
-    vendor: unmarshallRequiredField(item, 'vendor', 'vendor', 'vendor'),
-    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('duration' in item) {
+  if ('duration' in item || 'duration' in item) {
     result = {
       ...result,
-      duration: unmarshallOptionalField(
-        item,
+      duration: unmarshallOptionalField(item, 'duration', [
         'duration',
         'duration',
-        'duration'
-      ),
+      ]),
     };
   }
-
-  if ('filename' in item) {
+  if ('filename' in item || 'filename' in item) {
     result = {
       ...result,
-      filename: unmarshallOptionalField(
-        item,
+      filename: unmarshallOptionalField(item, 'filename', [
         'filename',
         'filename',
-        'filename'
-      ),
+      ]),
     };
   }
-
-  if ('label' in item) {
+  if ('label' in item || 'label' in item) {
     result = {
       ...result,
-      label: unmarshallOptionalField(item, 'label', 'label', 'label'),
+      label: unmarshallOptionalField(item, 'label', ['label', 'label']),
     };
   }
 
@@ -1827,44 +1815,41 @@ export function marshallCaseSummary(
 /** Unmarshalls a DynamoDB record into a CaseSummary object */
 export function unmarshallCaseSummary(item: Record<string, any>): CaseSummary {
   let result: CaseSummary = {
-    branchName: unmarshallRequiredField(
-      item,
+    branchName: unmarshallRequiredField(item, 'branchName', [
       'branch_name',
-      'branch_name',
-      'branchName'
-    ),
+      'branchName',
+    ]),
     createdAt: unmarshallRequiredField(
       item,
-      '_ct',
-      'ct',
-      'ct',
+      'createdAt',
+      ['_ct'],
       (v) => new Date(v)
     ),
-    duration: unmarshallRequiredField(item, 'duration', 'duration', 'duration'),
+    duration: unmarshallRequiredField(item, 'duration', [
+      'duration',
+      'duration',
+    ]),
     id: Base64.encode(`CaseSummary:${item.pk}#:#${item.sk}`),
-    lineage: unmarshallRequiredField(item, 'lineage', 'lineage', 'lineage'),
-    repoId: unmarshallRequiredField(item, 'repo_id', 'repo_id', 'repoId'),
-    stability: unmarshallRequiredField(
-      item,
+    lineage: unmarshallRequiredField(item, 'lineage', ['lineage', 'lineage']),
+    repoId: unmarshallRequiredField(item, 'repoId', ['repo_id', 'repoId']),
+    stability: unmarshallRequiredField(item, 'stability', [
       'stability',
       'stability',
-      'stability'
-    ),
+    ]),
     updatedAt: unmarshallRequiredField(
       item,
-      '_md',
-      'md',
-      'md',
+      'updatedAt',
+      ['_md'],
       (v) => new Date(v)
     ),
-    vendor: unmarshallRequiredField(item, 'vendor', 'vendor', 'vendor'),
-    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('label' in item) {
+  if ('label' in item || 'label' in item) {
     result = {
       ...result,
-      label: unmarshallOptionalField(item, 'label', 'label', 'label'),
+      label: unmarshallOptionalField(item, 'label', ['label', 'label']),
     };
   }
 
@@ -2556,38 +2541,40 @@ export function marshallFileTiming(
 /** Unmarshalls a DynamoDB record into a FileTiming object */
 export function unmarshallFileTiming(item: Record<string, any>): FileTiming {
   let result: FileTiming = {
-    branchName: unmarshallRequiredField(
-      item,
+    branchName: unmarshallRequiredField(item, 'branchName', [
       'branch_name',
-      'branch_name',
-      'branchName'
-    ),
+      'branchName',
+    ]),
     createdAt: unmarshallRequiredField(
       item,
-      '_ct',
-      'ct',
-      'ct',
+      'createdAt',
+      ['_ct'],
       (v) => new Date(v)
     ),
-    duration: unmarshallRequiredField(item, 'duration', 'duration', 'duration'),
-    filename: unmarshallRequiredField(item, 'filename', 'filename', 'filename'),
+    duration: unmarshallRequiredField(item, 'duration', [
+      'duration',
+      'duration',
+    ]),
+    filename: unmarshallRequiredField(item, 'filename', [
+      'filename',
+      'filename',
+    ]),
     id: Base64.encode(`FileTiming:${item.pk}#:#${item.sk}`),
-    repoId: unmarshallRequiredField(item, 'repo_id', 'repo_id', 'repoId'),
+    repoId: unmarshallRequiredField(item, 'repoId', ['repo_id', 'repoId']),
     updatedAt: unmarshallRequiredField(
       item,
-      '_md',
-      'md',
-      'md',
+      'updatedAt',
+      ['_md'],
       (v) => new Date(v)
     ),
-    vendor: unmarshallRequiredField(item, 'vendor', 'vendor', 'vendor'),
-    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('label' in item) {
+  if ('label' in item || 'label' in item) {
     result = {
       ...result,
-      label: unmarshallOptionalField(item, 'label', 'label', 'label'),
+      label: unmarshallOptionalField(item, 'label', ['label', 'label']),
     };
   }
 

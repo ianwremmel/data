@@ -902,96 +902,77 @@ export function unmarshallAccount(item: Record<string, any>): Account {
   let result: Account = {
     createdAt: unmarshallRequiredField(
       item,
-      '_ct',
-      'ct',
-      'ct',
+      'createdAt',
+      ['_ct'],
       (v) => new Date(v)
     ),
     effectiveDate: unmarshallRequiredField(
       item,
-      'effective_date',
-      'effective_date',
       'effectiveDate',
+      ['effective_date', 'effectiveDate'],
       (v) => new Date(v)
     ),
-    externalId: unmarshallRequiredField(
-      item,
+    externalId: unmarshallRequiredField(item, 'externalId', [
       'external_id',
-      'external_id',
-      'externalId'
-    ),
-    hasEverSubscribed: unmarshallRequiredField(
-      item,
+      'externalId',
+    ]),
+    hasEverSubscribed: unmarshallRequiredField(item, 'hasEverSubscribed', [
       'has_ever_subscribed',
-      'has_ever_subscribed',
-      'hasEverSubscribed'
-    ),
+      'hasEverSubscribed',
+    ]),
     id: Base64.encode(`Account:${item.pk}#:#${item.sk}`),
     updatedAt: unmarshallRequiredField(
       item,
-      '_md',
-      'md',
-      'md',
+      'updatedAt',
+      ['_md'],
       (v) => new Date(v)
     ),
-    vendor: unmarshallRequiredField(item, 'vendor', 'vendor', 'vendor'),
-    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('cancelled' in item) {
+  if ('cancelled' in item || 'cancelled' in item) {
     result = {
       ...result,
-      cancelled: unmarshallOptionalField(
-        item,
+      cancelled: unmarshallOptionalField(item, 'cancelled', [
         'cancelled',
         'cancelled',
-        'cancelled'
-      ),
+      ]),
     };
   }
-
-  if ('last_plan_name' in item) {
+  if ('last_plan_name' in item || 'lastPlanName' in item) {
     result = {
       ...result,
-      lastPlanName: unmarshallOptionalField(
-        item,
+      lastPlanName: unmarshallOptionalField(item, 'lastPlanName', [
         'last_plan_name',
-        'last_plan_name',
-        'lastPlanName'
-      ),
+        'lastPlanName',
+      ]),
     };
   }
-
-  if ('on_free_trial' in item) {
+  if ('on_free_trial' in item || 'onFreeTrial' in item) {
     result = {
       ...result,
-      onFreeTrial: unmarshallOptionalField(
-        item,
+      onFreeTrial: unmarshallOptionalField(item, 'onFreeTrial', [
         'on_free_trial',
-        'on_free_trial',
-        'onFreeTrial'
-      ),
+        'onFreeTrial',
+      ]),
     };
   }
-
-  if ('plan_name' in item) {
+  if ('plan_name' in item || 'planName' in item) {
     result = {
       ...result,
-      planName: unmarshallOptionalField(
-        item,
+      planName: unmarshallOptionalField(item, 'planName', [
         'plan_name',
-        'plan_name',
-        'planName'
-      ),
+        'planName',
+      ]),
     };
   }
 
   let indexedPlanNameComputed = false;
   const indexedPlanNameDatabaseValue = unmarshallOptionalField(
     item,
-    'indexed_plan_name',
-    'indexed_plan_name',
-    'indexedPlanName'
+    'indexedPlanName',
+    ['indexed_plan_name', 'indexedPlanName']
   );
   let indexedPlanNameComputedValue: Account['indexedPlanName'];
   Object.defineProperty(result, 'indexedPlanName', {
@@ -1705,77 +1686,59 @@ export function unmarshallRepository(item: Record<string, any>): Repository {
   let result: Repository = {
     createdAt: unmarshallRequiredField(
       item,
-      '_ct',
-      'ct',
-      'ct',
+      'createdAt',
+      ['_ct'],
       (v) => new Date(v)
     ),
-    externalAccountId: unmarshallRequiredField(
-      item,
+    externalAccountId: unmarshallRequiredField(item, 'externalAccountId', [
       'external_account_id',
-      'external_account_id',
-      'externalAccountId'
-    ),
-    externalId: unmarshallRequiredField(
-      item,
+      'externalAccountId',
+    ]),
+    externalId: unmarshallRequiredField(item, 'externalId', [
       'external_id',
-      'external_id',
-      'externalId'
-    ),
+      'externalId',
+    ]),
     externalInstallationId: unmarshallRequiredField(
       item,
-      'external_installation_id',
-      'external_installation_id',
-      'externalInstallationId'
+      'externalInstallationId',
+      ['external_installation_id', 'externalInstallationId']
     ),
     id: Base64.encode(`Repository:${item.pk}#:#${item.sk}`),
-    organization: unmarshallRequiredField(
-      item,
+    organization: unmarshallRequiredField(item, 'organization', [
       'organization',
       'organization',
-      'organization'
-    ),
-    publicId: unmarshallRequiredField(
-      item,
-      'publicId',
-      'public_id',
-      'publicId'
-    ),
-    token: unmarshallRequiredField(item, 'token', 'token', 'token'),
+    ]),
+    publicId: unmarshallRequiredField(item, 'publicId', ['publicId']),
+    token: unmarshallRequiredField(item, 'token', ['token', 'token']),
     updatedAt: unmarshallRequiredField(
       item,
-      '_md',
-      'md',
-      'md',
+      'updatedAt',
+      ['_md'],
       (v) => new Date(v)
     ),
-    vendor: unmarshallRequiredField(item, 'vendor', 'vendor', 'vendor'),
-    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('default_branch_name' in item) {
+  if ('default_branch_name' in item || 'defaultBranchName' in item) {
     result = {
       ...result,
-      defaultBranchName: unmarshallOptionalField(
-        item,
+      defaultBranchName: unmarshallOptionalField(item, 'defaultBranchName', [
         'default_branch_name',
-        'default_branch_name',
-        'defaultBranchName'
-      ),
+        'defaultBranchName',
+      ]),
     };
   }
-
-  if ('private' in item) {
+  if ('private' in item || 'private' in item) {
     result = {
       ...result,
-      private: unmarshallOptionalField(item, 'private', 'private', 'private'),
+      private: unmarshallOptionalField(item, 'private', ['private', 'private']),
     };
   }
-
-  if ('repo' in item) {
+  if ('repo' in item || 'repo' in item) {
     result = {
       ...result,
-      repo: unmarshallOptionalField(item, 'repo', 'repo', 'repo'),
+      repo: unmarshallOptionalField(item, 'repo', ['repo', 'repo']),
     };
   }
 
@@ -2475,90 +2438,69 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
   let result: UserSession = {
     createdAt: unmarshallRequiredField(
       item,
-      '_ct',
-      'ct',
-      'ct',
+      'createdAt',
+      ['_ct'],
       (v) => new Date(v)
     ),
     id: Base64.encode(`UserSession:${item.pk}`),
-    publicId: unmarshallRequiredField(
-      item,
-      'publicId',
-      'public_id',
-      'publicId'
-    ),
-    session: unmarshallRequiredField(item, 'session', 'session', 'session'),
-    sessionId: unmarshallRequiredField(
-      item,
+    publicId: unmarshallRequiredField(item, 'publicId', ['publicId']),
+    session: unmarshallRequiredField(item, 'session', ['session', 'session']),
+    sessionId: unmarshallRequiredField(item, 'sessionId', [
       'session_id',
-      'session_id',
-      'sessionId'
-    ),
+      'sessionId',
+    ]),
     updatedAt: unmarshallRequiredField(
       item,
-      '_md',
-      'md',
-      'md',
+      'updatedAt',
+      ['_md'],
       (v) => new Date(v)
     ),
-    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
   if ('renamedField' in item) {
     result = {
       ...result,
-      aliasedField: unmarshallOptionalField(
-        item,
+      aliasedField: unmarshallOptionalField(item, 'aliasedField', [
         'renamedField',
-        'renamed_field',
-        'renamedField'
-      ),
+      ]),
     };
   }
-
-  if ('computed_field' in item) {
+  if ('computed_field' in item || 'computedField' in item) {
     result = {
       ...result,
-      computedField: unmarshallOptionalField(
-        item,
+      computedField: unmarshallOptionalField(item, 'computedField', [
         'computed_field',
-        'computed_field',
-        'computedField'
-      ),
+        'computedField',
+      ]),
     };
   }
-
   if ('ttl' in item) {
     result = {
       ...result,
       expires: unmarshallOptionalField(
         item,
-        'ttl',
-        'ttl',
-        'ttl',
+        'expires',
+        ['ttl'],
         (v) => new Date(v * 1000)
       ),
     };
   }
-
-  if ('optional_field' in item) {
+  if ('optional_field' in item || 'optionalField' in item) {
     result = {
       ...result,
-      optionalField: unmarshallOptionalField(
-        item,
+      optionalField: unmarshallOptionalField(item, 'optionalField', [
         'optional_field',
-        'optional_field',
-        'optionalField'
-      ),
+        'optionalField',
+      ]),
     };
   }
 
   let computedFieldComputed = false;
   const computedFieldDatabaseValue = unmarshallOptionalField(
     item,
-    'computed_field',
-    'computed_field',
-    'computedField'
+    'computedField',
+    ['computed_field', 'computedField']
   );
   let computedFieldComputedValue: UserSession['computedField'];
   Object.defineProperty(result, 'computedField', {

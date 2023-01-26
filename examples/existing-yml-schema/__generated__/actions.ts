@@ -775,28 +775,24 @@ export function unmarshallUserLogin(item: Record<string, any>): UserLogin {
   const result: UserLogin = {
     createdAt: unmarshallRequiredField(
       item,
-      '_ct',
-      'ct',
-      'ct',
+      'createdAt',
+      ['_ct'],
       (v) => new Date(v)
     ),
-    externalId: unmarshallRequiredField(
-      item,
+    externalId: unmarshallRequiredField(item, 'externalId', [
       'external_id',
-      'external_id',
-      'externalId'
-    ),
+      'externalId',
+    ]),
     id: Base64.encode(`UserLogin:${item.pk}#:#${item.sk}`),
-    login: unmarshallRequiredField(item, 'login', 'login', 'login'),
+    login: unmarshallRequiredField(item, 'login', ['login', 'login']),
     updatedAt: unmarshallRequiredField(
       item,
-      '_md',
-      'md',
-      'md',
+      'updatedAt',
+      ['_md'],
       (v) => new Date(v)
     ),
-    vendor: unmarshallRequiredField(item, 'vendor', 'vendor', 'vendor'),
-    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
   return result;

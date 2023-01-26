@@ -780,69 +780,56 @@ export function unmarshallAccount(item: Record<string, any>): Account {
   let result: Account = {
     createdAt: unmarshallRequiredField(
       item,
-      '_ct',
-      'ct',
-      'ct',
+      'createdAt',
+      ['_ct'],
       (v) => new Date(v)
     ),
     effectiveDate: unmarshallRequiredField(
       item,
-      'effective_date',
-      'effective_date',
       'effectiveDate',
+      ['effective_date', 'effectiveDate'],
       (v) => new Date(v)
     ),
-    externalId: unmarshallRequiredField(
-      item,
+    externalId: unmarshallRequiredField(item, 'externalId', [
       'external_id',
-      'external_id',
-      'externalId'
-    ),
+      'externalId',
+    ]),
     id: Base64.encode(`Account:${item.pk}#:#${item.sk}`),
     updatedAt: unmarshallRequiredField(
       item,
-      '_md',
-      'md',
-      'md',
+      'updatedAt',
+      ['_md'],
       (v) => new Date(v)
     ),
-    vendor: unmarshallRequiredField(item, 'vendor', 'vendor', 'vendor'),
-    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('cancelled' in item) {
+  if ('cancelled' in item || 'cancelled' in item) {
     result = {
       ...result,
-      cancelled: unmarshallOptionalField(
-        item,
+      cancelled: unmarshallOptionalField(item, 'cancelled', [
         'cancelled',
         'cancelled',
-        'cancelled'
-      ),
+      ]),
     };
   }
-
-  if ('on_free_trial' in item) {
+  if ('on_free_trial' in item || 'onFreeTrial' in item) {
     result = {
       ...result,
-      onFreeTrial: unmarshallOptionalField(
-        item,
+      onFreeTrial: unmarshallOptionalField(item, 'onFreeTrial', [
         'on_free_trial',
-        'on_free_trial',
-        'onFreeTrial'
-      ),
+        'onFreeTrial',
+      ]),
     };
   }
-
-  if ('plan_name' in item) {
+  if ('plan_name' in item || 'planName' in item) {
     result = {
       ...result,
-      planName: unmarshallOptionalField(
-        item,
+      planName: unmarshallOptionalField(item, 'planName', [
         'plan_name',
-        'plan_name',
-        'planName'
-      ),
+        'planName',
+      ]),
     };
   }
 
@@ -1198,69 +1185,56 @@ export function unmarshallSubscription(
   let result: Subscription = {
     createdAt: unmarshallRequiredField(
       item,
-      '_ct',
-      'ct',
-      'ct',
+      'createdAt',
+      ['_ct'],
       (v) => new Date(v)
     ),
     effectiveDate: unmarshallRequiredField(
       item,
-      'effective_date',
-      'effective_date',
       'effectiveDate',
+      ['effective_date', 'effectiveDate'],
       (v) => new Date(v)
     ),
-    externalId: unmarshallRequiredField(
-      item,
+    externalId: unmarshallRequiredField(item, 'externalId', [
       'external_id',
-      'external_id',
-      'externalId'
-    ),
+      'externalId',
+    ]),
     id: Base64.encode(`Subscription:${item.pk}#:#${item.sk}`),
     updatedAt: unmarshallRequiredField(
       item,
-      '_md',
-      'md',
-      'md',
+      'updatedAt',
+      ['_md'],
       (v) => new Date(v)
     ),
-    vendor: unmarshallRequiredField(item, 'vendor', 'vendor', 'vendor'),
-    version: unmarshallRequiredField(item, '_v', 'v', 'v'),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('cancelled' in item) {
+  if ('cancelled' in item || 'cancelled' in item) {
     result = {
       ...result,
-      cancelled: unmarshallOptionalField(
-        item,
+      cancelled: unmarshallOptionalField(item, 'cancelled', [
         'cancelled',
         'cancelled',
-        'cancelled'
-      ),
+      ]),
     };
   }
-
-  if ('on_free_trial' in item) {
+  if ('on_free_trial' in item || 'onFreeTrial' in item) {
     result = {
       ...result,
-      onFreeTrial: unmarshallOptionalField(
-        item,
+      onFreeTrial: unmarshallOptionalField(item, 'onFreeTrial', [
         'on_free_trial',
-        'on_free_trial',
-        'onFreeTrial'
-      ),
+        'onFreeTrial',
+      ]),
     };
   }
-
-  if ('plan_name' in item) {
+  if ('plan_name' in item || 'planName' in item) {
     result = {
       ...result,
-      planName: unmarshallOptionalField(
-        item,
+      planName: unmarshallOptionalField(item, 'planName', [
         'plan_name',
-        'plan_name',
-        'planName'
-      ),
+        'planName',
+      ]),
     };
   }
 

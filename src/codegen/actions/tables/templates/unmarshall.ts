@@ -41,14 +41,14 @@ ${requiredFields.map((field) => {
 ${optionalFields
   .map(
     (field) =>
-      `
-  if ('${field.columnName}' in item) {
+      `  if (${field.columnNamesForRead
+        .map((c) => `('${c}' in item)`)
+        .join('||')}) {
     result = {
       ...result,
       ${unmarshallField(field)}
     }
-  }
-  `
+  }`
   )
   .join('\n')}
 
