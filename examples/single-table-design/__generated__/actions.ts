@@ -20,6 +20,8 @@ import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
 import type {MultiResultType, ResultType, QueryOptions} from '@ianwremmel/data';
 import {
   assert,
+  unmarshallRequiredField,
+  unmarshallOptionalField,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
@@ -71,6 +73,9 @@ export type Account = Model &
 
 /** CDC Event Types */
 export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
+
+/** Possible case types for converting a fieldName to a DyanmoeDB column_name. */
+export type ColumnCase = 'CAMEL_CASE' | 'SNAKE_CASE';
 
 /**
  * Models are DynamoDB tables with a key schema that may or may not include a sort
@@ -688,7 +693,13 @@ export async function queryAccount(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'Account', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'Account',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only Account was expected.`
+          )
+      );
       return unmarshallAccount(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -796,88 +807,59 @@ export function marshallAccount(
 
 /** Unmarshalls a DynamoDB record into a Account object */
 export function unmarshallAccount(item: Record<string, any>): Account {
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.effective_date !== null,
-    () => new DataIntegrityError('Expected effectiveDate to be non-null')
-  );
-  assert(
-    typeof item.effective_date !== 'undefined',
-    () => new DataIntegrityError('Expected effectiveDate to be defined')
-  );
-
-  assert(
-    item.external_id !== null,
-    () => new DataIntegrityError('Expected externalId to be non-null')
-  );
-  assert(
-    typeof item.external_id !== 'undefined',
-    () => new DataIntegrityError('Expected externalId to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item.vendor !== null,
-    () => new DataIntegrityError('Expected vendor to be non-null')
-  );
-  assert(
-    typeof item.vendor !== 'undefined',
-    () => new DataIntegrityError('Expected vendor to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   let result: Account = {
-    createdAt: new Date(item._ct),
-    effectiveDate: new Date(item.effective_date),
-    externalId: item.external_id,
+    createdAt: unmarshallRequiredField(
+      item,
+      'createdAt',
+      ['_ct'],
+      (v) => new Date(v)
+    ),
+    effectiveDate: unmarshallRequiredField(
+      item,
+      'effectiveDate',
+      ['effective_date', 'effectiveDate'],
+      (v) => new Date(v)
+    ),
+    externalId: unmarshallRequiredField(item, 'externalId', [
+      'external_id',
+      'externalId',
+    ]),
     id: Base64.encode(`Account:${item.pk}#:#${item.sk}`),
-    updatedAt: new Date(item._md),
-    vendor: item.vendor,
-    version: item._v,
+    updatedAt: unmarshallRequiredField(
+      item,
+      'updatedAt',
+      ['_md'],
+      (v) => new Date(v)
+    ),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('cancelled' in item) {
+  if ('cancelled' in item || 'cancelled' in item) {
     result = {
       ...result,
-      cancelled: item.cancelled,
+      cancelled: unmarshallOptionalField(item, 'cancelled', [
+        'cancelled',
+        'cancelled',
+      ]),
     };
   }
-
-  if ('on_free_trial' in item) {
+  if ('on_free_trial' in item || 'onFreeTrial' in item) {
     result = {
       ...result,
-      onFreeTrial: item.on_free_trial,
+      onFreeTrial: unmarshallOptionalField(item, 'onFreeTrial', [
+        'on_free_trial',
+        'onFreeTrial',
+      ]),
     };
   }
-
-  if ('plan_name' in item) {
+  if ('plan_name' in item || 'planName' in item) {
     result = {
       ...result,
-      planName: item.plan_name,
+      planName: unmarshallOptionalField(item, 'planName', [
+        'plan_name',
+        'planName',
+      ]),
     };
   }
 
@@ -1389,7 +1371,10 @@ export async function queryScheduledEmail(
     items: items.map((item) => {
       assert(
         item._et === 'ScheduledEmail',
-        () => new DataIntegrityError('TODO')
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only ScheduledEmail was expected.`
+          )
       );
       return unmarshallScheduledEmail(item);
     }),
@@ -1504,74 +1489,41 @@ export function marshallScheduledEmail(
 export function unmarshallScheduledEmail(
   item: Record<string, any>
 ): ScheduledEmail {
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.external_id !== null,
-    () => new DataIntegrityError('Expected externalId to be non-null')
-  );
-  assert(
-    typeof item.external_id !== 'undefined',
-    () => new DataIntegrityError('Expected externalId to be defined')
-  );
-
-  assert(
-    item.template !== null,
-    () => new DataIntegrityError('Expected template to be non-null')
-  );
-  assert(
-    typeof item.template !== 'undefined',
-    () => new DataIntegrityError('Expected template to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item.vendor !== null,
-    () => new DataIntegrityError('Expected vendor to be non-null')
-  );
-  assert(
-    typeof item.vendor !== 'undefined',
-    () => new DataIntegrityError('Expected vendor to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   let result: ScheduledEmail = {
-    createdAt: new Date(item._ct),
-    externalId: item.external_id,
+    createdAt: unmarshallRequiredField(
+      item,
+      'createdAt',
+      ['_ct'],
+      (v) => new Date(v)
+    ),
+    externalId: unmarshallRequiredField(item, 'externalId', [
+      'external_id',
+      'externalId',
+    ]),
     id: Base64.encode(`ScheduledEmail:${item.pk}#:#${item.sk}`),
-    template: item.template,
-    updatedAt: new Date(item._md),
-    vendor: item.vendor,
-    version: item._v,
+    template: unmarshallRequiredField(item, 'template', [
+      'template',
+      'template',
+    ]),
+    updatedAt: unmarshallRequiredField(
+      item,
+      'updatedAt',
+      ['_md'],
+      (v) => new Date(v)
+    ),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
   if ('ttl' in item) {
     result = {
       ...result,
-      sendAt: item.ttl * 1000 ? new Date(item.ttl * 1000) : null,
+      sendAt: unmarshallOptionalField(
+        item,
+        'sendAt',
+        ['ttl'],
+        (v) => new Date(v * 1000)
+      ),
     };
   }
 
@@ -2080,7 +2032,13 @@ export async function querySentEmail(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'SentEmail', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'SentEmail',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only SentEmail was expected.`
+          )
+      );
       return unmarshallSentEmail(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -2183,78 +2141,34 @@ export function marshallSentEmail(
 
 /** Unmarshalls a DynamoDB record into a SentEmail object */
 export function unmarshallSentEmail(item: Record<string, any>): SentEmail {
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.external_id !== null,
-    () => new DataIntegrityError('Expected externalId to be non-null')
-  );
-  assert(
-    typeof item.external_id !== 'undefined',
-    () => new DataIntegrityError('Expected externalId to be defined')
-  );
-
-  assert(
-    item.message_id !== null,
-    () => new DataIntegrityError('Expected messageId to be non-null')
-  );
-  assert(
-    typeof item.message_id !== 'undefined',
-    () => new DataIntegrityError('Expected messageId to be defined')
-  );
-
-  assert(
-    item.template !== null,
-    () => new DataIntegrityError('Expected template to be non-null')
-  );
-  assert(
-    typeof item.template !== 'undefined',
-    () => new DataIntegrityError('Expected template to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item.vendor !== null,
-    () => new DataIntegrityError('Expected vendor to be non-null')
-  );
-  assert(
-    typeof item.vendor !== 'undefined',
-    () => new DataIntegrityError('Expected vendor to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   const result: SentEmail = {
-    createdAt: new Date(item._ct),
-    externalId: item.external_id,
+    createdAt: unmarshallRequiredField(
+      item,
+      'createdAt',
+      ['_ct'],
+      (v) => new Date(v)
+    ),
+    externalId: unmarshallRequiredField(item, 'externalId', [
+      'external_id',
+      'externalId',
+    ]),
     id: Base64.encode(`SentEmail:${item.pk}#:#${item.sk}`),
-    messageId: item.message_id,
-    template: item.template,
-    updatedAt: new Date(item._md),
-    vendor: item.vendor,
-    version: item._v,
+    messageId: unmarshallRequiredField(item, 'messageId', [
+      'message_id',
+      'messageId',
+    ]),
+    template: unmarshallRequiredField(item, 'template', [
+      'template',
+      'template',
+    ]),
+    updatedAt: unmarshallRequiredField(
+      item,
+      'updatedAt',
+      ['_md'],
+      (v) => new Date(v)
+    ),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
   return result;
@@ -2755,7 +2669,13 @@ export async function querySubscription(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'Subscription', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'Subscription',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only Subscription was expected.`
+          )
+      );
       return unmarshallSubscription(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -2870,88 +2790,59 @@ export function marshallSubscription(
 export function unmarshallSubscription(
   item: Record<string, any>
 ): Subscription {
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.effective_date !== null,
-    () => new DataIntegrityError('Expected effectiveDate to be non-null')
-  );
-  assert(
-    typeof item.effective_date !== 'undefined',
-    () => new DataIntegrityError('Expected effectiveDate to be defined')
-  );
-
-  assert(
-    item.external_id !== null,
-    () => new DataIntegrityError('Expected externalId to be non-null')
-  );
-  assert(
-    typeof item.external_id !== 'undefined',
-    () => new DataIntegrityError('Expected externalId to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item.vendor !== null,
-    () => new DataIntegrityError('Expected vendor to be non-null')
-  );
-  assert(
-    typeof item.vendor !== 'undefined',
-    () => new DataIntegrityError('Expected vendor to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   let result: Subscription = {
-    createdAt: new Date(item._ct),
-    effectiveDate: new Date(item.effective_date),
-    externalId: item.external_id,
+    createdAt: unmarshallRequiredField(
+      item,
+      'createdAt',
+      ['_ct'],
+      (v) => new Date(v)
+    ),
+    effectiveDate: unmarshallRequiredField(
+      item,
+      'effectiveDate',
+      ['effective_date', 'effectiveDate'],
+      (v) => new Date(v)
+    ),
+    externalId: unmarshallRequiredField(item, 'externalId', [
+      'external_id',
+      'externalId',
+    ]),
     id: Base64.encode(`Subscription:${item.pk}#:#${item.sk}`),
-    updatedAt: new Date(item._md),
-    vendor: item.vendor,
-    version: item._v,
+    updatedAt: unmarshallRequiredField(
+      item,
+      'updatedAt',
+      ['_md'],
+      (v) => new Date(v)
+    ),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('cancelled' in item) {
+  if ('cancelled' in item || 'cancelled' in item) {
     result = {
       ...result,
-      cancelled: item.cancelled,
+      cancelled: unmarshallOptionalField(item, 'cancelled', [
+        'cancelled',
+        'cancelled',
+      ]),
     };
   }
-
-  if ('on_free_trial' in item) {
+  if ('on_free_trial' in item || 'onFreeTrial' in item) {
     result = {
       ...result,
-      onFreeTrial: item.on_free_trial,
+      onFreeTrial: unmarshallOptionalField(item, 'onFreeTrial', [
+        'on_free_trial',
+        'onFreeTrial',
+      ]),
     };
   }
-
-  if ('plan_name' in item) {
+  if ('plan_name' in item || 'planName' in item) {
     result = {
       ...result,
-      planName: item.plan_name,
+      planName: unmarshallOptionalField(item, 'planName', [
+        'plan_name',
+        'planName',
+      ]),
     };
   }
 

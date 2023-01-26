@@ -1,5 +1,7 @@
 import assert from 'assert';
 
+import {camelCase, snakeCase} from 'lodash';
+
 import {filterNull} from '../../../common/filters';
 import type {Field} from '../../../parser';
 
@@ -96,28 +98,37 @@ export function objectToString(obj: Record<string, string>): string {
   return `{${Object.entries(obj).map(([k, value]) => `${k}: ${value}`)}}`;
 }
 
+/** helper */
+function getTransformString(field: Field): string {
+  if (field.columnName === 'ttl') {
+    return '(v) => new Date(v * 1000)';
+  }
+
+  if (field.isDateType) {
+    return '(v) => new Date(v)';
+  }
+
+  return '';
+}
+
 /**
  * Helper function for building a field unmarshaller
  */
-export function unmarshallFieldValue({
-  columnName,
-  isDateType,
-  isRequired,
-}: Field): string {
-  let out = `item.${columnName}`;
+export function unmarshallFieldValue(field: Field): string {
+  const transformString = getTransformString(field);
 
-  if (columnName === 'ttl') {
-    out = `${out} * 1000`;
-  }
+  const func = field.isRequired
+    ? 'unmarshallRequiredField'
+    : 'unmarshallOptionalField';
 
-  if (isDateType) {
-    if (isRequired) {
-      out = `new Date(${out})`;
-    } else {
-      out = `${out} ? new Date(${out}) : null`;
-    }
-  }
-  return out;
+  const args = [
+    'item',
+    `'${field.fieldName}'`,
+    `[${field.columnNamesForRead.map((c) => `'${c}'`).join(',')}]`,
+    transformString,
+  ];
+
+  return `${func}(${args.join(', ')})`;
 }
 /**
  * Helper function for building a field unmarshaller

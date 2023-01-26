@@ -24,23 +24,6 @@ export function unmarshallTpl({
 /** Unmarshalls a DynamoDB record into a ${typeName} object */
 export function unmarshall${typeName}(item: Record<string, any>): ${typeName} {
 
-${requiredFields
-  // id is a computed field and therefore never present in the DynamoDB record
-  .filter(({fieldName}) => fieldName !== 'id')
-  .map(({columnName, fieldName}) => {
-    return `
-  assert(
-    item.${columnName} !== null,
-    () => new DataIntegrityError('Expected ${fieldName} to be non-null')
-  );
-  assert(
-    typeof item.${columnName} !== 'undefined',
-    () => new DataIntegrityError('Expected ${fieldName} to be defined')
-  );
-`;
-  })
-  .join('\n')}
-
   let result: ${typeName} = {
 ${requiredFields.map((field) => {
   // This isn't ideal, but it'll work for now. I need a better way to deal
@@ -58,14 +41,14 @@ ${requiredFields.map((field) => {
 ${optionalFields
   .map(
     (field) =>
-      `
-  if ('${field.columnName}' in item) {
+      `  if (${field.columnNamesForRead
+        .map((c) => `('${c}' in item)`)
+        .join('||')}) {
     result = {
       ...result,
       ${unmarshallField(field)}
     }
-  }
-  `
+  }`
   )
   .join('\n')}
 

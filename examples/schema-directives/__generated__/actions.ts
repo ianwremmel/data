@@ -20,6 +20,8 @@ import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
 import type {MultiResultType, ResultType, QueryOptions} from '@ianwremmel/data';
 import {
   assert,
+  unmarshallRequiredField,
+  unmarshallOptionalField,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
@@ -75,6 +77,9 @@ export type Account = Model &
 
 /** CDC Event Types */
 export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
+
+/** Possible case types for converting a fieldName to a DyanmoeDB column_name. */
+export type ColumnCase = 'CAMEL_CASE' | 'SNAKE_CASE';
 
 /**
  * Models are DynamoDB tables with a key schema that may or may not include a sort
@@ -758,7 +763,13 @@ export async function queryAccount(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'Account', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'Account',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only Account was expected.`
+          )
+      );
       return unmarshallAccount(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -888,110 +899,81 @@ export function marshallAccount(
 
 /** Unmarshalls a DynamoDB record into a Account object */
 export function unmarshallAccount(item: Record<string, any>): Account {
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.effective_date !== null,
-    () => new DataIntegrityError('Expected effectiveDate to be non-null')
-  );
-  assert(
-    typeof item.effective_date !== 'undefined',
-    () => new DataIntegrityError('Expected effectiveDate to be defined')
-  );
-
-  assert(
-    item.external_id !== null,
-    () => new DataIntegrityError('Expected externalId to be non-null')
-  );
-  assert(
-    typeof item.external_id !== 'undefined',
-    () => new DataIntegrityError('Expected externalId to be defined')
-  );
-
-  assert(
-    item.has_ever_subscribed !== null,
-    () => new DataIntegrityError('Expected hasEverSubscribed to be non-null')
-  );
-  assert(
-    typeof item.has_ever_subscribed !== 'undefined',
-    () => new DataIntegrityError('Expected hasEverSubscribed to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item.vendor !== null,
-    () => new DataIntegrityError('Expected vendor to be non-null')
-  );
-  assert(
-    typeof item.vendor !== 'undefined',
-    () => new DataIntegrityError('Expected vendor to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   let result: Account = {
-    createdAt: new Date(item._ct),
-    effectiveDate: new Date(item.effective_date),
-    externalId: item.external_id,
-    hasEverSubscribed: item.has_ever_subscribed,
+    createdAt: unmarshallRequiredField(
+      item,
+      'createdAt',
+      ['_ct'],
+      (v) => new Date(v)
+    ),
+    effectiveDate: unmarshallRequiredField(
+      item,
+      'effectiveDate',
+      ['effective_date', 'effectiveDate'],
+      (v) => new Date(v)
+    ),
+    externalId: unmarshallRequiredField(item, 'externalId', [
+      'external_id',
+      'externalId',
+    ]),
+    hasEverSubscribed: unmarshallRequiredField(item, 'hasEverSubscribed', [
+      'has_ever_subscribed',
+      'hasEverSubscribed',
+    ]),
     id: Base64.encode(`Account:${item.pk}#:#${item.sk}`),
-    updatedAt: new Date(item._md),
-    vendor: item.vendor,
-    version: item._v,
+    updatedAt: unmarshallRequiredField(
+      item,
+      'updatedAt',
+      ['_md'],
+      (v) => new Date(v)
+    ),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('cancelled' in item) {
+  if ('cancelled' in item || 'cancelled' in item) {
     result = {
       ...result,
-      cancelled: item.cancelled,
+      cancelled: unmarshallOptionalField(item, 'cancelled', [
+        'cancelled',
+        'cancelled',
+      ]),
     };
   }
-
-  if ('last_plan_name' in item) {
+  if ('last_plan_name' in item || 'lastPlanName' in item) {
     result = {
       ...result,
-      lastPlanName: item.last_plan_name,
+      lastPlanName: unmarshallOptionalField(item, 'lastPlanName', [
+        'last_plan_name',
+        'lastPlanName',
+      ]),
     };
   }
-
-  if ('on_free_trial' in item) {
+  if ('on_free_trial' in item || 'onFreeTrial' in item) {
     result = {
       ...result,
-      onFreeTrial: item.on_free_trial,
+      onFreeTrial: unmarshallOptionalField(item, 'onFreeTrial', [
+        'on_free_trial',
+        'onFreeTrial',
+      ]),
     };
   }
-
-  if ('plan_name' in item) {
+  if ('plan_name' in item || 'planName' in item) {
     result = {
       ...result,
-      planName: item.plan_name,
+      planName: unmarshallOptionalField(item, 'planName', [
+        'plan_name',
+        'planName',
+      ]),
     };
   }
 
   let indexedPlanNameComputed = false;
-  const indexedPlanNameDatabaseValue = item.indexed_plan_name;
+  const indexedPlanNameDatabaseValue = unmarshallOptionalField(
+    item,
+    'indexedPlanName',
+    ['indexed_plan_name', 'indexedPlanName']
+  );
   let indexedPlanNameComputedValue: Account['indexedPlanName'];
   Object.defineProperty(result, 'indexedPlanName', {
     enumerable: true,
@@ -1541,7 +1523,13 @@ export async function queryRepository(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'Repository', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'Repository',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only Repository was expected.`
+          )
+      );
       return unmarshallRepository(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -1695,130 +1683,62 @@ export function marshallRepository(
 
 /** Unmarshalls a DynamoDB record into a Repository object */
 export function unmarshallRepository(item: Record<string, any>): Repository {
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.external_account_id !== null,
-    () => new DataIntegrityError('Expected externalAccountId to be non-null')
-  );
-  assert(
-    typeof item.external_account_id !== 'undefined',
-    () => new DataIntegrityError('Expected externalAccountId to be defined')
-  );
-
-  assert(
-    item.external_id !== null,
-    () => new DataIntegrityError('Expected externalId to be non-null')
-  );
-  assert(
-    typeof item.external_id !== 'undefined',
-    () => new DataIntegrityError('Expected externalId to be defined')
-  );
-
-  assert(
-    item.external_installation_id !== null,
-    () =>
-      new DataIntegrityError('Expected externalInstallationId to be non-null')
-  );
-  assert(
-    typeof item.external_installation_id !== 'undefined',
-    () =>
-      new DataIntegrityError('Expected externalInstallationId to be defined')
-  );
-
-  assert(
-    item.organization !== null,
-    () => new DataIntegrityError('Expected organization to be non-null')
-  );
-  assert(
-    typeof item.organization !== 'undefined',
-    () => new DataIntegrityError('Expected organization to be defined')
-  );
-
-  assert(
-    item.publicId !== null,
-    () => new DataIntegrityError('Expected publicId to be non-null')
-  );
-  assert(
-    typeof item.publicId !== 'undefined',
-    () => new DataIntegrityError('Expected publicId to be defined')
-  );
-
-  assert(
-    item.token !== null,
-    () => new DataIntegrityError('Expected token to be non-null')
-  );
-  assert(
-    typeof item.token !== 'undefined',
-    () => new DataIntegrityError('Expected token to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item.vendor !== null,
-    () => new DataIntegrityError('Expected vendor to be non-null')
-  );
-  assert(
-    typeof item.vendor !== 'undefined',
-    () => new DataIntegrityError('Expected vendor to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   let result: Repository = {
-    createdAt: new Date(item._ct),
-    externalAccountId: item.external_account_id,
-    externalId: item.external_id,
-    externalInstallationId: item.external_installation_id,
+    createdAt: unmarshallRequiredField(
+      item,
+      'createdAt',
+      ['_ct'],
+      (v) => new Date(v)
+    ),
+    externalAccountId: unmarshallRequiredField(item, 'externalAccountId', [
+      'external_account_id',
+      'externalAccountId',
+    ]),
+    externalId: unmarshallRequiredField(item, 'externalId', [
+      'external_id',
+      'externalId',
+    ]),
+    externalInstallationId: unmarshallRequiredField(
+      item,
+      'externalInstallationId',
+      ['external_installation_id', 'externalInstallationId']
+    ),
     id: Base64.encode(`Repository:${item.pk}#:#${item.sk}`),
-    organization: item.organization,
-    publicId: item.publicId,
-    token: item.token,
-    updatedAt: new Date(item._md),
-    vendor: item.vendor,
-    version: item._v,
+    organization: unmarshallRequiredField(item, 'organization', [
+      'organization',
+      'organization',
+    ]),
+    publicId: unmarshallRequiredField(item, 'publicId', ['publicId']),
+    token: unmarshallRequiredField(item, 'token', ['token', 'token']),
+    updatedAt: unmarshallRequiredField(
+      item,
+      'updatedAt',
+      ['_md'],
+      (v) => new Date(v)
+    ),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('default_branch_name' in item) {
+  if ('default_branch_name' in item || 'defaultBranchName' in item) {
     result = {
       ...result,
-      defaultBranchName: item.default_branch_name,
+      defaultBranchName: unmarshallOptionalField(item, 'defaultBranchName', [
+        'default_branch_name',
+        'defaultBranchName',
+      ]),
     };
   }
-
-  if ('private' in item) {
+  if ('private' in item || 'private' in item) {
     result = {
       ...result,
-      private: item.private,
+      private: unmarshallOptionalField(item, 'private', ['private', 'private']),
     };
   }
-
-  if ('repo' in item) {
+  if ('repo' in item || 'repo' in item) {
     result = {
       ...result,
-      repo: item.repo,
+      repo: unmarshallOptionalField(item, 'repo', ['repo', 'repo']),
     };
   }
 
@@ -2369,7 +2289,13 @@ export async function queryUserSession(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'UserSession', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'UserSession',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only UserSession was expected.`
+          )
+      );
       return unmarshallUserSession(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -2509,100 +2435,73 @@ export function marshallUserSession(
 
 /** Unmarshalls a DynamoDB record into a UserSession object */
 export function unmarshallUserSession(item: Record<string, any>): UserSession {
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.publicId !== null,
-    () => new DataIntegrityError('Expected publicId to be non-null')
-  );
-  assert(
-    typeof item.publicId !== 'undefined',
-    () => new DataIntegrityError('Expected publicId to be defined')
-  );
-
-  assert(
-    item.session !== null,
-    () => new DataIntegrityError('Expected session to be non-null')
-  );
-  assert(
-    typeof item.session !== 'undefined',
-    () => new DataIntegrityError('Expected session to be defined')
-  );
-
-  assert(
-    item.session_id !== null,
-    () => new DataIntegrityError('Expected sessionId to be non-null')
-  );
-  assert(
-    typeof item.session_id !== 'undefined',
-    () => new DataIntegrityError('Expected sessionId to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   let result: UserSession = {
-    createdAt: new Date(item._ct),
+    createdAt: unmarshallRequiredField(
+      item,
+      'createdAt',
+      ['_ct'],
+      (v) => new Date(v)
+    ),
     id: Base64.encode(`UserSession:${item.pk}`),
-    publicId: item.publicId,
-    session: item.session,
-    sessionId: item.session_id,
-    updatedAt: new Date(item._md),
-    version: item._v,
+    publicId: unmarshallRequiredField(item, 'publicId', ['publicId']),
+    session: unmarshallRequiredField(item, 'session', ['session', 'session']),
+    sessionId: unmarshallRequiredField(item, 'sessionId', [
+      'session_id',
+      'sessionId',
+    ]),
+    updatedAt: unmarshallRequiredField(
+      item,
+      'updatedAt',
+      ['_md'],
+      (v) => new Date(v)
+    ),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
   if ('renamedField' in item) {
     result = {
       ...result,
-      aliasedField: item.renamedField,
+      aliasedField: unmarshallOptionalField(item, 'aliasedField', [
+        'renamedField',
+      ]),
     };
   }
-
-  if ('computed_field' in item) {
+  if ('computed_field' in item || 'computedField' in item) {
     result = {
       ...result,
-      computedField: item.computed_field,
+      computedField: unmarshallOptionalField(item, 'computedField', [
+        'computed_field',
+        'computedField',
+      ]),
     };
   }
-
   if ('ttl' in item) {
     result = {
       ...result,
-      expires: item.ttl * 1000 ? new Date(item.ttl * 1000) : null,
+      expires: unmarshallOptionalField(
+        item,
+        'expires',
+        ['ttl'],
+        (v) => new Date(v * 1000)
+      ),
     };
   }
-
-  if ('optional_field' in item) {
+  if ('optional_field' in item || 'optionalField' in item) {
     result = {
       ...result,
-      optionalField: item.optional_field,
+      optionalField: unmarshallOptionalField(item, 'optionalField', [
+        'optional_field',
+        'optionalField',
+      ]),
     };
   }
 
   let computedFieldComputed = false;
-  const computedFieldDatabaseValue = item.computed_field;
+  const computedFieldDatabaseValue = unmarshallOptionalField(
+    item,
+    'computedField',
+    ['computed_field', 'computedField']
+  );
   let computedFieldComputedValue: UserSession['computedField'];
   Object.defineProperty(result, 'computedField', {
     enumerable: true,

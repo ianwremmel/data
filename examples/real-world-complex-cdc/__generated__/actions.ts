@@ -20,6 +20,8 @@ import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
 import type {MultiResultType, ResultType, QueryOptions} from '@ianwremmel/data';
 import {
   assert,
+  unmarshallRequiredField,
+  unmarshallOptionalField,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
@@ -92,6 +94,9 @@ export type CaseSummary = Model &
 
 /** CDC Event Types */
 export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
+
+/** Possible case types for converting a fieldName to a DyanmoeDB column_name. */
+export type ColumnCase = 'CAMEL_CASE' | 'SNAKE_CASE';
 
 /** Describes the stability and duration of each submitted file */
 export type FileTiming = Model &
@@ -886,7 +891,13 @@ export async function queryCaseInstance(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'CaseInstance', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'CaseInstance',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only CaseInstance was expected.`
+          )
+      );
       return unmarshallCaseInstance(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -1047,128 +1058,58 @@ export function marshallCaseInstance(
 export function unmarshallCaseInstance(
   item: Record<string, any>
 ): CaseInstance {
-  assert(
-    item.branch_name !== null,
-    () => new DataIntegrityError('Expected branchName to be non-null')
-  );
-  assert(
-    typeof item.branch_name !== 'undefined',
-    () => new DataIntegrityError('Expected branchName to be defined')
-  );
-
-  assert(
-    item.conclusion !== null,
-    () => new DataIntegrityError('Expected conclusion to be non-null')
-  );
-  assert(
-    typeof item.conclusion !== 'undefined',
-    () => new DataIntegrityError('Expected conclusion to be defined')
-  );
-
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.lineage !== null,
-    () => new DataIntegrityError('Expected lineage to be non-null')
-  );
-  assert(
-    typeof item.lineage !== 'undefined',
-    () => new DataIntegrityError('Expected lineage to be defined')
-  );
-
-  assert(
-    item.repo_id !== null,
-    () => new DataIntegrityError('Expected repoId to be non-null')
-  );
-  assert(
-    typeof item.repo_id !== 'undefined',
-    () => new DataIntegrityError('Expected repoId to be defined')
-  );
-
-  assert(
-    item.retry !== null,
-    () => new DataIntegrityError('Expected retry to be non-null')
-  );
-  assert(
-    typeof item.retry !== 'undefined',
-    () => new DataIntegrityError('Expected retry to be defined')
-  );
-
-  assert(
-    item.sha !== null,
-    () => new DataIntegrityError('Expected sha to be non-null')
-  );
-  assert(
-    typeof item.sha !== 'undefined',
-    () => new DataIntegrityError('Expected sha to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item.vendor !== null,
-    () => new DataIntegrityError('Expected vendor to be non-null')
-  );
-  assert(
-    typeof item.vendor !== 'undefined',
-    () => new DataIntegrityError('Expected vendor to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   let result: CaseInstance = {
-    branchName: item.branch_name,
-    conclusion: item.conclusion,
-    createdAt: new Date(item._ct),
+    branchName: unmarshallRequiredField(item, 'branchName', [
+      'branch_name',
+      'branchName',
+    ]),
+    conclusion: unmarshallRequiredField(item, 'conclusion', [
+      'conclusion',
+      'conclusion',
+    ]),
+    createdAt: unmarshallRequiredField(
+      item,
+      'createdAt',
+      ['_ct'],
+      (v) => new Date(v)
+    ),
     id: Base64.encode(`CaseInstance:${item.pk}#:#${item.sk}`),
-    lineage: item.lineage,
-    repoId: item.repo_id,
-    retry: item.retry,
-    sha: item.sha,
-    updatedAt: new Date(item._md),
-    vendor: item.vendor,
-    version: item._v,
+    lineage: unmarshallRequiredField(item, 'lineage', ['lineage', 'lineage']),
+    repoId: unmarshallRequiredField(item, 'repoId', ['repo_id', 'repoId']),
+    retry: unmarshallRequiredField(item, 'retry', ['retry', 'retry']),
+    sha: unmarshallRequiredField(item, 'sha', ['sha', 'sha']),
+    updatedAt: unmarshallRequiredField(
+      item,
+      'updatedAt',
+      ['_md'],
+      (v) => new Date(v)
+    ),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('duration' in item) {
+  if ('duration' in item || 'duration' in item) {
     result = {
       ...result,
-      duration: item.duration,
+      duration: unmarshallOptionalField(item, 'duration', [
+        'duration',
+        'duration',
+      ]),
     };
   }
-
-  if ('filename' in item) {
+  if ('filename' in item || 'filename' in item) {
     result = {
       ...result,
-      filename: item.filename,
+      filename: unmarshallOptionalField(item, 'filename', [
+        'filename',
+        'filename',
+      ]),
     };
   }
-
-  if ('label' in item) {
+  if ('label' in item || 'label' in item) {
     result = {
       ...result,
-      label: item.label,
+      label: unmarshallOptionalField(item, 'label', ['label', 'label']),
     };
   }
 
@@ -1748,7 +1689,13 @@ export async function queryCaseSummary(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'CaseSummary', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'CaseSummary',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only CaseSummary was expected.`
+          )
+      );
       return unmarshallCaseSummary(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -1867,104 +1814,42 @@ export function marshallCaseSummary(
 
 /** Unmarshalls a DynamoDB record into a CaseSummary object */
 export function unmarshallCaseSummary(item: Record<string, any>): CaseSummary {
-  assert(
-    item.branch_name !== null,
-    () => new DataIntegrityError('Expected branchName to be non-null')
-  );
-  assert(
-    typeof item.branch_name !== 'undefined',
-    () => new DataIntegrityError('Expected branchName to be defined')
-  );
-
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.duration !== null,
-    () => new DataIntegrityError('Expected duration to be non-null')
-  );
-  assert(
-    typeof item.duration !== 'undefined',
-    () => new DataIntegrityError('Expected duration to be defined')
-  );
-
-  assert(
-    item.lineage !== null,
-    () => new DataIntegrityError('Expected lineage to be non-null')
-  );
-  assert(
-    typeof item.lineage !== 'undefined',
-    () => new DataIntegrityError('Expected lineage to be defined')
-  );
-
-  assert(
-    item.repo_id !== null,
-    () => new DataIntegrityError('Expected repoId to be non-null')
-  );
-  assert(
-    typeof item.repo_id !== 'undefined',
-    () => new DataIntegrityError('Expected repoId to be defined')
-  );
-
-  assert(
-    item.stability !== null,
-    () => new DataIntegrityError('Expected stability to be non-null')
-  );
-  assert(
-    typeof item.stability !== 'undefined',
-    () => new DataIntegrityError('Expected stability to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item.vendor !== null,
-    () => new DataIntegrityError('Expected vendor to be non-null')
-  );
-  assert(
-    typeof item.vendor !== 'undefined',
-    () => new DataIntegrityError('Expected vendor to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   let result: CaseSummary = {
-    branchName: item.branch_name,
-    createdAt: new Date(item._ct),
-    duration: item.duration,
+    branchName: unmarshallRequiredField(item, 'branchName', [
+      'branch_name',
+      'branchName',
+    ]),
+    createdAt: unmarshallRequiredField(
+      item,
+      'createdAt',
+      ['_ct'],
+      (v) => new Date(v)
+    ),
+    duration: unmarshallRequiredField(item, 'duration', [
+      'duration',
+      'duration',
+    ]),
     id: Base64.encode(`CaseSummary:${item.pk}#:#${item.sk}`),
-    lineage: item.lineage,
-    repoId: item.repo_id,
-    stability: item.stability,
-    updatedAt: new Date(item._md),
-    vendor: item.vendor,
-    version: item._v,
+    lineage: unmarshallRequiredField(item, 'lineage', ['lineage', 'lineage']),
+    repoId: unmarshallRequiredField(item, 'repoId', ['repo_id', 'repoId']),
+    stability: unmarshallRequiredField(item, 'stability', [
+      'stability',
+      'stability',
+    ]),
+    updatedAt: unmarshallRequiredField(
+      item,
+      'updatedAt',
+      ['_md'],
+      (v) => new Date(v)
+    ),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('label' in item) {
+  if ('label' in item || 'label' in item) {
     result = {
       ...result,
-      label: item.label,
+      label: unmarshallOptionalField(item, 'label', ['label', 'label']),
     };
   }
 
@@ -2533,7 +2418,13 @@ export async function queryFileTiming(
     capacity,
     hasNextPage: !!lastEvaluatedKey,
     items: items.map((item) => {
-      assert(item._et === 'FileTiming', () => new DataIntegrityError('TODO'));
+      assert(
+        item._et === 'FileTiming',
+        () =>
+          new DataIntegrityError(
+            `Query result included at item with type ${item._et}. Only FileTiming was expected.`
+          )
+      );
       return unmarshallFileTiming(item);
     }),
     nextToken: lastEvaluatedKey,
@@ -2649,94 +2540,41 @@ export function marshallFileTiming(
 
 /** Unmarshalls a DynamoDB record into a FileTiming object */
 export function unmarshallFileTiming(item: Record<string, any>): FileTiming {
-  assert(
-    item.branch_name !== null,
-    () => new DataIntegrityError('Expected branchName to be non-null')
-  );
-  assert(
-    typeof item.branch_name !== 'undefined',
-    () => new DataIntegrityError('Expected branchName to be defined')
-  );
-
-  assert(
-    item._ct !== null,
-    () => new DataIntegrityError('Expected createdAt to be non-null')
-  );
-  assert(
-    typeof item._ct !== 'undefined',
-    () => new DataIntegrityError('Expected createdAt to be defined')
-  );
-
-  assert(
-    item.duration !== null,
-    () => new DataIntegrityError('Expected duration to be non-null')
-  );
-  assert(
-    typeof item.duration !== 'undefined',
-    () => new DataIntegrityError('Expected duration to be defined')
-  );
-
-  assert(
-    item.filename !== null,
-    () => new DataIntegrityError('Expected filename to be non-null')
-  );
-  assert(
-    typeof item.filename !== 'undefined',
-    () => new DataIntegrityError('Expected filename to be defined')
-  );
-
-  assert(
-    item.repo_id !== null,
-    () => new DataIntegrityError('Expected repoId to be non-null')
-  );
-  assert(
-    typeof item.repo_id !== 'undefined',
-    () => new DataIntegrityError('Expected repoId to be defined')
-  );
-
-  assert(
-    item._md !== null,
-    () => new DataIntegrityError('Expected updatedAt to be non-null')
-  );
-  assert(
-    typeof item._md !== 'undefined',
-    () => new DataIntegrityError('Expected updatedAt to be defined')
-  );
-
-  assert(
-    item.vendor !== null,
-    () => new DataIntegrityError('Expected vendor to be non-null')
-  );
-  assert(
-    typeof item.vendor !== 'undefined',
-    () => new DataIntegrityError('Expected vendor to be defined')
-  );
-
-  assert(
-    item._v !== null,
-    () => new DataIntegrityError('Expected version to be non-null')
-  );
-  assert(
-    typeof item._v !== 'undefined',
-    () => new DataIntegrityError('Expected version to be defined')
-  );
-
   let result: FileTiming = {
-    branchName: item.branch_name,
-    createdAt: new Date(item._ct),
-    duration: item.duration,
-    filename: item.filename,
+    branchName: unmarshallRequiredField(item, 'branchName', [
+      'branch_name',
+      'branchName',
+    ]),
+    createdAt: unmarshallRequiredField(
+      item,
+      'createdAt',
+      ['_ct'],
+      (v) => new Date(v)
+    ),
+    duration: unmarshallRequiredField(item, 'duration', [
+      'duration',
+      'duration',
+    ]),
+    filename: unmarshallRequiredField(item, 'filename', [
+      'filename',
+      'filename',
+    ]),
     id: Base64.encode(`FileTiming:${item.pk}#:#${item.sk}`),
-    repoId: item.repo_id,
-    updatedAt: new Date(item._md),
-    vendor: item.vendor,
-    version: item._v,
+    repoId: unmarshallRequiredField(item, 'repoId', ['repo_id', 'repoId']),
+    updatedAt: unmarshallRequiredField(
+      item,
+      'updatedAt',
+      ['_md'],
+      (v) => new Date(v)
+    ),
+    vendor: unmarshallRequiredField(item, 'vendor', ['vendor', 'vendor']),
+    version: unmarshallRequiredField(item, 'version', ['_v']),
   };
 
-  if ('label' in item) {
+  if ('label' in item || 'label' in item) {
     result = {
       ...result,
-      label: item.label,
+      label: unmarshallOptionalField(item, 'label', ['label', 'label']),
     };
   }
 

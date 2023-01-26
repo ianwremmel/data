@@ -58,6 +58,11 @@ export interface Model {
 
 export interface Field {
   readonly columnName: string;
+  /**
+   * In order to handle the possibility of legacy tables, read all possible
+   * column permutations
+   */
+  readonly columnNamesForRead: readonly string[];
   readonly computeFunction: ComputeFunction | undefined;
   readonly ean: string;
   readonly eav: string;

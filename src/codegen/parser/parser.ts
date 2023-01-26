@@ -13,7 +13,7 @@ import {
   isObjectType,
   isScalarType,
 } from 'graphql';
-import {snakeCase} from 'lodash';
+import {camelCase, snakeCase} from 'lodash';
 
 import {filterNull} from '../common/filters';
 import {resolveDependenciesModuleId} from '../common/paths';
@@ -243,7 +243,8 @@ function extractFields(
         }
       : undefined;
     return {
-      columnName: getAliasForField(field) ?? snakeCase(fieldName),
+      columnName: getAliasForField(field, type, fieldName),
+      columnNamesForRead: getReadAliasesForField(field, type, fieldName),
       computeFunction: importDetails,
       ean: `:${fieldName}`,
       eav: `#${fieldName}`,
@@ -497,7 +498,11 @@ function extractTTLConfig(
 }
 
 /** helper */
-export function getAliasForField(field: GraphQLField<unknown, unknown>) {
+export function getAliasForField(
+  field: GraphQLField<unknown, unknown>,
+  type: GraphQLObjectType<unknown, unknown>,
+  fieldName: string
+) {
   if (hasDirective('ttl', field)) {
     return 'ttl';
   }
@@ -521,6 +526,61 @@ export function getAliasForField(field: GraphQLField<unknown, unknown>) {
     case 'publicId':
       return 'publicId';
     default:
-      return undefined;
+      return getCaseType(type) === 'CAMEL_CASE'
+        ? camelCase(fieldName)
+        : snakeCase(fieldName);
   }
+}
+
+/** helper  */
+function getReadAliasesForField(
+  field: GraphQLField<unknown, unknown>,
+  type: GraphQLObjectType<unknown, unknown>,
+  fieldName: string
+): readonly string[] {
+  if (hasDirective('ttl', field)) {
+    return ['ttl'];
+  }
+
+  if (hasDirective('alias', field)) {
+    const {astNode} = field;
+    assert(astNode);
+    return [getArgStringValue('name', getDirective('alias', astNode))];
+  }
+
+  switch (field.name) {
+    case 'version':
+      return ['_v'];
+    case 'createdAt':
+      return ['_ct'];
+    case 'updatedAt':
+      return ['_md'];
+    // do not snakeCase publicId (to support a legacy project). At some future
+    // point, this and the general index column issue of camel-not-snake needs
+    //
+    case 'publicId':
+      return ['publicId'];
+    default:
+      return getCaseType(type) === 'CAMEL_CASE'
+        ? [camelCase(fieldName), snakeCase(fieldName)]
+        : [snakeCase(fieldName), camelCase(fieldName)];
+  }
+}
+
+/** helper  */
+function getCaseType(
+  type: GraphQLObjectType<unknown, unknown>
+): 'CAMEL_CASE' | 'SNAKE_CASE' {
+  const tableDirective = getOptionalDirective('table', type);
+  if (tableDirective) {
+    const arg = getOptionalArg('columnCase', tableDirective);
+    if (arg) {
+      assert(arg.value.kind === 'EnumValue');
+      if (arg.value.value === 'CAMEL_CASE') {
+        return 'CAMEL_CASE';
+      }
+      assert(arg.value.value === 'SNAKE_CASE');
+    }
+  }
+  return 'SNAKE_CASE';
 }
