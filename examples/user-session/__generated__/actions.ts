@@ -58,6 +58,9 @@ export interface Scalars {
 /** CDC Event Types */
 export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
+/** Possible case types for converting a fieldName to a DyanmoeDB column_name. */
+export type ColumnCase = 'CAMEL_CASE' | 'SNAKE_CASE';
+
 /**
  * Models are DynamoDB tables with a key schema that may or may not include a sort
  * key. A Model must be decorated with either @partitionKey or @compositeKey.

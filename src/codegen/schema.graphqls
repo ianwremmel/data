@@ -163,9 +163,21 @@ directive @secondaryIndex(
 ) repeatable on OBJECT
 
 """
+Possible case types for converting a fieldName to a DyanmoeDB column_name.
+"""
+enum ColumnCase {
+  CAMEL_CASE
+  SNAKE_CASE
+}
+
+"""
 Allows customizing the generated attributes for a table.
 """
 directive @table(
+  """
+  Defaults to ColumnCase.SNAKE_CASE
+  """
+  columnCase: ColumnCase
   """
   Defaults to true
   """

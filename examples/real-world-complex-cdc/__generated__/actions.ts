@@ -95,6 +95,9 @@ export type CaseSummary = Model &
 /** CDC Event Types */
 export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
+/** Possible case types for converting a fieldName to a DyanmoeDB column_name. */
+export type ColumnCase = 'CAMEL_CASE' | 'SNAKE_CASE';
+
 /** Describes the stability and duration of each submitted file */
 export type FileTiming = Model &
   Timestamped &

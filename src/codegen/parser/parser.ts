@@ -13,7 +13,7 @@ import {
   isObjectType,
   isScalarType,
 } from 'graphql';
-import {snakeCase} from 'lodash';
+import {camelCase, snakeCase} from 'lodash';
 
 import {filterNull} from '../common/filters';
 import {resolveDependenciesModuleId} from '../common/paths';
@@ -243,7 +243,7 @@ function extractFields(
         }
       : undefined;
     return {
-      columnName: getAliasForField(field) ?? snakeCase(fieldName),
+      columnName: getAliasForField(field, type, fieldName),
       computeFunction: importDetails,
       ean: `:${fieldName}`,
       eav: `#${fieldName}`,
@@ -497,7 +497,11 @@ function extractTTLConfig(
 }
 
 /** helper */
-export function getAliasForField(field: GraphQLField<unknown, unknown>) {
+export function getAliasForField(
+  field: GraphQLField<unknown, unknown>,
+  type: GraphQLObjectType<unknown, unknown>,
+  fieldName: string
+) {
   if (hasDirective('ttl', field)) {
     return 'ttl';
   }
@@ -507,6 +511,7 @@ export function getAliasForField(field: GraphQLField<unknown, unknown>) {
     assert(astNode);
     return getArgStringValue('name', getDirective('alias', astNode));
   }
+  const tableDirective = getOptionalDirective('table', type);
 
   switch (field.name) {
     case 'version':
@@ -521,6 +526,16 @@ export function getAliasForField(field: GraphQLField<unknown, unknown>) {
     case 'publicId':
       return 'publicId';
     default:
-      return undefined;
+      if (tableDirective) {
+        const arg = getOptionalArg('columnCase', tableDirective);
+        if (arg) {
+          assert(arg.value.kind === 'EnumValue');
+          if (arg.value.value === 'CAMEL_CASE') {
+            return camelCase(fieldName);
+          }
+          assert(arg.value.value === 'SNAKE_CASE');
+        }
+      }
+      return snakeCase(fieldName);
   }
 }
