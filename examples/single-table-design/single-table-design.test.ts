@@ -1,13 +1,19 @@
+import assert from 'assert';
+
+import {UpdateCommand} from '@aws-sdk/lib-dynamodb';
 import {faker} from '@faker-js/faker';
 import {NotFoundError} from '@ianwremmel/data';
 
+import {ddbDocClient} from '../dependencies';
 import {waitFor} from '../test-helpers';
 
 import {
   createSubscription,
   deleteAccount,
   deleteSubscription,
+  marshallAccount,
   readAccount,
+  updateAccount,
 } from './__generated__/actions';
 
 describe('Single Table Design', () => {
@@ -107,4 +113,75 @@ describe('Single Table Design', () => {
     },
     5 * 60 * 1000
   );
+});
+
+describe('#version', () => {
+  it("does not blow up when the version is not set, for example, when adopting a previous library's data", async () => {
+    const tableName = process.env.TABLE_ACCOUNTS;
+    assert(tableName, 'TABLE_ACCOUNTS is not set');
+
+    const externalId = String(faker.datatype.number());
+    const vendor = 'GITHUB';
+
+    try {
+      const now = new Date();
+
+      const {
+        ExpressionAttributeNames,
+        ExpressionAttributeValues,
+        UpdateExpression,
+      } = marshallAccount(
+        {
+          effectiveDate: new Date(),
+          externalId,
+          vendor,
+        },
+        now
+      );
+      delete ExpressionAttributeNames['#version'];
+      delete ExpressionAttributeValues[':version'];
+
+      const result = await ddbDocClient.send(
+        new UpdateCommand({
+          ConditionExpression: 'attribute_not_exists(#pk)',
+          ExpressionAttributeNames: {
+            ...ExpressionAttributeNames,
+            '#createdAt': '_ct',
+          },
+          ExpressionAttributeValues: {
+            ...ExpressionAttributeValues,
+            ':createdAt': now.getTime(),
+          },
+          Key: {pk: `ACCOUNT#${vendor}#${externalId}`, sk: `SUMMARY`},
+          ReturnConsumedCapacity: 'INDEXES',
+          ReturnItemCollectionMetrics: 'SIZE',
+          ReturnValues: 'ALL_NEW',
+          TableName: tableName,
+          UpdateExpression: `${UpdateExpression.split(',')
+            .filter((item) => !item.includes('version'))
+            .join(',')}, #createdAt = :createdAt`,
+        })
+      );
+
+      const promise = readAccount({
+        externalId,
+        vendor,
+      });
+
+      await expect(promise).resolves.not.toThrow();
+      const {item: existing} = await promise;
+      expect(existing.version).toMatchInlineSnapshot(`undefined`);
+
+      const updatePromise = updateAccount({
+        ...existing,
+        cancelled: true,
+      });
+      await updatePromise;
+      await expect(updatePromise).resolves.not.toThrow();
+      const {item: updated} = await updatePromise;
+      expect(updated.version).toMatchInlineSnapshot(`1`);
+    } finally {
+      await deleteAccount({externalId, vendor});
+    }
+  }, 10000);
 });

@@ -478,13 +478,18 @@ export async function updateAccount(
     UpdateExpression,
   } = marshallAccount(input);
   try {
+    let previousVersionCE = '';
+    let previousVersionEAV = {};
+    if ('version' in input && typeof input.version !== 'undefined') {
+      previousVersionCE = '#version = :previousVersion AND ';
+      previousVersionEAV = {':previousVersion': input.version};
+    }
     const commandInput: UpdateCommandInput = {
-      ConditionExpression:
-        '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+      ConditionExpression: `${previousVersionCE}#entity = :entity AND attribute_exists(#pk)`,
       ExpressionAttributeNames,
       ExpressionAttributeValues: {
         ...ExpressionAttributeValues,
-        ':previousVersion': input.version,
+        ...previousVersionEAV,
       },
       Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
       ReturnConsumedCapacity: 'INDEXES',

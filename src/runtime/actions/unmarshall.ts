@@ -39,6 +39,12 @@ export function unmarshallRequiredField(
     }
   }
 
+  // special case for version, which could be absent if we adopted a table that
+  // wasn't versioned
+  if (fieldName === 'version') {
+    return undefined;
+  }
+
   throw new DataIntegrityError(`Expected ${fieldName} to be defined`);
 }
 
