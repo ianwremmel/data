@@ -515,13 +515,18 @@ export async function updateCaseInstance(
     UpdateExpression,
   } = marshallCaseInstance(input);
   try {
+    let previousVersionCE = '';
+    let previousVersionEAV = {};
+    if ('version' in input && typeof input.version !== 'undefined') {
+      previousVersionCE = '#version = :previousVersion AND ';
+      previousVersionEAV = {':previousVersion': input.version};
+    }
     const commandInput: UpdateCommandInput = {
-      ConditionExpression:
-        '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+      ConditionExpression: `${previousVersionCE}#entity = :entity AND attribute_exists(#pk)`,
       ExpressionAttributeNames,
       ExpressionAttributeValues: {
         ...ExpressionAttributeValues,
-        ':previousVersion': input.version,
+        ...previousVersionEAV,
       },
       Key: {
         pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
@@ -1438,13 +1443,18 @@ export async function updateCaseSummary(
     UpdateExpression,
   } = marshallCaseSummary(input);
   try {
+    let previousVersionCE = '';
+    let previousVersionEAV = {};
+    if ('version' in input && typeof input.version !== 'undefined') {
+      previousVersionCE = '#version = :previousVersion AND ';
+      previousVersionEAV = {':previousVersion': input.version};
+    }
     const commandInput: UpdateCommandInput = {
-      ConditionExpression:
-        '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+      ConditionExpression: `${previousVersionCE}#entity = :entity AND attribute_exists(#pk)`,
       ExpressionAttributeNames,
       ExpressionAttributeValues: {
         ...ExpressionAttributeValues,
-        ':previousVersion': input.version,
+        ...previousVersionEAV,
       },
       Key: {
         pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
@@ -2178,13 +2188,18 @@ export async function updateFileTiming(
     UpdateExpression,
   } = marshallFileTiming(input);
   try {
+    let previousVersionCE = '';
+    let previousVersionEAV = {};
+    if ('version' in input && typeof input.version !== 'undefined') {
+      previousVersionCE = '#version = :previousVersion AND ';
+      previousVersionEAV = {':previousVersion': input.version};
+    }
     const commandInput: UpdateCommandInput = {
-      ConditionExpression:
-        '#version = :previousVersion AND #entity = :entity AND attribute_exists(#pk)',
+      ConditionExpression: `${previousVersionCE}#entity = :entity AND attribute_exists(#pk)`,
       ExpressionAttributeNames,
       ExpressionAttributeValues: {
         ...ExpressionAttributeValues,
-        ':previousVersion': input.version,
+        ...previousVersionEAV,
       },
       Key: {
         pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
