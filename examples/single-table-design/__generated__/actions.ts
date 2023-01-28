@@ -439,56 +439,6 @@ export async function readAccount(
   };
 }
 
-export type TouchAccountOutput = ResultType<void>;
-
-/**  */
-export async function touchAccount(
-  input: AccountPrimaryKey
-): Promise<TouchAccountOutput> {
-  const tableName = process.env.TABLE_ACCOUNTS;
-  assert(tableName, 'TABLE_ACCOUNTS is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':versionInc': 1,
-      },
-      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('Account', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
-}
-
 export type UpdateAccountInput = Omit<
   Account,
   'createdAt' | 'id' | 'updatedAt'
@@ -1121,62 +1071,6 @@ export async function readScheduledEmail(
   };
 }
 
-export type TouchScheduledEmailOutput = ResultType<void>;
-
-/**  */
-export async function touchScheduledEmail(
-  input: ScheduledEmailPrimaryKey
-): Promise<TouchScheduledEmailOutput> {
-  const tableName = process.env.TABLE_EMAIL;
-  assert(tableName, 'TABLE_EMAIL is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#pk': 'pk',
-        '#sendAt': 'ttl',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':ttlInc': 86400000,
-        ':versionInc': 1,
-      },
-      Key: {
-        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-        sk: `SCHEDULED_EMAIL#${input.template}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression:
-        'SET #sendAt = #sendAt + :ttlInc, #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('ScheduledEmail', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
-}
-
 export type UpdateScheduledEmailInput = Omit<
   ScheduledEmail,
   'createdAt' | 'id' | 'sendAt' | 'updatedAt'
@@ -1789,59 +1683,6 @@ export async function readSentEmail(
   };
 }
 
-export type TouchSentEmailOutput = ResultType<void>;
-
-/**  */
-export async function touchSentEmail(
-  input: SentEmailPrimaryKey
-): Promise<TouchSentEmailOutput> {
-  const tableName = process.env.TABLE_EMAIL;
-  assert(tableName, 'TABLE_EMAIL is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':versionInc': 1,
-      },
-      Key: {
-        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-        sk: `TEMPLATE#${input.template}#'createdAt' in input ? input.createdAt.getTime() : now.getTime()`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('SentEmail', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
-}
-
 export type UpdateSentEmailInput = Omit<SentEmail, 'id' | 'updatedAt'>;
 export type UpdateSentEmailOutput = ResultType<SentEmail>;
 
@@ -2435,59 +2276,6 @@ export async function readSubscription(
     item: unmarshallSubscription(item),
     metrics: undefined,
   };
-}
-
-export type TouchSubscriptionOutput = ResultType<void>;
-
-/**  */
-export async function touchSubscription(
-  input: SubscriptionPrimaryKey
-): Promise<TouchSubscriptionOutput> {
-  const tableName = process.env.TABLE_ACCOUNTS;
-  assert(tableName, 'TABLE_ACCOUNTS is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':versionInc': 1,
-      },
-      Key: {
-        pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-        sk: `SUBSCRIPTION#${input.effectiveDate.toISOString()}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('Subscription', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
 }
 
 export type UpdateSubscriptionInput = Omit<

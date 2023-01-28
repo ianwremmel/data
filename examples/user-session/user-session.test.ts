@@ -11,7 +11,6 @@ import {
   createUserSession,
   deleteUserSession,
   readUserSession,
-  touchUserSession,
   updateUserSession,
 } from './__generated__/actions';
 
@@ -486,98 +485,6 @@ describe('readUserSession()', () => {
   it('throws an error if the record does not exist', async () => {
     await expect(
       async () => await readUserSession({sessionId: 'some-id'})
-    ).rejects.toThrow(NotFoundError);
-  });
-});
-
-describe('touchUserSession()', () => {
-  it("updates a record's createdAt and extends its ttl", async () => {
-    const result = await createUserSession({
-      session: {foo: 'foo'},
-      sessionId: faker.datatype.uuid(),
-    });
-
-    const readResult = await readUserSession(result.item);
-    expect(readResult).toMatchInlineSnapshot(
-      itemMatcher,
-      `
-      {
-        "capacity": {
-          "CapacityUnits": 1,
-          "GlobalSecondaryIndexes": undefined,
-          "LocalSecondaryIndexes": undefined,
-          "ReadCapacityUnits": undefined,
-          "Table": {
-            "CapacityUnits": 1,
-            "ReadCapacityUnits": undefined,
-            "WriteCapacityUnits": undefined,
-          },
-          "TableName": Any<String>,
-          "WriteCapacityUnits": undefined,
-        },
-        "item": {
-          "createdAt": Any<Date>,
-          "expires": Any<Date>,
-          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
-          "session": {
-            "foo": "foo",
-          },
-          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
-          "updatedAt": Any<Date>,
-          "version": 1,
-        },
-        "metrics": undefined,
-      }
-    `
-    );
-
-    await touchUserSession(result.item);
-    const touchResult = await readUserSession(result.item);
-    expect(touchResult).toMatchInlineSnapshot(
-      itemMatcher,
-      `
-      {
-        "capacity": {
-          "CapacityUnits": 1,
-          "GlobalSecondaryIndexes": undefined,
-          "LocalSecondaryIndexes": undefined,
-          "ReadCapacityUnits": undefined,
-          "Table": {
-            "CapacityUnits": 1,
-            "ReadCapacityUnits": undefined,
-            "WriteCapacityUnits": undefined,
-          },
-          "TableName": Any<String>,
-          "WriteCapacityUnits": undefined,
-        },
-        "item": {
-          "createdAt": Any<Date>,
-          "expires": Any<Date>,
-          "id": "VXNlclNlc3Npb246VVNFUl9TRVNTSU9OIzE4MWM4ODdjLWU3ZGYtNDMzMS05ZmJhLTY1ZDI1NTg2N2UyMA",
-          "session": {
-            "foo": "foo",
-          },
-          "sessionId": "181c887c-e7df-4331-9fba-65d255867e20",
-          "updatedAt": Any<Date>,
-          "version": 2,
-        },
-        "metrics": undefined,
-      }
-    `
-    );
-
-    expect(readResult.item.createdAt).toEqual(touchResult.item.createdAt);
-    expect(readResult.item.updatedAt).toEqual(touchResult.item.updatedAt);
-
-    expect(readResult.item.expires).not.toEqual(touchResult.item.expires);
-
-    // cleanup, not part of test
-    await deleteUserSession(result.item);
-  });
-
-  it('throws an error if the record does not exist', async () => {
-    await expect(
-      async () => await touchUserSession({sessionId: 'some-id'})
     ).rejects.toThrow(NotFoundError);
   });
 });

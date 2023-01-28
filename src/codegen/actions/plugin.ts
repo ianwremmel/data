@@ -17,7 +17,6 @@ import {
   deleteItemTemplate,
   queryTemplate,
   readItemTemplate,
-  touchItemTemplate,
   updateItemTemplate,
 } from './tables/table';
 import {
@@ -87,7 +86,6 @@ ${models
         blindWriteTemplate(model, config),
       !model.isLedger && deleteItemTemplate(model, config),
       readItemTemplate(model, config),
-      !model.isLedger && touchItemTemplate(model, config),
       !model.isLedger && updateItemTemplate(model, config),
       queryTemplate(model),
       marshallTpl({model}),

@@ -443,59 +443,6 @@ export async function readCaseInstance(
   };
 }
 
-export type TouchCaseInstanceOutput = ResultType<void>;
-
-/**  */
-export async function touchCaseInstance(
-  input: CaseInstancePrimaryKey
-): Promise<TouchCaseInstanceOutput> {
-  const tableName = process.env.TABLE_CASE_INSTANCE;
-  assert(tableName, 'TABLE_CASE_INSTANCE is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':versionInc': 1,
-      },
-      Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-        sk: `INSTANCE#${input.sha}#${input.retry}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('CaseInstance', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
-}
-
 export type UpdateCaseInstanceInput = Omit<
   CaseInstance,
   'createdAt' | 'id' | 'updatedAt'
@@ -1371,59 +1318,6 @@ export async function readCaseSummary(
   };
 }
 
-export type TouchCaseSummaryOutput = ResultType<void>;
-
-/**  */
-export async function touchCaseSummary(
-  input: CaseSummaryPrimaryKey
-): Promise<TouchCaseSummaryOutput> {
-  const tableName = process.env.TABLE_CASE_SUMMARY;
-  assert(tableName, 'TABLE_CASE_SUMMARY is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':versionInc': 1,
-      },
-      Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-        sk: `SUMMARY#${input.lineage}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('CaseSummary', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
-}
-
 export type UpdateCaseSummaryInput = Omit<
   CaseSummary,
   'createdAt' | 'id' | 'updatedAt'
@@ -2114,59 +2008,6 @@ export async function readFileTiming(
     item: unmarshallFileTiming(item),
     metrics: undefined,
   };
-}
-
-export type TouchFileTimingOutput = ResultType<void>;
-
-/**  */
-export async function touchFileTiming(
-  input: FileTimingPrimaryKey
-): Promise<TouchFileTimingOutput> {
-  const tableName = process.env.TABLE_FILE_TIMING;
-  assert(tableName, 'TABLE_FILE_TIMING is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':versionInc': 1,
-      },
-      Key: {
-        pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-        sk: `FILE#${input.filename}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('FileTiming', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
 }
 
 export type UpdateFileTimingInput = Omit<

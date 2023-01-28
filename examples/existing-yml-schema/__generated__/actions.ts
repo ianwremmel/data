@@ -398,59 +398,6 @@ export async function readUserLogin(
   };
 }
 
-export type TouchUserLoginOutput = ResultType<void>;
-
-/**  */
-export async function touchUserLogin(
-  input: UserLoginPrimaryKey
-): Promise<TouchUserLoginOutput> {
-  const tableName = process.env.TABLE_USER_LOGIN;
-  assert(tableName, 'TABLE_USER_LOGIN is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':versionInc': 1,
-      },
-      Key: {
-        pk: `USER#${input.vendor}#${input.externalId}`,
-        sk: `LOGIN#${input.login}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('UserLogin', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
-}
-
 export type UpdateUserLoginInput = Omit<
   UserLogin,
   'createdAt' | 'id' | 'updatedAt'

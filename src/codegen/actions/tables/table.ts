@@ -7,7 +7,6 @@ import {deleteItemTpl} from './templates/delete-item';
 import {makeKeyTemplate, objectToString} from './templates/helpers';
 import {queryTpl} from './templates/query';
 import {readItemTpl} from './templates/read-item';
-import {touchItemTpl} from './templates/touch-item';
 import {updateItemTpl} from './templates/update-item';
 
 /**
@@ -86,47 +85,6 @@ export function readItemTemplate(model: Model, config: ActionPluginConfig) {
     key: makeKeyForRead(model.primaryKey, config),
     tableName: model.tableName,
     typeName: model.typeName,
-  });
-}
-
-/**
- * Generates the updateItem function for a table
- */
-export function touchItemTemplate(model: Model, config: ActionPluginConfig) {
-  const ean: string[] = [];
-  const eav: string[] = [];
-  const updateExpressions: string[] = [];
-
-  for (const {fieldName} of model.fields) {
-    if (fieldName === 'id') {
-      continue;
-    } else if (fieldName === 'version') {
-      ean.push(`'#version': '_v'`);
-      eav.push(`':versionInc': 1`);
-      updateExpressions.push(`#version = #version + :versionInc`);
-    } else if (
-      fieldName === model.ttlConfig?.fieldName &&
-      model.ttlConfig.duration
-    ) {
-      ean.push(`'#${fieldName}': 'ttl'`);
-      eav.push(`':ttlInc': ${model.ttlConfig.duration}`);
-      updateExpressions.push(`#${fieldName} = #${fieldName} + :ttlInc`);
-    }
-  }
-
-  ean.push("'#pk': 'pk'");
-
-  ean.sort();
-  eav.sort();
-  updateExpressions.sort();
-
-  return touchItemTpl({
-    ean,
-    eav,
-    key: makeKeyForBlind(model.primaryKey, config),
-    tableName: model.tableName,
-    typeName: model.typeName,
-    updateExpressions,
   });
 }
 

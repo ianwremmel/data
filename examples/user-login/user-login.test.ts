@@ -8,7 +8,6 @@ import {
   queryUserLogin,
   queryUserLoginByNodeId,
   readUserLogin,
-  touchUserLogin,
   updateUserLogin,
 } from './__generated__/actions';
 
@@ -188,98 +187,6 @@ describe('readUserLogin()', () => {
     await expect(
       async () =>
         await readUserLogin({
-          externalId: 'does-not-exist',
-          login: 'does-not-exist',
-          vendor: 'GITHUB',
-        })
-    ).rejects.toThrow(NotFoundError);
-  });
-});
-
-describe('touchUserLogin()', () => {
-  it("updates a record's createdAt and extends its ttl (if present)", async () => {
-    const result = await createUserLogin({
-      externalId: String(faker.datatype.number()),
-      login: faker.internet.userName(),
-      vendor: 'GITHUB',
-    });
-
-    const readResult = await readUserLogin(result.item);
-    expect(readResult).toMatchInlineSnapshot(
-      itemMatcher,
-      `
-      {
-        "capacity": {
-          "CapacityUnits": 0.5,
-          "GlobalSecondaryIndexes": undefined,
-          "LocalSecondaryIndexes": undefined,
-          "ReadCapacityUnits": undefined,
-          "Table": {
-            "CapacityUnits": 0.5,
-            "ReadCapacityUnits": undefined,
-            "WriteCapacityUnits": undefined,
-          },
-          "TableName": Any<String>,
-          "WriteCapacityUnits": undefined,
-        },
-        "item": {
-          "createdAt": Any<Date>,
-          "externalId": "8943",
-          "id": Any<String>,
-          "login": "Joshuah_Buckridge53",
-          "updatedAt": Any<Date>,
-          "vendor": "GITHUB",
-          "version": 1,
-        },
-        "metrics": undefined,
-      }
-    `
-    );
-
-    await touchUserLogin(result.item);
-    const touchResult = await readUserLogin(result.item);
-    expect(touchResult).toMatchInlineSnapshot(
-      itemMatcher,
-      `
-      {
-        "capacity": {
-          "CapacityUnits": 0.5,
-          "GlobalSecondaryIndexes": undefined,
-          "LocalSecondaryIndexes": undefined,
-          "ReadCapacityUnits": undefined,
-          "Table": {
-            "CapacityUnits": 0.5,
-            "ReadCapacityUnits": undefined,
-            "WriteCapacityUnits": undefined,
-          },
-          "TableName": Any<String>,
-          "WriteCapacityUnits": undefined,
-        },
-        "item": {
-          "createdAt": Any<Date>,
-          "externalId": "8943",
-          "id": Any<String>,
-          "login": "Joshuah_Buckridge53",
-          "updatedAt": Any<Date>,
-          "vendor": "GITHUB",
-          "version": 2,
-        },
-        "metrics": undefined,
-      }
-    `
-    );
-
-    expect(readResult.item.createdAt).toEqual(touchResult.item.createdAt);
-    expect(readResult.item.updatedAt).toEqual(touchResult.item.updatedAt);
-
-    // cleanup, not part of test
-    await deleteUserLogin(result.item);
-  });
-
-  it('throws an error if the record does not exist', async () => {
-    await expect(
-      async () =>
-        await touchUserLogin({
           externalId: 'does-not-exist',
           login: 'does-not-exist',
           vendor: 'GITHUB',

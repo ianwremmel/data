@@ -389,59 +389,6 @@ export async function readUserSession(
   };
 }
 
-export type TouchUserSessionOutput = ResultType<void>;
-
-/**  */
-export async function touchUserSession(
-  input: UserSessionPrimaryKey
-): Promise<TouchUserSessionOutput> {
-  const tableName = process.env.TABLE_USER_SESSION;
-  assert(tableName, 'TABLE_USER_SESSION is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#expires': 'ttl',
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':ttlInc': 86400000,
-        ':versionInc': 1,
-      },
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression:
-        'SET #expires = #expires + :ttlInc, #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('UserSession', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
-}
-
 export type UpdateUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt'
