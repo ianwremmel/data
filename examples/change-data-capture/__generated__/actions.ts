@@ -213,9 +213,12 @@ export async function createAccount(
       ...ExpressionAttributeValues,
       ':createdAt': now.getTime(),
 
-      ':lsi1sk': `INSTANCE#${now.getTime()}`,
+      ':lsi1sk': ['INSTANCE', now.getTime()].join('#'),
     },
-    Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+    Key: {
+      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+      sk: ['SUMMARY'].join('#'),
+    },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
@@ -290,11 +293,12 @@ export async function blindWriteAccount(
     ':one': 1,
     ':createdAt': now.getTime(),
 
-    ':lsi1sk': `INSTANCE#${
+    ':lsi1sk': [
+      'INSTANCE',
       'createdAt' in input && typeof input.createdAt !== 'undefined'
         ? input.createdAt.getTime()
-        : now.getTime()
-    }`,
+        : now.getTime(),
+    ].join('#'),
   };
   const ue = `${[
     ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
@@ -306,7 +310,10 @@ export async function blindWriteAccount(
   const commandInput: UpdateCommandInput = {
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
-    Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+    Key: {
+      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+      sk: ['SUMMARY'].join('#'),
+    },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
@@ -356,7 +363,10 @@ export async function deleteAccount(
       ExpressionAttributeNames: {
         '#pk': 'pk',
       },
-      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+      Key: {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: ['SUMMARY'].join('#'),
+      },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'NONE',
@@ -398,7 +408,10 @@ export async function readAccount(
 
   const commandInput: GetCommandInput = {
     ConsistentRead: false,
-    Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+    Key: {
+      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+      sk: ['SUMMARY'].join('#'),
+    },
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
   };
@@ -462,7 +475,10 @@ export async function updateAccount(
         ...ExpressionAttributeValues,
         ...previousVersionEAV,
       },
-      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+      Key: {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: ['SUMMARY'].join('#'),
+      },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
@@ -552,7 +568,7 @@ function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
   if ('index' in input) {
     if (input.index === 'lsi1') {
       return {
-        ':pk': `ACCOUNT#${input.vendor}#${input.externalId}`,
+        ':pk': ['ACCOUNT', input.vendor, input.externalId].join('#'),
         ':sk': ['INSTANCE', 'createdAt' in input && input.createdAt]
           .filter(Boolean)
           .join('#'),
@@ -563,7 +579,7 @@ function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
     );
   } else {
     return {
-      ':pk': `ACCOUNT#${input.vendor}#${input.externalId}`,
+      ':pk': ['ACCOUNT', input.vendor, input.externalId].join('#'),
       ':sk': ['SUMMARY'].filter(Boolean).join('#'),
     };
   }
@@ -848,8 +864,8 @@ export async function createSubscription(
       ':createdAt': now.getTime(),
     },
     Key: {
-      pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-      sk: `SUBSCRIPTION#${input.effectiveDate.toISOString()}`,
+      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+      sk: ['SUBSCRIPTION', input.effectiveDate.toISOString()].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
@@ -900,8 +916,8 @@ export async function readSubscription(
   const commandInput: GetCommandInput = {
     ConsistentRead: false,
     Key: {
-      pk: `ACCOUNT#${input.vendor}#${input.externalId}`,
-      sk: `SUBSCRIPTION#${input.effectiveDate.toISOString()}`,
+      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+      sk: ['SUBSCRIPTION', input.effectiveDate.toISOString()].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
@@ -966,7 +982,7 @@ function makeEavForQuerySubscription(
     );
   } else {
     return {
-      ':pk': `ACCOUNT#${input.vendor}#${input.externalId}`,
+      ':pk': ['ACCOUNT', input.vendor, input.externalId].join('#'),
       ':sk': ['SUBSCRIPTION', 'effectiveDate' in input && input.effectiveDate]
         .filter(Boolean)
         .join('#'),

@@ -236,12 +236,19 @@ export async function createCaseInstance(
       ...ExpressionAttributeValues,
       ':createdAt': now.getTime(),
 
-      ':lsi1sk': `INSTANCE#${now.getTime()}`,
-      ':lsi2sk': `INSTANCE#${input.conclusion}#${now.getTime()}`,
+      ':lsi1sk': ['INSTANCE', now.getTime()].join('#'),
+      ':lsi2sk': ['INSTANCE', input.conclusion, now.getTime()].join('#'),
     },
     Key: {
-      pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-      sk: `INSTANCE#${input.sha}#${input.retry}`,
+      pk: [
+        'CASE',
+        input.vendor,
+        input.repoId,
+        input.branchName,
+        input.label,
+        input.lineage,
+      ].join('#'),
+      sk: ['INSTANCE', input.sha, input.retry].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
@@ -319,16 +326,19 @@ export async function blindWriteCaseInstance(
     ':one': 1,
     ':createdAt': now.getTime(),
 
-    ':lsi1sk': `INSTANCE#${
+    ':lsi1sk': [
+      'INSTANCE',
       'createdAt' in input && typeof input.createdAt !== 'undefined'
         ? input.createdAt.getTime()
-        : now.getTime()
-    }`,
-    ':lsi2sk': `INSTANCE#${input.conclusion}#${
+        : now.getTime(),
+    ].join('#'),
+    ':lsi2sk': [
+      'INSTANCE',
+      input.conclusion,
       'createdAt' in input && typeof input.createdAt !== 'undefined'
         ? input.createdAt.getTime()
-        : now.getTime()
-    }`,
+        : now.getTime(),
+    ].join('#'),
   };
   const ue = `${[
     ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
@@ -342,8 +352,15 @@ export async function blindWriteCaseInstance(
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
     Key: {
-      pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-      sk: `INSTANCE#${input.sha}#${input.retry}`,
+      pk: [
+        'CASE',
+        input.vendor,
+        input.repoId,
+        input.branchName,
+        input.label,
+        input.lineage,
+      ].join('#'),
+      sk: ['INSTANCE', input.sha, input.retry].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
@@ -395,8 +412,15 @@ export async function deleteCaseInstance(
         '#pk': 'pk',
       },
       Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-        sk: `INSTANCE#${input.sha}#${input.retry}`,
+        pk: [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+          input.lineage,
+        ].join('#'),
+        sk: ['INSTANCE', input.sha, input.retry].join('#'),
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -440,8 +464,15 @@ export async function readCaseInstance(
   const commandInput: GetCommandInput = {
     ConsistentRead: false,
     Key: {
-      pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-      sk: `INSTANCE#${input.sha}#${input.retry}`,
+      pk: [
+        'CASE',
+        input.vendor,
+        input.repoId,
+        input.branchName,
+        input.label,
+        input.lineage,
+      ].join('#'),
+      sk: ['INSTANCE', input.sha, input.retry].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
@@ -507,8 +538,15 @@ export async function updateCaseInstance(
         ...previousVersionEAV,
       },
       Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
-        sk: `INSTANCE#${input.sha}#${input.retry}`,
+        pk: [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+          input.lineage,
+        ].join('#'),
+        sk: ['INSTANCE', input.sha, input.retry].join('#'),
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -730,7 +768,14 @@ function makeEavForQueryCaseInstance(
   if ('index' in input) {
     if (input.index === 'gsi1') {
       return {
-        ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.sha}`,
+        ':pk': [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+          input.sha,
+        ].join('#'),
         ':sk': [
           'INSTANCE',
           'lineage' in input && input.lineage,
@@ -741,7 +786,7 @@ function makeEavForQueryCaseInstance(
       };
     } else if (input.index === 'gsi2') {
       return {
-        ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}`,
+        ':pk': ['CASE', input.vendor, input.repoId, input.branchName].join('#'),
         ':sk': [
           'INSTANCE',
           'label' in input && input.label,
@@ -752,14 +797,28 @@ function makeEavForQueryCaseInstance(
       };
     } else if (input.index === 'lsi1') {
       return {
-        ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+        ':pk': [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+          input.lineage,
+        ].join('#'),
         ':sk': ['INSTANCE', 'createdAt' in input && input.createdAt]
           .filter(Boolean)
           .join('#'),
       };
     } else if (input.index === 'lsi2') {
       return {
-        ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+        ':pk': [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+          input.lineage,
+        ].join('#'),
         ':sk': [
           'INSTANCE',
           'conclusion' in input && input.conclusion,
@@ -774,7 +833,14 @@ function makeEavForQueryCaseInstance(
     );
   } else {
     return {
-      ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
+      ':pk': [
+        'CASE',
+        input.vendor,
+        input.repoId,
+        input.branchName,
+        input.label,
+        input.lineage,
+      ].join('#'),
       ':sk': [
         'INSTANCE',
         'sha' in input && input.sha,
@@ -999,10 +1065,17 @@ export function marshallCaseInstance(
     ':vendor': input.vendor,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
-    ':gsi1pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.sha}`,
-    ':gsi1sk': `INSTANCE#${input.lineage}#${input.retry}`,
-    ':gsi2pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}`,
-    ':gsi2sk': `INSTANCE#${input.label}#${input.sha}`,
+    ':gsi1pk': [
+      'CASE',
+      input.vendor,
+      input.repoId,
+      input.branchName,
+      input.label,
+      input.sha,
+    ].join('#'),
+    ':gsi1sk': ['INSTANCE', input.lineage, input.retry].join('#'),
+    ':gsi2pk': ['CASE', input.vendor, input.repoId, input.branchName].join('#'),
+    ':gsi2sk': ['INSTANCE', input.label, input.sha].join('#'),
   };
 
   if ('duration' in input && typeof input.duration !== 'undefined') {
@@ -1134,8 +1207,14 @@ export async function createCaseSummary(
       ':createdAt': now.getTime(),
     },
     Key: {
-      pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-      sk: `SUMMARY#${input.lineage}`,
+      pk: [
+        'CASE',
+        input.vendor,
+        input.repoId,
+        input.branchName,
+        input.label,
+      ].join('#'),
+      sk: ['SUMMARY', input.lineage].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
@@ -1216,8 +1295,14 @@ export async function blindWriteCaseSummary(
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
     Key: {
-      pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-      sk: `SUMMARY#${input.lineage}`,
+      pk: [
+        'CASE',
+        input.vendor,
+        input.repoId,
+        input.branchName,
+        input.label,
+      ].join('#'),
+      sk: ['SUMMARY', input.lineage].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
@@ -1269,8 +1354,14 @@ export async function deleteCaseSummary(
         '#pk': 'pk',
       },
       Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-        sk: `SUMMARY#${input.lineage}`,
+        pk: [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+        ].join('#'),
+        sk: ['SUMMARY', input.lineage].join('#'),
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -1314,8 +1405,14 @@ export async function readCaseSummary(
   const commandInput: GetCommandInput = {
     ConsistentRead: false,
     Key: {
-      pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-      sk: `SUMMARY#${input.lineage}`,
+      pk: [
+        'CASE',
+        input.vendor,
+        input.repoId,
+        input.branchName,
+        input.label,
+      ].join('#'),
+      sk: ['SUMMARY', input.lineage].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
@@ -1381,8 +1478,14 @@ export async function updateCaseSummary(
         ...previousVersionEAV,
       },
       Key: {
-        pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-        sk: `SUMMARY#${input.lineage}`,
+        pk: [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+        ].join('#'),
+        sk: ['SUMMARY', input.lineage].join('#'),
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -1521,14 +1624,26 @@ function makeEavForQueryCaseSummary(
   if ('index' in input) {
     if (input.index === 'lsi1') {
       return {
-        ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        ':pk': [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+        ].join('#'),
         ':sk': ['SUMMARY', 'stability' in input && input.stability]
           .filter(Boolean)
           .join('#'),
       };
     } else if (input.index === 'lsi2') {
       return {
-        ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        ':pk': [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+        ].join('#'),
         ':sk': ['SUMMARY', 'duration' in input && input.duration]
           .filter(Boolean)
           .join('#'),
@@ -1539,7 +1654,13 @@ function makeEavForQueryCaseSummary(
     );
   } else {
     return {
-      ':pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+      ':pk': [
+        'CASE',
+        input.vendor,
+        input.repoId,
+        input.branchName,
+        input.label,
+      ].join('#'),
       ':sk': ['SUMMARY', 'lineage' in input && input.lineage]
         .filter(Boolean)
         .join('#'),
@@ -1728,8 +1849,8 @@ export function marshallCaseSummary(
     ':vendor': input.vendor,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
-    ':lsi1sk': `SUMMARY#${input.stability}`,
-    ':lsi2sk': `SUMMARY#${input.duration}`,
+    ':lsi1sk': ['SUMMARY', input.stability].join('#'),
+    ':lsi2sk': ['SUMMARY', input.duration].join('#'),
   };
 
   if ('label' in input && typeof input.label !== 'undefined') {
@@ -1831,8 +1952,14 @@ export async function createFileTiming(
       ':createdAt': now.getTime(),
     },
     Key: {
-      pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-      sk: `FILE#${input.filename}`,
+      pk: [
+        'TIMING',
+        input.vendor,
+        input.repoId,
+        input.branchName,
+        input.label,
+      ].join('#'),
+      sk: ['FILE', input.filename].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
@@ -1913,8 +2040,14 @@ export async function blindWriteFileTiming(
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
     Key: {
-      pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-      sk: `FILE#${input.filename}`,
+      pk: [
+        'TIMING',
+        input.vendor,
+        input.repoId,
+        input.branchName,
+        input.label,
+      ].join('#'),
+      sk: ['FILE', input.filename].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
@@ -1966,8 +2099,14 @@ export async function deleteFileTiming(
         '#pk': 'pk',
       },
       Key: {
-        pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-        sk: `FILE#${input.filename}`,
+        pk: [
+          'TIMING',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+        ].join('#'),
+        sk: ['FILE', input.filename].join('#'),
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -2011,8 +2150,14 @@ export async function readFileTiming(
   const commandInput: GetCommandInput = {
     ConsistentRead: false,
     Key: {
-      pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-      sk: `FILE#${input.filename}`,
+      pk: [
+        'TIMING',
+        input.vendor,
+        input.repoId,
+        input.branchName,
+        input.label,
+      ].join('#'),
+      sk: ['FILE', input.filename].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
@@ -2078,8 +2223,14 @@ export async function updateFileTiming(
         ...previousVersionEAV,
       },
       Key: {
-        pk: `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
-        sk: `FILE#${input.filename}`,
+        pk: [
+          'TIMING',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+        ].join('#'),
+        sk: ['FILE', input.filename].join('#'),
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -2209,12 +2360,20 @@ function makeEavForQueryFileTiming(
   if ('index' in input) {
     if (input.index === 'gsi2') {
       return {
-        ':pk': `BRANCH#${input.vendor}#${input.repoId}#${input.branchName}`,
+        ':pk': ['BRANCH', input.vendor, input.repoId, input.branchName].join(
+          '#'
+        ),
         ':sk': ['FILE'].filter(Boolean).join('#'),
       };
     } else if (input.index === 'lsi1') {
       return {
-        ':pk': `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+        ':pk': [
+          'TIMING',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+        ].join('#'),
         ':sk': ['FILE', 'duration' in input && input.duration]
           .filter(Boolean)
           .join('#'),
@@ -2225,7 +2384,13 @@ function makeEavForQueryFileTiming(
     );
   } else {
     return {
-      ':pk': `TIMING#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}`,
+      ':pk': [
+        'TIMING',
+        input.vendor,
+        input.repoId,
+        input.branchName,
+        input.label,
+      ].join('#'),
       ':sk': ['FILE', 'filename' in input && input.filename]
         .filter(Boolean)
         .join('#'),
@@ -2410,9 +2575,11 @@ export function marshallFileTiming(
     ':vendor': input.vendor,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
-    ':gsi2pk': `BRANCH#${input.vendor}#${input.repoId}#${input.branchName}`,
-    ':gsi2sk': `FILE`,
-    ':lsi1sk': `FILE#${input.duration}`,
+    ':gsi2pk': ['BRANCH', input.vendor, input.repoId, input.branchName].join(
+      '#'
+    ),
+    ':gsi2sk': ['FILE'].join('#'),
+    ':lsi1sk': ['FILE', input.duration].join('#'),
   };
 
   if ('label' in input && typeof input.label !== 'undefined') {

@@ -133,25 +133,23 @@ function makeKey(
     const doLegacy =
       config.legacyEmptySortFieldBehavior && key.sortKeyFields.length === 0;
     return {
-      pk: `\`${makeKeyTemplate(
+      pk: makeKeyTemplate(
         key.partitionKeyPrefix,
         key.partitionKeyFields,
         'create'
-      )}\``,
-      sk: `\`${
-        doLegacy
-          ? `${key.sortKeyPrefix}#0`
-          : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'create')
-      }\``,
+      ),
+      sk: doLegacy
+        ? `${key.sortKeyPrefix}#0`
+        : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'create'),
     };
   }
 
   return {
-    pk: `\`${makeKeyTemplate(
+    pk: makeKeyTemplate(
       key.partitionKeyPrefix,
       key.partitionKeyFields,
       'create'
-    )}\``,
+    ),
   };
 }
 
@@ -164,25 +162,23 @@ function makeKeyForBlind(
     const doLegacy =
       config.legacyEmptySortFieldBehavior && key.sortKeyFields.length === 0;
     return {
-      pk: `\`${makeKeyTemplate(
+      pk: makeKeyTemplate(
         key.partitionKeyPrefix,
         key.partitionKeyFields,
         'blind'
-      )}\``,
-      sk: `\`${
-        doLegacy
-          ? `${key.sortKeyPrefix}#0`
-          : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'blind')
-      }\``,
+      ),
+      sk: doLegacy
+        ? `${key.sortKeyPrefix}#0`
+        : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'blind'),
     };
   }
 
   return {
-    pk: `\`${makeKeyTemplate(
+    pk: makeKeyTemplate(
       key.partitionKeyPrefix,
       key.partitionKeyFields,
       'blind'
-    )}\``,
+    ),
   };
 }
 
@@ -195,24 +191,18 @@ function makeKeyForRead(
     const doLegacy =
       config.legacyEmptySortFieldBehavior && key.sortKeyFields.length === 0;
     return {
-      pk: `\`${makeKeyTemplate(
+      pk: makeKeyTemplate(
         key.partitionKeyPrefix,
         key.partitionKeyFields,
         'read'
-      )}\``,
-      sk: `\`${
-        doLegacy
-          ? `${key.sortKeyPrefix}#0`
-          : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'read')
-      }\``,
+      ),
+      sk: doLegacy
+        ? `${key.sortKeyPrefix}#0`
+        : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'read'),
     };
   }
 
   return {
-    pk: `\`${makeKeyTemplate(
-      key.partitionKeyPrefix,
-      key.partitionKeyFields,
-      'read'
-    )}\``,
+    pk: makeKeyTemplate(key.partitionKeyPrefix, key.partitionKeyFields, 'read'),
   };
 }

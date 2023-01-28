@@ -52,27 +52,27 @@ export function indexToEAVPart(
       return [];
     }
     return [
-      `':${`${index.name}pk`}': \`${makeKeyTemplate(
+      `':${`${index.name}pk`}': ${makeKeyTemplate(
         index.partitionKeyPrefix,
         index.partitionKeyFields,
         mode
-      )}\`,`,
+      )},`,
       index.isComposite
-        ? `':${index.name}sk': \`${makeKeyTemplate(
+        ? `':${index.name}sk': ${makeKeyTemplate(
             index.sortKeyPrefix,
             index.sortKeyFields,
             mode
-          )}\`,`
+          )},`
         : undefined,
     ];
   }
 
   return [
-    `':${index.name}sk': \`${makeKeyTemplate(
+    `':${index.name}sk': ${makeKeyTemplate(
       index.sortKeyPrefix,
       index.sortKeyFields,
       mode
-    )}\`,`,
+    )},`,
   ];
 }
 

@@ -266,7 +266,10 @@ export async function createAccount(
       ...ExpressionAttributeValues,
       ':createdAt': now.getTime(),
     },
-    Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+    Key: {
+      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+      sk: ['SUMMARY'].join('#'),
+    },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
@@ -363,7 +366,10 @@ export async function blindWriteAccount(
   const commandInput: UpdateCommandInput = {
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
-    Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+    Key: {
+      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+      sk: ['SUMMARY'].join('#'),
+    },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
@@ -413,7 +419,10 @@ export async function deleteAccount(
       ExpressionAttributeNames: {
         '#pk': 'pk',
       },
-      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+      Key: {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: ['SUMMARY'].join('#'),
+      },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'NONE',
@@ -455,7 +464,10 @@ export async function readAccount(
 
   const commandInput: GetCommandInput = {
     ConsistentRead: false,
-    Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+    Key: {
+      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+      sk: ['SUMMARY'].join('#'),
+    },
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
   };
@@ -537,7 +549,10 @@ export async function updateAccount(
         ...ExpressionAttributeValues,
         ...previousVersionEAV,
       },
-      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+      Key: {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: ['SUMMARY'].join('#'),
+      },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
@@ -632,7 +647,7 @@ function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
   if ('index' in input) {
     if (input.index === 'gsi1') {
       return {
-        ':pk': `PLAN#${input.hasEverSubscribed}`,
+        ':pk': ['PLAN', input.hasEverSubscribed].join('#'),
         ':sk': [
           'PLAN',
           'cancelled' in input && input.cancelled,
@@ -647,7 +662,7 @@ function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
     );
   } else {
     return {
-      ':pk': `ACCOUNT#${input.vendor}#${input.externalId}`,
+      ':pk': ['ACCOUNT', input.vendor, input.externalId].join('#'),
       ':sk': ['SUMMARY'].filter(Boolean).join('#'),
     };
   }
@@ -821,8 +836,8 @@ export function marshallAccount(
     ':vendor': input.vendor,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
-    ':gsi1pk': `PLAN#${input.hasEverSubscribed}`,
-    ':gsi1sk': `PLAN#${input.cancelled}#${input.indexedPlanName}`,
+    ':gsi1pk': ['PLAN', input.hasEverSubscribed].join('#'),
+    ':gsi1sk': ['PLAN', input.cancelled, input.indexedPlanName].join('#'),
   };
 
   if ('cancelled' in input && typeof input.cancelled !== 'undefined') {
@@ -995,8 +1010,8 @@ export async function createRepository(
       ':publicId': publicId,
     },
     Key: {
-      pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
-      sk: `REPOSITORY`,
+      pk: ['REPOSITORY', input.vendor, input.externalId].join('#'),
+      sk: ['REPOSITORY'].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
@@ -1081,8 +1096,8 @@ export async function blindWriteRepository(
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
     Key: {
-      pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
-      sk: `REPOSITORY`,
+      pk: ['REPOSITORY', input.vendor, input.externalId].join('#'),
+      sk: ['REPOSITORY'].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
@@ -1134,8 +1149,8 @@ export async function deleteRepository(
         '#pk': 'pk',
       },
       Key: {
-        pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
-        sk: `REPOSITORY`,
+        pk: ['REPOSITORY', input.vendor, input.externalId].join('#'),
+        sk: ['REPOSITORY'].join('#'),
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -1179,8 +1194,8 @@ export async function readRepository(
   const commandInput: GetCommandInput = {
     ConsistentRead: false,
     Key: {
-      pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
-      sk: `REPOSITORY`,
+      pk: ['REPOSITORY', input.vendor, input.externalId].join('#'),
+      sk: ['REPOSITORY'].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
@@ -1246,8 +1261,8 @@ export async function updateRepository(
         ...previousVersionEAV,
       },
       Key: {
-        pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
-        sk: `REPOSITORY`,
+        pk: ['REPOSITORY', input.vendor, input.externalId].join('#'),
+        sk: ['REPOSITORY'].join('#'),
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -1346,22 +1361,22 @@ function makeEavForQueryRepository(
   if ('index' in input) {
     if (input.index === 'gsi1') {
       return {
-        ':pk': `REPOSITORY#${input.vendor}#${input.organization}`,
+        ':pk': ['REPOSITORY', input.vendor, input.organization].join('#'),
         ':sk': ['REPOSITORY', 'repo' in input && input.repo]
           .filter(Boolean)
           .join('#'),
       };
     } else if (input.index === 'token') {
-      return {':pk': `${input.token}`};
+      return {':pk': [input.token].join('#')};
     } else if (input.index === 'publicId') {
-      return {':pk': `${input.publicId}`};
+      return {':pk': [input.publicId].join('#')};
     }
     throw new Error(
       'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
     );
   } else {
     return {
-      ':pk': `REPOSITORY#${input.vendor}#${input.externalId}`,
+      ':pk': ['REPOSITORY', input.vendor, input.externalId].join('#'),
       ':sk': ['REPOSITORY'].filter(Boolean).join('#'),
     };
   }
@@ -1566,8 +1581,8 @@ export function marshallRepository(
     ':vendor': input.vendor,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
-    ':gsi1pk': `REPOSITORY#${input.vendor}#${input.organization}`,
-    ':gsi1sk': `REPOSITORY#${input.repo}`,
+    ':gsi1pk': ['REPOSITORY', input.vendor, input.organization].join('#'),
+    ':gsi1sk': ['REPOSITORY', input.repo].join('#'),
   };
 
   if (
@@ -1729,7 +1744,7 @@ export async function createUserSession(
       ':createdAt': now.getTime(),
       ':publicId': publicId,
     },
-    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
@@ -1839,7 +1854,7 @@ export async function blindWriteUserSession(
   const commandInput: UpdateCommandInput = {
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
-    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
@@ -1889,7 +1904,7 @@ export async function deleteUserSession(
       ExpressionAttributeNames: {
         '#pk': 'pk',
       },
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
+      Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'NONE',
@@ -1931,7 +1946,7 @@ export async function readUserSession(
 
   const commandInput: GetCommandInput = {
     ConsistentRead: true,
-    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
   };
@@ -2016,7 +2031,7 @@ export async function updateUserSession(
         ...ExpressionAttributeValues,
         ...previousVersionEAV,
       },
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
+      Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
@@ -2096,13 +2111,13 @@ function makeEavForQueryUserSession(
 ): Record<string, any> {
   if ('index' in input) {
     if (input.index === 'publicId') {
-      return {':pk': `${input.publicId}`};
+      return {':pk': [input.publicId].join('#')};
     }
     throw new Error(
       'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
     );
   } else {
-    return {':pk': `USER_SESSION#${input.sessionId}`};
+    return {':pk': ['USER_SESSION', input.sessionId].join('#')};
   }
 }
 

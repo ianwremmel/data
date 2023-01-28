@@ -52,32 +52,26 @@ export function makeKeyTemplate(
   fields: readonly Field[],
   mode: 'blind' | 'create' | 'read'
 ): string {
-  return [
-    prefix,
+  const accessors = [
+    ...(prefix ? [`'${prefix}'`] : []),
     ...fields.map((field) => {
       const {fieldName} = field;
       if (fieldName === 'createdAt') {
         if (mode === 'blind') {
-          // this template gets passed through so it's available in the output.
-          // eslint-disable-next-line no-template-curly-in-string
-          return "${'createdAt' in input && typeof input.createdAt !== 'undefined' ? input.createdAt.getTime() : now.getTime()}";
+          return "'createdAt' in input && typeof input.createdAt !== 'undefined' ? input.createdAt.getTime() : now.getTime()";
         }
         if (mode === 'create') {
-          // this template gets passed through so it's available in the output.
-          // eslint-disable-next-line no-template-curly-in-string
-          return '${now.getTime()}';
+          return 'now.getTime()';
         }
         if (mode === 'read') {
-          // this template gets passed through so it's available in the output.
-          // eslint-disable-next-line no-template-curly-in-string
-          return '${input.createdAt.getTime()}';
+          return 'input.createdAt.getTime()';
         }
         assert.fail('Invalid mode');
       }
       if (fieldName === 'updatedAt') {
         // this template gets passed through so it's available in the output.
         // eslint-disable-next-line no-template-curly-in-string
-        return '${now.getTime()}';
+        return 'now.getTime()';
       }
       // The create template sets a local variable "publicId" so we only
       // generate it once for both the Key and ExpressionAttributeValues.
@@ -85,14 +79,14 @@ export function makeKeyTemplate(
         if (mode === 'create') {
           // this template gets passed through so it's available in the output.
           // eslint-disable-next-line no-template-curly-in-string
-          return '${publicId}';
+          return 'publicId';
         }
       }
-      return `\${${marshallField(field)}}`;
+      return marshallField(field);
     }),
-  ]
-    .filter(filterNull)
-    .join('#');
+  ].filter(filterNull);
+
+  return `[${accessors.join(', ')}].join('#')`;
 }
 
 /** Converts a compile time object to a runtime object */

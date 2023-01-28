@@ -190,7 +190,7 @@ export async function createUserSession(
       ...ExpressionAttributeValues,
       ':createdAt': now.getTime(),
     },
-    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
@@ -270,7 +270,7 @@ export async function blindWriteUserSession(
   const commandInput: UpdateCommandInput = {
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
-    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
@@ -320,7 +320,7 @@ export async function deleteUserSession(
       ExpressionAttributeNames: {
         '#pk': 'pk',
       },
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
+      Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'NONE',
@@ -362,7 +362,7 @@ export async function readUserSession(
 
   const commandInput: GetCommandInput = {
     ConsistentRead: true,
-    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
   };
@@ -427,7 +427,7 @@ export async function updateUserSession(
         ...ExpressionAttributeValues,
         ...previousVersionEAV,
       },
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
+      Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
