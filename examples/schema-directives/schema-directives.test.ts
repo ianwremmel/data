@@ -12,6 +12,7 @@ import {
   createRepository,
   createUserSession,
   deleteAccount,
+  deleteRepository,
   deleteUserSession,
   queryRepository,
   queryUserSessionByPublicId,
@@ -181,9 +182,10 @@ describe('optional ttl', () => {
       sessionId: faker.datatype.uuid(),
     });
 
-    expect(result).toMatchInlineSnapshot(
-      itemMatcher,
-      `
+    try {
+      expect(result).toMatchInlineSnapshot(
+        itemMatcher,
+        `
       {
         "capacity": {
           "CapacityUnits": 2,
@@ -219,18 +221,19 @@ describe('optional ttl', () => {
         "metrics": undefined,
       }
     `
-    );
+      );
 
-    expect(Base64.decode(result.item.id)).toMatchInlineSnapshot(
-      `"UserSession:USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20"`
-    );
+      expect(Base64.decode(result.item.id)).toMatchInlineSnapshot(
+        `"UserSession:USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20"`
+      );
 
-    expect(result.item.createdAt.getTime()).not.toBeNaN();
-    expect(result.item.expires).toBeUndefined();
-    expect(result.item.updatedAt.getTime()).not.toBeNaN();
-
-    // cleanup, not part of test
-    await deleteUserSession(result.item);
+      expect(result.item.createdAt.getTime()).not.toBeNaN();
+      expect(result.item.expires).toBeUndefined();
+      expect(result.item.updatedAt.getTime()).not.toBeNaN();
+    } finally {
+      // cleanup, not part of test
+      await deleteUserSession(result.item);
+    }
   });
 
   it('allows creating an item with a ttl value', async () => {
@@ -239,10 +242,10 @@ describe('optional ttl', () => {
       session: {foo: 'foo'},
       sessionId: faker.datatype.uuid(),
     });
-
-    expect(result).toMatchInlineSnapshot(
-      {...itemMatcher, item: expiringUserSessionMatcher},
-      `
+    try {
+      expect(result).toMatchInlineSnapshot(
+        {...itemMatcher, item: expiringUserSessionMatcher},
+        `
       {
         "capacity": {
           "CapacityUnits": 2,
@@ -279,18 +282,19 @@ describe('optional ttl', () => {
         "metrics": undefined,
       }
     `
-    );
+      );
 
-    expect(Base64.decode(result.item.id)).toMatchInlineSnapshot(
-      `"UserSession:USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20"`
-    );
+      expect(Base64.decode(result.item.id)).toMatchInlineSnapshot(
+        `"UserSession:USER_SESSION#181c887c-e7df-4331-9fba-65d255867e20"`
+      );
 
-    expect(result.item.createdAt.getTime()).not.toBeNaN();
-    expect(result.item.expires?.getTime()).not.toBeNaN();
-    expect(result.item.updatedAt.getTime()).not.toBeNaN();
-
-    // cleanup, not part of test
-    await deleteUserSession(result.item);
+      expect(result.item.createdAt.getTime()).not.toBeNaN();
+      expect(result.item.expires?.getTime()).not.toBeNaN();
+      expect(result.item.updatedAt.getTime()).not.toBeNaN();
+    } finally {
+      // cleanup, not part of test
+      await deleteUserSession(result.item);
+    }
   });
 });
 
@@ -315,26 +319,28 @@ describe('@alias', () => {
       sessionId: faker.datatype.uuid(),
     });
 
-    const createRaw = await loadRaw(createResult.item.sessionId);
-    expect(createRaw.renamedField).toBe(createResult.item.aliasedField);
-    expect(createRaw.aliasedField).toBeUndefined();
+    try {
+      const createRaw = await loadRaw(createResult.item.sessionId);
+      expect(createRaw.renamedField).toBe(createResult.item.aliasedField);
+      expect(createRaw.aliasedField).toBeUndefined();
 
-    const readResult1 = await readUserSession(createResult.item);
-    expect(readResult1.item.aliasedField).toBe('foo');
+      const readResult1 = await readUserSession(createResult.item);
+      expect(readResult1.item.aliasedField).toBe('foo');
 
-    const updateResult = await updateUserSession({
-      ...createResult.item,
-      aliasedField: 'bar',
-    });
-    const updateRaw = await loadRaw(updateResult.item.sessionId);
-    expect(updateRaw.renamedField).toBe(updateResult.item.aliasedField);
-    expect(updateRaw.aliasedField).toBeUndefined();
+      const updateResult = await updateUserSession({
+        ...createResult.item,
+        aliasedField: 'bar',
+      });
+      const updateRaw = await loadRaw(updateResult.item.sessionId);
+      expect(updateRaw.renamedField).toBe(updateResult.item.aliasedField);
+      expect(updateRaw.aliasedField).toBeUndefined();
 
-    const readResult2 = await readUserSession(createResult.item);
-    expect(readResult2.item.aliasedField).toBe('bar');
-
-    // cleanup, not part of test
-    await deleteUserSession(createResult.item);
+      const readResult2 = await readUserSession(createResult.item);
+      expect(readResult2.item.aliasedField).toBe('bar');
+    } finally {
+      // cleanup, not part of test
+      await deleteUserSession(createResult.item);
+    }
   });
 });
 
@@ -345,14 +351,16 @@ describe('PublicModel', () => {
       sessionId: faker.datatype.uuid(),
     });
 
-    const queriedResult = await queryUserSessionByPublicId(
-      result.item.publicId
-    );
+    try {
+      const queriedResult = await queryUserSessionByPublicId(
+        result.item.publicId
+      );
 
-    expect(queriedResult.item).toStrictEqual(result.item);
-
-    // cleanup, not part of test
-    await deleteUserSession(result.item);
+      expect(queriedResult.item).toStrictEqual(result.item);
+    } finally {
+      // cleanup, not part of test
+      await deleteUserSession(result.item);
+    }
   });
 });
 
@@ -370,13 +378,20 @@ describe('@simpleIndex', () => {
       vendor: 'GITHUB',
     });
 
-    const queryResult = await queryRepository({
-      index: 'token',
-      token,
-    });
+    try {
+      const queryResult = await queryRepository({
+        index: 'token',
+        token,
+      });
 
-    expect(queryResult.items).toHaveLength(1);
-    expect(queryResult.items[0]).toStrictEqual(createResult.item);
+      expect(queryResult.items).toHaveLength(1);
+      expect(queryResult.items[0]).toStrictEqual(createResult.item);
+    } finally {
+      deleteRepository({
+        externalId: createResult.item.externalId,
+        vendor: createResult.item.vendor,
+      });
+    }
   });
 });
 

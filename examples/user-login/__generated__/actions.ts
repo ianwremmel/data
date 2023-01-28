@@ -189,14 +189,17 @@ export async function createUserLogin(
       ':createdAt': now.getTime(),
     },
     Key: {
-      pk: `USER#${input.vendor}#${input.externalId}`,
-      sk: `LOGIN#${input.login}`,
+      pk: ['USER', input.vendor, input.externalId].join('#'),
+      sk: ['LOGIN', input.login].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+    ].join(', '),
   };
 
   const {
@@ -210,7 +213,7 @@ export async function createUserLogin(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'UserLogin',
     () =>
@@ -229,7 +232,9 @@ export async function createUserLogin(
 export type BlindWriteUserLoginInput = Omit<
   UserLogin,
   'createdAt' | 'id' | 'updatedAt' | 'version'
->;
+> &
+  Partial<Pick<UserLogin, 'createdAt'>>;
+
 export type BlindWriteUserLoginOutput = ResultType<UserLogin>;
 /** */
 export async function blindWriteUserLogin(
@@ -266,8 +271,8 @@ export async function blindWriteUserLogin(
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
     Key: {
-      pk: `USER#${input.vendor}#${input.externalId}`,
-      sk: `LOGIN#${input.login}`,
+      pk: ['USER', input.vendor, input.externalId].join('#'),
+      sk: ['LOGIN', input.login].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
@@ -319,8 +324,8 @@ export async function deleteUserLogin(
         '#pk': 'pk',
       },
       Key: {
-        pk: `USER#${input.vendor}#${input.externalId}`,
-        sk: `LOGIN#${input.login}`,
+        pk: ['USER', input.vendor, input.externalId].join('#'),
+        sk: ['LOGIN', input.login].join('#'),
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -364,8 +369,8 @@ export async function readUserLogin(
   const commandInput: GetCommandInput = {
     ConsistentRead: false,
     Key: {
-      pk: `USER#${input.vendor}#${input.externalId}`,
-      sk: `LOGIN#${input.login}`,
+      pk: ['USER', input.vendor, input.externalId].join('#'),
+      sk: ['LOGIN', input.login].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
@@ -396,59 +401,6 @@ export async function readUserLogin(
     item: unmarshallUserLogin(item),
     metrics: undefined,
   };
-}
-
-export type TouchUserLoginOutput = ResultType<void>;
-
-/**  */
-export async function touchUserLogin(
-  input: UserLoginPrimaryKey
-): Promise<TouchUserLoginOutput> {
-  const tableName = process.env.TABLE_USER_LOGIN;
-  assert(tableName, 'TABLE_USER_LOGIN is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':versionInc': 1,
-      },
-      Key: {
-        pk: `USER#${input.vendor}#${input.externalId}`,
-        sk: `LOGIN#${input.login}`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('UserLogin', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
 }
 
 export type UpdateUserLoginInput = Omit<
@@ -484,8 +436,8 @@ export async function updateUserLogin(
         ...previousVersionEAV,
       },
       Key: {
-        pk: `USER#${input.vendor}#${input.externalId}`,
-        sk: `LOGIN#${input.login}`,
+        pk: ['USER', input.vendor, input.externalId].join('#'),
+        sk: ['LOGIN', input.login].join('#'),
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -505,7 +457,7 @@ export async function updateUserLogin(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'UserLogin',
       () =>
@@ -582,7 +534,7 @@ function makeEavForQueryUserLogin(
   if ('index' in input) {
     if (input.index === 'gsi1') {
       return {
-        ':pk': `LOGIN#${input.vendor}#${input.login}`,
+        ':pk': ['LOGIN', input.vendor, input.login].join('#'),
         ':sk': ['MODIFIED', 'updatedAt' in input && input.updatedAt]
           .filter(Boolean)
           .join('#'),
@@ -593,7 +545,7 @@ function makeEavForQueryUserLogin(
     );
   } else {
     return {
-      ':pk': `USER#${input.vendor}#${input.externalId}`,
+      ':pk': ['USER', input.vendor, input.externalId].join('#'),
       ':sk': ['LOGIN', 'login' in input && input.login]
         .filter(Boolean)
         .join('#'),
@@ -762,8 +714,8 @@ export function marshallUserLogin(
     ':vendor': input.vendor,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
-    ':gsi1pk': `LOGIN#${input.vendor}#${input.login}`,
-    ':gsi1sk': `MODIFIED#${now.getTime()}`,
+    ':gsi1pk': ['LOGIN', input.vendor, input.login].join('#'),
+    ':gsi1sk': ['MODIFIED', now.getTime()].join('#'),
   };
 
   updateExpression.sort();

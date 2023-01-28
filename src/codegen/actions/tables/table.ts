@@ -7,7 +7,6 @@ import {deleteItemTpl} from './templates/delete-item';
 import {makeKeyTemplate, objectToString} from './templates/helpers';
 import {queryTpl} from './templates/query';
 import {readItemTpl} from './templates/read-item';
-import {touchItemTpl} from './templates/touch-item';
 import {updateItemTpl} from './templates/update-item';
 
 /**
@@ -92,47 +91,6 @@ export function readItemTemplate(model: Model, config: ActionPluginConfig) {
 /**
  * Generates the updateItem function for a table
  */
-export function touchItemTemplate(model: Model, config: ActionPluginConfig) {
-  const ean: string[] = [];
-  const eav: string[] = [];
-  const updateExpressions: string[] = [];
-
-  for (const {fieldName} of model.fields) {
-    if (fieldName === 'id') {
-      continue;
-    } else if (fieldName === 'version') {
-      ean.push(`'#version': '_v'`);
-      eav.push(`':versionInc': 1`);
-      updateExpressions.push(`#version = #version + :versionInc`);
-    } else if (
-      fieldName === model.ttlConfig?.fieldName &&
-      model.ttlConfig.duration
-    ) {
-      ean.push(`'#${fieldName}': 'ttl'`);
-      eav.push(`':ttlInc': ${model.ttlConfig.duration}`);
-      updateExpressions.push(`#${fieldName} = #${fieldName} + :ttlInc`);
-    }
-  }
-
-  ean.push("'#pk': 'pk'");
-
-  ean.sort();
-  eav.sort();
-  updateExpressions.sort();
-
-  return touchItemTpl({
-    ean,
-    eav,
-    key: makeKeyForBlind(model.primaryKey, config),
-    tableName: model.tableName,
-    typeName: model.typeName,
-    updateExpressions,
-  });
-}
-
-/**
- * Generates the updateItem function for a table
- */
 export function updateItemTemplate(model: Model, config: ActionPluginConfig) {
   return updateItemTpl({
     fields: model.fields,
@@ -175,25 +133,23 @@ function makeKey(
     const doLegacy =
       config.legacyEmptySortFieldBehavior && key.sortKeyFields.length === 0;
     return {
-      pk: `\`${makeKeyTemplate(
+      pk: makeKeyTemplate(
         key.partitionKeyPrefix,
         key.partitionKeyFields,
         'create'
-      )}\``,
-      sk: `\`${
-        doLegacy
-          ? `${key.sortKeyPrefix}#0`
-          : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'create')
-      }\``,
+      ),
+      sk: doLegacy
+        ? `${key.sortKeyPrefix}#0`
+        : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'create'),
     };
   }
 
   return {
-    pk: `\`${makeKeyTemplate(
+    pk: makeKeyTemplate(
       key.partitionKeyPrefix,
       key.partitionKeyFields,
       'create'
-    )}\``,
+    ),
   };
 }
 
@@ -206,25 +162,23 @@ function makeKeyForBlind(
     const doLegacy =
       config.legacyEmptySortFieldBehavior && key.sortKeyFields.length === 0;
     return {
-      pk: `\`${makeKeyTemplate(
+      pk: makeKeyTemplate(
         key.partitionKeyPrefix,
         key.partitionKeyFields,
         'blind'
-      )}\``,
-      sk: `\`${
-        doLegacy
-          ? `${key.sortKeyPrefix}#0`
-          : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'blind')
-      }\``,
+      ),
+      sk: doLegacy
+        ? `${key.sortKeyPrefix}#0`
+        : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'blind'),
     };
   }
 
   return {
-    pk: `\`${makeKeyTemplate(
+    pk: makeKeyTemplate(
       key.partitionKeyPrefix,
       key.partitionKeyFields,
       'blind'
-    )}\``,
+    ),
   };
 }
 
@@ -237,24 +191,18 @@ function makeKeyForRead(
     const doLegacy =
       config.legacyEmptySortFieldBehavior && key.sortKeyFields.length === 0;
     return {
-      pk: `\`${makeKeyTemplate(
+      pk: makeKeyTemplate(
         key.partitionKeyPrefix,
         key.partitionKeyFields,
         'read'
-      )}\``,
-      sk: `\`${
-        doLegacy
-          ? `${key.sortKeyPrefix}#0`
-          : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'read')
-      }\``,
+      ),
+      sk: doLegacy
+        ? `${key.sortKeyPrefix}#0`
+        : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'read'),
     };
   }
 
   return {
-    pk: `\`${makeKeyTemplate(
-      key.partitionKeyPrefix,
-      key.partitionKeyFields,
-      'read'
-    )}\``,
+    pk: makeKeyTemplate(key.partitionKeyPrefix, key.partitionKeyFields, 'read'),
   };
 }

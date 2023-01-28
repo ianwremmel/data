@@ -266,12 +266,18 @@ export async function createAccount(
       ...ExpressionAttributeValues,
       ':createdAt': now.getTime(),
     },
-    Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+    Key: {
+      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+      sk: ['SUMMARY'].join('#'),
+    },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+    ].join(', '),
   };
 
   const {
@@ -285,7 +291,7 @@ export async function createAccount(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'Account',
     () =>
@@ -304,7 +310,9 @@ export async function createAccount(
 export type BlindWriteAccountInput = Omit<
   Account,
   'createdAt' | 'id' | 'indexedPlanName' | 'updatedAt' | 'version'
->;
+> &
+  Partial<Pick<Account, 'createdAt'>>;
+
 export type BlindWriteAccountOutput = ResultType<Account>;
 /** */
 export async function blindWriteAccount(
@@ -358,7 +366,10 @@ export async function blindWriteAccount(
   const commandInput: UpdateCommandInput = {
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
-    Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+    Key: {
+      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+      sk: ['SUMMARY'].join('#'),
+    },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
@@ -408,7 +419,10 @@ export async function deleteAccount(
       ExpressionAttributeNames: {
         '#pk': 'pk',
       },
-      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+      Key: {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: ['SUMMARY'].join('#'),
+      },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'NONE',
@@ -450,7 +464,10 @@ export async function readAccount(
 
   const commandInput: GetCommandInput = {
     ConsistentRead: false,
-    Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+    Key: {
+      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+      sk: ['SUMMARY'].join('#'),
+    },
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
   };
@@ -480,56 +497,6 @@ export async function readAccount(
     item: unmarshallAccount(item),
     metrics: undefined,
   };
-}
-
-export type TouchAccountOutput = ResultType<void>;
-
-/**  */
-export async function touchAccount(
-  input: AccountPrimaryKey
-): Promise<TouchAccountOutput> {
-  const tableName = process.env.TABLE_ACCOUNT;
-  assert(tableName, 'TABLE_ACCOUNT is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':versionInc': 1,
-      },
-      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('Account', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
 }
 
 export type UpdateAccountInput = Omit<
@@ -582,7 +549,10 @@ export async function updateAccount(
         ...ExpressionAttributeValues,
         ...previousVersionEAV,
       },
-      Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
+      Key: {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: ['SUMMARY'].join('#'),
+      },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
@@ -601,7 +571,7 @@ export async function updateAccount(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'Account',
       () =>
@@ -677,7 +647,7 @@ function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
   if ('index' in input) {
     if (input.index === 'gsi1') {
       return {
-        ':pk': `PLAN#${input.hasEverSubscribed}`,
+        ':pk': ['PLAN', input.hasEverSubscribed].join('#'),
         ':sk': [
           'PLAN',
           'cancelled' in input && input.cancelled,
@@ -692,7 +662,7 @@ function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
     );
   } else {
     return {
-      ':pk': `ACCOUNT#${input.vendor}#${input.externalId}`,
+      ':pk': ['ACCOUNT', input.vendor, input.externalId].join('#'),
       ':sk': ['SUMMARY'].filter(Boolean).join('#'),
     };
   }
@@ -866,8 +836,8 @@ export function marshallAccount(
     ':vendor': input.vendor,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
-    ':gsi1pk': `PLAN#${input.hasEverSubscribed}`,
-    ':gsi1sk': `PLAN#${input.cancelled}#${input.indexedPlanName}`,
+    ':gsi1pk': ['PLAN', input.hasEverSubscribed].join('#'),
+    ':gsi1sk': ['PLAN', input.cancelled, input.indexedPlanName].join('#'),
   };
 
   if ('cancelled' in input && typeof input.cancelled !== 'undefined') {
@@ -1040,14 +1010,18 @@ export async function createRepository(
       ':publicId': publicId,
     },
     Key: {
-      pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
-      sk: `REPOSITORY`,
+      pk: ['REPOSITORY', input.vendor, input.externalId].join('#'),
+      sk: ['REPOSITORY'].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt, #publicId = :publicId`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+      '#publicId = :publicId',
+    ].join(', '),
   };
 
   const {
@@ -1061,7 +1035,7 @@ export async function createRepository(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'Repository',
     () =>
@@ -1080,7 +1054,9 @@ export async function createRepository(
 export type BlindWriteRepositoryInput = Omit<
   Repository,
   'createdAt' | 'id' | 'publicId' | 'updatedAt' | 'version'
->;
+> &
+  Partial<Pick<Repository, 'createdAt'>>;
+
 export type BlindWriteRepositoryOutput = ResultType<Repository>;
 /** */
 export async function blindWriteRepository(
@@ -1120,8 +1096,8 @@ export async function blindWriteRepository(
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
     Key: {
-      pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
-      sk: `REPOSITORY`,
+      pk: ['REPOSITORY', input.vendor, input.externalId].join('#'),
+      sk: ['REPOSITORY'].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
@@ -1173,8 +1149,8 @@ export async function deleteRepository(
         '#pk': 'pk',
       },
       Key: {
-        pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
-        sk: `REPOSITORY`,
+        pk: ['REPOSITORY', input.vendor, input.externalId].join('#'),
+        sk: ['REPOSITORY'].join('#'),
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -1218,8 +1194,8 @@ export async function readRepository(
   const commandInput: GetCommandInput = {
     ConsistentRead: false,
     Key: {
-      pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
-      sk: `REPOSITORY`,
+      pk: ['REPOSITORY', input.vendor, input.externalId].join('#'),
+      sk: ['REPOSITORY'].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
@@ -1250,59 +1226,6 @@ export async function readRepository(
     item: unmarshallRepository(item),
     metrics: undefined,
   };
-}
-
-export type TouchRepositoryOutput = ResultType<void>;
-
-/**  */
-export async function touchRepository(
-  input: RepositoryPrimaryKey
-): Promise<TouchRepositoryOutput> {
-  const tableName = process.env.TABLE_APPLICATION_DATA;
-  assert(tableName, 'TABLE_APPLICATION_DATA is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':versionInc': 1,
-      },
-      Key: {
-        pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
-        sk: `REPOSITORY`,
-      },
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('Repository', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
 }
 
 export type UpdateRepositoryInput = Omit<
@@ -1338,8 +1261,8 @@ export async function updateRepository(
         ...previousVersionEAV,
       },
       Key: {
-        pk: `REPOSITORY#${input.vendor}#${input.externalId}`,
-        sk: `REPOSITORY`,
+        pk: ['REPOSITORY', input.vendor, input.externalId].join('#'),
+        sk: ['REPOSITORY'].join('#'),
       },
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
@@ -1359,7 +1282,7 @@ export async function updateRepository(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'Repository',
       () =>
@@ -1438,22 +1361,22 @@ function makeEavForQueryRepository(
   if ('index' in input) {
     if (input.index === 'gsi1') {
       return {
-        ':pk': `REPOSITORY#${input.vendor}#${input.organization}`,
+        ':pk': ['REPOSITORY', input.vendor, input.organization].join('#'),
         ':sk': ['REPOSITORY', 'repo' in input && input.repo]
           .filter(Boolean)
           .join('#'),
       };
     } else if (input.index === 'token') {
-      return {':pk': `${input.token}`};
+      return {':pk': [input.token].join('#')};
     } else if (input.index === 'publicId') {
-      return {':pk': `${input.publicId}`};
+      return {':pk': [input.publicId].join('#')};
     }
     throw new Error(
       'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
     );
   } else {
     return {
-      ':pk': `REPOSITORY#${input.vendor}#${input.externalId}`,
+      ':pk': ['REPOSITORY', input.vendor, input.externalId].join('#'),
       ':sk': ['REPOSITORY'].filter(Boolean).join('#'),
     };
   }
@@ -1658,8 +1581,8 @@ export function marshallRepository(
     ':vendor': input.vendor,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
-    ':gsi1pk': `REPOSITORY#${input.vendor}#${input.organization}`,
-    ':gsi1sk': `REPOSITORY#${input.repo}`,
+    ':gsi1pk': ['REPOSITORY', input.vendor, input.organization].join('#'),
+    ':gsi1sk': ['REPOSITORY', input.repo].join('#'),
   };
 
   if (
@@ -1821,12 +1744,16 @@ export async function createUserSession(
       ':createdAt': now.getTime(),
       ':publicId': publicId,
     },
-    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt, #publicId = :publicId`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+      '#publicId = :publicId',
+    ].join(', '),
   };
 
   const {
@@ -1840,7 +1767,7 @@ export async function createUserSession(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'UserSession',
     () =>
@@ -1866,7 +1793,9 @@ export type BlindWriteUserSessionInput = Omit<
   | 'updatedAt'
   | 'version'
 > &
-  Partial<Pick<UserSession, 'expires'>>;
+  Partial<Pick<UserSession, 'expires'>> &
+  Partial<Pick<UserSession, 'createdAt'>>;
+
 export type BlindWriteUserSessionOutput = ResultType<UserSession>;
 /** */
 export async function blindWriteUserSession(
@@ -1925,7 +1854,7 @@ export async function blindWriteUserSession(
   const commandInput: UpdateCommandInput = {
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
-    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
@@ -1975,7 +1904,7 @@ export async function deleteUserSession(
       ExpressionAttributeNames: {
         '#pk': 'pk',
       },
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
+      Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'NONE',
@@ -2017,7 +1946,7 @@ export async function readUserSession(
 
   const commandInput: GetCommandInput = {
     ConsistentRead: true,
-    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
   };
@@ -2047,56 +1976,6 @@ export async function readUserSession(
     item: unmarshallUserSession(item),
     metrics: undefined,
   };
-}
-
-export type TouchUserSessionOutput = ResultType<void>;
-
-/**  */
-export async function touchUserSession(
-  input: UserSessionPrimaryKey
-): Promise<TouchUserSessionOutput> {
-  const tableName = process.env.TABLE_USER_SESSIONS;
-  assert(tableName, 'TABLE_USER_SESSIONS is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':versionInc': 1,
-      },
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression: 'SET #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('UserSession', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
 }
 
 export type UpdateUserSessionInput = Omit<
@@ -2152,7 +2031,7 @@ export async function updateUserSession(
         ...ExpressionAttributeValues,
         ...previousVersionEAV,
       },
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
+      Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
@@ -2171,7 +2050,7 @@ export async function updateUserSession(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'UserSession',
       () =>
@@ -2232,13 +2111,13 @@ function makeEavForQueryUserSession(
 ): Record<string, any> {
   if ('index' in input) {
     if (input.index === 'publicId') {
-      return {':pk': `${input.publicId}`};
+      return {':pk': [input.publicId].join('#')};
     }
     throw new Error(
       'Invalid index. If TypeScript did not catch this, then this is a bug in codegen.'
     );
   } else {
-    return {':pk': `USER_SESSION#${input.sessionId}`};
+    return {':pk': ['USER_SESSION', input.sessionId].join('#')};
   }
 }
 

@@ -4,6 +4,12 @@ import {filterNull} from '../../../common/filters';
 import type {Field, Model, TTLConfig} from '../../../parser';
 
 import {makeKeyTemplate, marshallField} from './helpers';
+import {
+  indexHasField,
+  indexToEANPart,
+  indexToEAVPart,
+  indexToUpdateExpressionPart,
+} from './indexes';
 
 export interface MarshallTplInput {
   readonly model: Model;
@@ -32,7 +38,7 @@ function makeTypeDefinition(
 
 /** Generates the marshall function for a table */
 export function marshallTpl({
-  model: {fields, secondaryIndexes, ttlConfig, typeName},
+  model: {fields, primaryKey, secondaryIndexes, ttlConfig, typeName},
 }: MarshallTplInput): string {
   const requiredFields = fields
     .filter((f) => f.isRequired && f.fieldName !== 'publicId')
@@ -91,13 +97,8 @@ export function marshall${typeName}(input: ${inputTypeName}, now = new Date()): 
     .join('\n')}
   ${secondaryIndexes
     .filter(({name}) => name !== 'publicId')
-    .map(({isSingleField, name, type}) =>
-      type === 'gsi'
-        ? isSingleField
-          ? []
-          : [`'#${name}pk = :${name}pk',`, `'#${name}sk = :${name}sk',`]
-        : [`'#${name}sk = :${name}sk',`]
-    )
+    .filter((index) => !indexHasField('createdAt', primaryKey, index))
+    .map(indexToUpdateExpressionPart)
     .flat()
     .join('\n')}
   ];
@@ -114,13 +115,8 @@ ${requiredFields
   .join('\n')}
 ${secondaryIndexes
   .filter(({name}) => name !== 'publicId')
-  .map(({isSingleField, name, type}) =>
-    type === 'gsi'
-      ? isSingleField
-        ? []
-        : [`'#${name}pk': '${name}pk',`, `'#${name}sk': '${name}sk',`]
-      : [`'#${name}sk': '${name}sk',`]
-  )
+  .filter((index) => !indexHasField('createdAt', primaryKey, index))
+  .map(indexToEANPart)
   .flat()
   .join('\n')}
   };
@@ -148,35 +144,8 @@ ${secondaryIndexes
       .join('\n')}
 ${secondaryIndexes
   .filter(({name}) => name !== 'publicId')
-  .map((index) => {
-    if (index.type === 'gsi') {
-      if (index.isSingleField) {
-        return [];
-      }
-      return [
-        `':${`${index.name}pk`}': \`${makeKeyTemplate(
-          index.partitionKeyPrefix,
-          index.partitionKeyFields,
-          'read'
-        )}\`,`,
-        index.isComposite
-          ? `':${index.name}sk': \`${makeKeyTemplate(
-              index.sortKeyPrefix,
-              index.sortKeyFields,
-              'read'
-            )}\`,`
-          : undefined,
-      ];
-    }
-
-    return [
-      `':${index.name}sk': \`${makeKeyTemplate(
-        index.sortKeyPrefix,
-        index.sortKeyFields,
-        'read'
-      )}\`,`,
-    ];
-  })
+  .filter((index) => !indexHasField('createdAt', primaryKey, index))
+  .map((index) => indexToEAVPart('read', index))
   .flat()
   .join('\n')}
   };

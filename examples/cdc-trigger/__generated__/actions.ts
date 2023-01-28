@@ -190,12 +190,15 @@ export async function createUserSession(
       ...ExpressionAttributeValues,
       ':createdAt': now.getTime(),
     },
-    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+    ].join(', '),
   };
 
   const {
@@ -209,7 +212,7 @@ export async function createUserSession(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'UserSession',
     () =>
@@ -229,7 +232,9 @@ export type BlindWriteUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
 > &
-  Partial<Pick<UserSession, 'expires'>>;
+  Partial<Pick<UserSession, 'expires'>> &
+  Partial<Pick<UserSession, 'createdAt'>>;
+
 export type BlindWriteUserSessionOutput = ResultType<UserSession>;
 /** */
 export async function blindWriteUserSession(
@@ -265,7 +270,7 @@ export async function blindWriteUserSession(
   const commandInput: UpdateCommandInput = {
     ExpressionAttributeNames: ean,
     ExpressionAttributeValues: eav,
-    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
@@ -315,7 +320,7 @@ export async function deleteUserSession(
       ExpressionAttributeNames: {
         '#pk': 'pk',
       },
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
+      Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'NONE',
@@ -357,7 +362,7 @@ export async function readUserSession(
 
   const commandInput: GetCommandInput = {
     ConsistentRead: true,
-    Key: {pk: `USER_SESSION#${input.sessionId}`},
+    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
   };
@@ -387,59 +392,6 @@ export async function readUserSession(
     item: unmarshallUserSession(item),
     metrics: undefined,
   };
-}
-
-export type TouchUserSessionOutput = ResultType<void>;
-
-/**  */
-export async function touchUserSession(
-  input: UserSessionPrimaryKey
-): Promise<TouchUserSessionOutput> {
-  const tableName = process.env.TABLE_USER_SESSION;
-  assert(tableName, 'TABLE_USER_SESSION is not set');
-  try {
-    const commandInput: UpdateCommandInput = {
-      ConditionExpression: 'attribute_exists(#pk)',
-      ExpressionAttributeNames: {
-        '#expires': 'ttl',
-        '#pk': 'pk',
-        '#version': '_v',
-      },
-      ExpressionAttributeValues: {
-        ':ttlInc': 86400000,
-        ':versionInc': 1,
-      },
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
-      ReturnConsumedCapacity: 'INDEXES',
-      ReturnItemCollectionMetrics: 'SIZE',
-      ReturnValues: 'ALL_NEW',
-      TableName: tableName,
-      UpdateExpression:
-        'SET #expires = #expires + :ttlInc, #version = #version + :versionInc',
-    };
-
-    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics} =
-      await ddbDocClient.send(new UpdateCommand(commandInput));
-
-    assert(
-      capacity,
-      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-    );
-
-    return {
-      capacity,
-      item: undefined,
-      metrics,
-    };
-  } catch (err) {
-    if (err instanceof ConditionalCheckFailedException) {
-      throw new NotFoundError('UserSession', input);
-    }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
-  }
 }
 
 export type UpdateUserSessionInput = Omit<
@@ -475,7 +427,7 @@ export async function updateUserSession(
         ...ExpressionAttributeValues,
         ...previousVersionEAV,
       },
-      Key: {pk: `USER_SESSION#${input.sessionId}`},
+      Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
       ReturnConsumedCapacity: 'INDEXES',
       ReturnItemCollectionMetrics: 'SIZE',
       ReturnValues: 'ALL_NEW',
@@ -494,7 +446,7 @@ export async function updateUserSession(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'UserSession',
       () =>

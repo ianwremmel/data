@@ -308,7 +308,7 @@ function compositeKeyValues({
     .join(', ')}].filter(Boolean).join('#')`;
 
   return `{
-    ':pk': \`${pkFragment}\`,
+    ':pk': ${pkFragment},
     ':sk': ${skFragment},
   }`;
 }
@@ -318,7 +318,7 @@ function simpleKeyValues(
   keyPrefix: string | undefined,
   keyFields: readonly Field[]
 ) {
-  return `{':pk': \`${makeKeyTemplate(keyPrefix, keyFields, 'read')}\`}`;
+  return `{':pk': ${makeKeyTemplate(keyPrefix, keyFields, 'read')}}`;
 }
 
 /** helper */
