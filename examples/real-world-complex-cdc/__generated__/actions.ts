@@ -255,7 +255,7 @@ export async function createCaseInstance(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'CaseInstance',
     () =>
@@ -550,7 +550,7 @@ export async function updateCaseInstance(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'CaseInstance',
       () =>
@@ -1183,7 +1183,7 @@ export async function createCaseSummary(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'CaseSummary',
     () =>
@@ -1478,7 +1478,7 @@ export async function updateCaseSummary(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'CaseSummary',
       () =>
@@ -1928,7 +1928,7 @@ export async function createFileTiming(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'FileTiming',
     () =>
@@ -2223,7 +2223,7 @@ export async function updateFileTiming(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'FileTiming',
       () =>

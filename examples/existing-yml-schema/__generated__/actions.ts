@@ -210,7 +210,7 @@ export async function createUserLogin(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'UserLogin',
     () =>
@@ -505,7 +505,7 @@ export async function updateUserLogin(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'UserLogin',
       () =>

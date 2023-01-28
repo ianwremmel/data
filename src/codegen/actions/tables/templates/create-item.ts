@@ -87,7 +87,7 @@ ${ensureTableTemplate(tableName)}
 
   assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected to write ${typeName} but wrote \${item?._et} instead\`));
 
   return {

@@ -230,7 +230,7 @@ export async function createAccount(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'Account',
     () =>
@@ -510,7 +510,7 @@ export async function updateAccount(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'Account',
       () =>
@@ -901,7 +901,7 @@ export async function createSubscription(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'Subscription',
     () =>

@@ -285,7 +285,7 @@ export async function createAccount(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'Account',
     () =>
@@ -601,7 +601,7 @@ export async function updateAccount(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'Account',
       () =>
@@ -1061,7 +1061,7 @@ export async function createRepository(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'Repository',
     () =>
@@ -1359,7 +1359,7 @@ export async function updateRepository(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'Repository',
       () =>
@@ -1840,7 +1840,7 @@ export async function createUserSession(
     'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
   );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+  assert(item, 'Expected DynamoDB to return an Attributes prop.');
   assert(
     item._et === 'UserSession',
     () =>
@@ -2171,7 +2171,7 @@ export async function updateUserSession(
       'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
     );
 
-    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
     assert(
       item._et === 'UserSession',
       () =>
