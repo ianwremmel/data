@@ -139,7 +139,7 @@ function makeKey(
         'create'
       ),
       sk: doLegacy
-        ? `${key.sortKeyPrefix}#0`
+        ? `'${key.sortKeyPrefix}#0'`
         : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'create'),
     };
   }
@@ -168,7 +168,7 @@ function makeKeyForBlind(
         'blind'
       ),
       sk: doLegacy
-        ? `${key.sortKeyPrefix}#0`
+        ? `'${key.sortKeyPrefix}#0'`
         : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'blind'),
     };
   }
@@ -197,7 +197,7 @@ function makeKeyForRead(
         'read'
       ),
       sk: doLegacy
-        ? `${key.sortKeyPrefix}#0`
+        ? `'${key.sortKeyPrefix}#0'`
         : makeKeyTemplate(key.sortKeyPrefix, key.sortKeyFields, 'read'),
     };
   }
