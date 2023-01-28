@@ -228,10 +228,16 @@ export async function createCaseInstance(
     ExpressionAttributeNames: {
       ...ExpressionAttributeNames,
       '#createdAt': '_ct',
+
+      '#lsi1sk': 'lsi1sk',
+      '#lsi2sk': 'lsi2sk',
     },
     ExpressionAttributeValues: {
       ...ExpressionAttributeValues,
       ':createdAt': now.getTime(),
+
+      ':lsi1sk': `INSTANCE#${now.getTime()}`,
+      ':lsi2sk': `INSTANCE#${input.conclusion}#${now.getTime()}`,
     },
     Key: {
       pk: `CASE#${input.vendor}#${input.repoId}#${input.branchName}#${input.label}#${input.lineage}`,
@@ -241,7 +247,13 @@ export async function createCaseInstance(
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+
+      '#lsi1sk = :lsi1sk',
+      '#lsi2sk = :lsi2sk',
+    ].join(', '),
   };
 
   const {
@@ -274,7 +286,9 @@ export async function createCaseInstance(
 export type BlindWriteCaseInstanceInput = Omit<
   CaseInstance,
   'createdAt' | 'id' | 'updatedAt' | 'version'
->;
+> &
+  Partial<Pick<CaseInstance, 'createdAt'>>;
+
 export type BlindWriteCaseInstanceOutput = ResultType<CaseInstance>;
 /** */
 export async function blindWriteCaseInstance(
@@ -296,15 +310,32 @@ export async function blindWriteCaseInstance(
   const ean = {
     ...ExpressionAttributeNames,
     '#createdAt': '_ct',
+
+    '#lsi1sk': 'lsi1sk',
+    '#lsi2sk': 'lsi2sk',
   };
   const eav = {
     ...ExpressionAttributeValues,
     ':one': 1,
     ':createdAt': now.getTime(),
+
+    ':lsi1sk': `INSTANCE#${
+      'createdAt' in input && typeof input.createdAt !== 'undefined'
+        ? input.createdAt.getTime()
+        : now.getTime()
+    }`,
+    ':lsi2sk': `INSTANCE#${input.conclusion}#${
+      'createdAt' in input && typeof input.createdAt !== 'undefined'
+        ? input.createdAt.getTime()
+        : now.getTime()
+    }`,
   };
   const ue = `${[
     ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
     '#createdAt = if_not_exists(#createdAt, :createdAt)',
+
+    '#lsi1sk = :lsi1sk',
+    '#lsi2sk = :lsi2sk',
   ].join(', ')} ADD #version :one`;
 
   const commandInput: UpdateCommandInput = {
@@ -937,8 +968,6 @@ export function marshallCaseInstance(
     '#gsi1sk = :gsi1sk',
     '#gsi2pk = :gsi2pk',
     '#gsi2sk = :gsi2sk',
-    '#lsi1sk = :lsi1sk',
-    '#lsi2sk = :lsi2sk',
   ];
 
   const ean: Record<string, string> = {
@@ -957,8 +986,6 @@ export function marshallCaseInstance(
     '#gsi1sk': 'gsi1sk',
     '#gsi2pk': 'gsi2pk',
     '#gsi2sk': 'gsi2sk',
-    '#lsi1sk': 'lsi1sk',
-    '#lsi2sk': 'lsi2sk',
   };
 
   const eav: Record<string, unknown> = {
@@ -976,8 +1003,6 @@ export function marshallCaseInstance(
     ':gsi1sk': `INSTANCE#${input.lineage}#${input.retry}`,
     ':gsi2pk': `CASE#${input.vendor}#${input.repoId}#${input.branchName}`,
     ':gsi2sk': `INSTANCE#${input.label}#${input.sha}`,
-    ':lsi1sk': `INSTANCE#input.createdAt.getTime()`,
-    ':lsi2sk': `INSTANCE#${input.conclusion}#input.createdAt.getTime()`,
   };
 
   if ('duration' in input && typeof input.duration !== 'undefined') {
@@ -1116,7 +1141,10 @@ export async function createCaseSummary(
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+    ].join(', '),
   };
 
   const {
@@ -1149,7 +1177,9 @@ export async function createCaseSummary(
 export type BlindWriteCaseSummaryInput = Omit<
   CaseSummary,
   'createdAt' | 'id' | 'updatedAt' | 'version'
->;
+> &
+  Partial<Pick<CaseSummary, 'createdAt'>>;
+
 export type BlindWriteCaseSummaryOutput = ResultType<CaseSummary>;
 /** */
 export async function blindWriteCaseSummary(
@@ -1808,7 +1838,10 @@ export async function createFileTiming(
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+    ].join(', '),
   };
 
   const {
@@ -1841,7 +1874,9 @@ export async function createFileTiming(
 export type BlindWriteFileTimingInput = Omit<
   FileTiming,
   'createdAt' | 'id' | 'updatedAt' | 'version'
->;
+> &
+  Partial<Pick<FileTiming, 'createdAt'>>;
+
 export type BlindWriteFileTimingOutput = ResultType<FileTiming>;
 /** */
 export async function blindWriteFileTiming(

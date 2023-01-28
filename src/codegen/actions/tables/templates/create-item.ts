@@ -4,6 +4,12 @@ import {defineComputedInputFields, inputName} from '../computed-fields';
 
 import {ensureTableTemplate} from './ensure-table';
 import {objectToString} from './helpers';
+import {
+  indexHasField,
+  indexToEANPart,
+  indexToEAVPart,
+  indexToUpdateExpressionPart,
+} from './indexes';
 
 export interface CreateItemTplInput {
   readonly fields: readonly Field[];
@@ -67,20 +73,41 @@ ${ensureTableTemplate(tableName)}
       ...ExpressionAttributeNames,
       '#createdAt': '_ct',
       ${hasPublicId ? "'#publicId': 'publicId'," : ''}
+          ${model.secondaryIndexes
+            .filter((index) =>
+              indexHasField('createdAt', model.primaryKey, index)
+            )
+            .map(indexToEANPart)
+            .flat()
+            .join('\n')}
     },
     ExpressionAttributeValues: {
       ...ExpressionAttributeValues,
       ':createdAt': now.getTime(),
       ${hasPublicId ? "':publicId': publicId," : ''}
+          ${model.secondaryIndexes
+            .filter((index) =>
+              indexHasField('createdAt', model.primaryKey, index)
+            )
+            .map((index) => indexToEAVPart('create', index))
+            .flat()
+            .join('\n')}
     },
     Key: ${objectToString(key)},
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: UpdateExpression + ', #createdAt = :createdAt${
-      hasPublicId ? ', #publicId = :publicId' : ''
-    }',
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+      ${hasPublicId ? "'#publicId = :publicId'," : ''}
+      ${model.secondaryIndexes
+        .filter((index) => indexHasField('createdAt', model.primaryKey, index))
+        .map(indexToUpdateExpressionPart)
+        .flat()
+        .join('\n')}
+    ].join(', ')
   };
 
   const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand(commandInput));

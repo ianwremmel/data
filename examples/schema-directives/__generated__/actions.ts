@@ -271,7 +271,10 @@ export async function createAccount(
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+    ].join(', '),
   };
 
   const {
@@ -304,7 +307,9 @@ export async function createAccount(
 export type BlindWriteAccountInput = Omit<
   Account,
   'createdAt' | 'id' | 'indexedPlanName' | 'updatedAt' | 'version'
->;
+> &
+  Partial<Pick<Account, 'createdAt'>>;
+
 export type BlindWriteAccountOutput = ResultType<Account>;
 /** */
 export async function blindWriteAccount(
@@ -997,7 +1002,11 @@ export async function createRepository(
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt, #publicId = :publicId`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+      '#publicId = :publicId',
+    ].join(', '),
   };
 
   const {
@@ -1030,7 +1039,9 @@ export async function createRepository(
 export type BlindWriteRepositoryInput = Omit<
   Repository,
   'createdAt' | 'id' | 'publicId' | 'updatedAt' | 'version'
->;
+> &
+  Partial<Pick<Repository, 'createdAt'>>;
+
 export type BlindWriteRepositoryOutput = ResultType<Repository>;
 /** */
 export async function blindWriteRepository(
@@ -1723,7 +1734,11 @@ export async function createUserSession(
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt, #publicId = :publicId`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+      '#publicId = :publicId',
+    ].join(', '),
   };
 
   const {
@@ -1763,7 +1778,9 @@ export type BlindWriteUserSessionInput = Omit<
   | 'updatedAt'
   | 'version'
 > &
-  Partial<Pick<UserSession, 'expires'>>;
+  Partial<Pick<UserSession, 'expires'>> &
+  Partial<Pick<UserSession, 'createdAt'>>;
+
 export type BlindWriteUserSessionOutput = ResultType<UserSession>;
 /** */
 export async function blindWriteUserSession(

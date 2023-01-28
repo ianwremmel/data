@@ -195,7 +195,10 @@ export async function createUserSession(
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+    ].join(', '),
   };
 
   const {
@@ -229,7 +232,9 @@ export type BlindWriteUserSessionInput = Omit<
   UserSession,
   'createdAt' | 'expires' | 'id' | 'updatedAt' | 'version'
 > &
-  Partial<Pick<UserSession, 'expires'>>;
+  Partial<Pick<UserSession, 'expires'>> &
+  Partial<Pick<UserSession, 'createdAt'>>;
+
 export type BlindWriteUserSessionOutput = ResultType<UserSession>;
 /** */
 export async function blindWriteUserSession(

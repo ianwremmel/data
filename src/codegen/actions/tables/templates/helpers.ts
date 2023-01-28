@@ -1,7 +1,5 @@
 import assert from 'assert';
 
-import {camelCase, snakeCase} from 'lodash';
-
 import {filterNull} from '../../../common/filters';
 import type {Field} from '../../../parser';
 
@@ -60,7 +58,9 @@ export function makeKeyTemplate(
       const {fieldName} = field;
       if (fieldName === 'createdAt') {
         if (mode === 'blind') {
-          return "'createdAt' in input ? input.createdAt.getTime() : now.getTime()";
+          // this template gets passed through so it's available in the output.
+          // eslint-disable-next-line no-template-curly-in-string
+          return "${'createdAt' in input && typeof input.createdAt !== 'undefined' ? input.createdAt.getTime() : now.getTime()}";
         }
         if (mode === 'create') {
           // this template gets passed through so it's available in the output.
@@ -68,7 +68,9 @@ export function makeKeyTemplate(
           return '${now.getTime()}';
         }
         if (mode === 'read') {
-          return 'input.createdAt.getTime()';
+          // this template gets passed through so it's available in the output.
+          // eslint-disable-next-line no-template-curly-in-string
+          return '${input.createdAt.getTime()}';
         }
         assert.fail('Invalid mode');
       }
@@ -130,6 +132,7 @@ export function unmarshallFieldValue(field: Field): string {
 
   return `${func}(${args.join(', ')})`;
 }
+
 /**
  * Helper function for building a field unmarshaller
  */

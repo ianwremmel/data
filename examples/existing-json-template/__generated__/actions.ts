@@ -196,7 +196,10 @@ export async function createUserLogin(
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+    ].join(', '),
   };
 
   const {
@@ -229,7 +232,9 @@ export async function createUserLogin(
 export type BlindWriteUserLoginInput = Omit<
   UserLogin,
   'createdAt' | 'id' | 'updatedAt' | 'version'
->;
+> &
+  Partial<Pick<UserLogin, 'createdAt'>>;
+
 export type BlindWriteUserLoginOutput = ResultType<UserLogin>;
 /** */
 export async function blindWriteUserLogin(

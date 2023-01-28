@@ -206,17 +206,26 @@ export async function createAccount(
     ExpressionAttributeNames: {
       ...ExpressionAttributeNames,
       '#createdAt': '_ct',
+
+      '#lsi1sk': 'lsi1sk',
     },
     ExpressionAttributeValues: {
       ...ExpressionAttributeValues,
       ':createdAt': now.getTime(),
+
+      ':lsi1sk': `INSTANCE#${now.getTime()}`,
     },
     Key: {pk: `ACCOUNT#${input.vendor}#${input.externalId}`, sk: `SUMMARY`},
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+
+      '#lsi1sk = :lsi1sk',
+    ].join(', '),
   };
 
   const {
@@ -249,7 +258,9 @@ export async function createAccount(
 export type BlindWriteAccountInput = Omit<
   Account,
   'createdAt' | 'id' | 'updatedAt' | 'version'
->;
+> &
+  Partial<Pick<Account, 'createdAt'>>;
+
 export type BlindWriteAccountOutput = ResultType<Account>;
 /** */
 export async function blindWriteAccount(
@@ -271,15 +282,25 @@ export async function blindWriteAccount(
   const ean = {
     ...ExpressionAttributeNames,
     '#createdAt': '_ct',
+
+    '#lsi1sk': 'lsi1sk',
   };
   const eav = {
     ...ExpressionAttributeValues,
     ':one': 1,
     ':createdAt': now.getTime(),
+
+    ':lsi1sk': `INSTANCE#${
+      'createdAt' in input && typeof input.createdAt !== 'undefined'
+        ? input.createdAt.getTime()
+        : now.getTime()
+    }`,
   };
   const ue = `${[
     ...UpdateExpression.split(', ').filter((e) => !e.startsWith('#version')),
     '#createdAt = if_not_exists(#createdAt, :createdAt)',
+
+    '#lsi1sk = :lsi1sk',
   ].join(', ')} ADD #version :one`;
 
   const commandInput: UpdateCommandInput = {
@@ -680,7 +701,6 @@ export function marshallAccount(
     '#updatedAt = :updatedAt',
     '#vendor = :vendor',
     '#version = :version',
-    '#lsi1sk = :lsi1sk',
   ];
 
   const ean: Record<string, string> = {
@@ -691,7 +711,6 @@ export function marshallAccount(
     '#updatedAt': '_md',
     '#vendor': 'vendor',
     '#version': '_v',
-    '#lsi1sk': 'lsi1sk',
   };
 
   const eav: Record<string, unknown> = {
@@ -701,7 +720,6 @@ export function marshallAccount(
     ':vendor': input.vendor,
     ':updatedAt': now.getTime(),
     ':version': ('version' in input ? input.version ?? 0 : 0) + 1,
-    ':lsi1sk': `INSTANCE#input.createdAt.getTime()`,
   };
 
   if ('cancelled' in input && typeof input.cancelled !== 'undefined') {
@@ -837,7 +855,10 @@ export async function createSubscription(
     ReturnItemCollectionMetrics: 'SIZE',
     ReturnValues: 'ALL_NEW',
     TableName: tableName,
-    UpdateExpression: `${UpdateExpression}, #createdAt = :createdAt`,
+    UpdateExpression: [
+      ...UpdateExpression.split(', '),
+      '#createdAt = :createdAt',
+    ].join(', '),
   };
 
   const {

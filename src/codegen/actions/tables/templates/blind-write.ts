@@ -4,6 +4,12 @@ import {defineComputedInputFields, inputName} from '../computed-fields';
 
 import {ensureTableTemplate} from './ensure-table';
 import {objectToString} from './helpers';
+import {
+  indexHasField,
+  indexToEANPart,
+  indexToEAVPart,
+  indexToUpdateExpressionPart,
+} from './indexes';
 
 export interface BlindWriteTplInput {
   readonly fields: readonly Field[];
@@ -47,7 +53,8 @@ export type ${inputTypeName} = Omit<${typeName}, ${omitInputFields.join(
     '|'
   )}> ${
     ttlConfig ? ` & Partial<Pick<${typeName}, '${ttlConfig.fieldName}'>>` : ''
-  };
+  } & Partial<Pick<${typeName}, 'createdAt'>>
+
 export type ${outputTypeName} = ResultType<${typeName}>;
 /** */
 export async function blindWrite${typeName}(${inputName(
@@ -65,18 +72,33 @@ ${ensureTableTemplate(tableName)}
     ...ExpressionAttributeNames,
     '#createdAt': '_ct',
     ${hasPublicId ? "'#publicId': 'publicId'," : ''}
+    ${model.secondaryIndexes
+      .filter((index) => indexHasField('createdAt', model.primaryKey, index))
+      .map(indexToEANPart)
+      .flat()
+      .join('\n')}
   }
   const eav = {
     ...ExpressionAttributeValues, ':one': 1,
     ':createdAt': now.getTime(),
     ${hasPublicId ? "':publicId': idGenerator()," : ''}
+    ${model.secondaryIndexes
+      .filter((index) => indexHasField('createdAt', model.primaryKey, index))
+      .map((index) => indexToEAVPart('blind', index))
+      .flat()
+      .join('\n')}
   };
   const ue = [
     ...UpdateExpression
       .split(', ')
       .filter((e) => !e.startsWith('#version')),
     '#createdAt = if_not_exists(#createdAt, :createdAt)',
-    ${hasPublicId ? "'#publicId = if_not_exists(#publicId, :publicId)'" : ''}
+    ${hasPublicId ? "'#publicId = if_not_exists(#publicId, :publicId)'," : ''}
+    ${model.secondaryIndexes
+      .filter((index) => indexHasField('createdAt', model.primaryKey, index))
+      .map(indexToUpdateExpressionPart)
+      .flat()
+      .join('\n')}
   ].join(', ') + ' ADD #version :one';
 
   const commandInput: UpdateCommandInput = {
