@@ -52,7 +52,7 @@
     "@typescript-eslint/parser": "^5.46.1",
     "aws-xray-sdk-core": "^3.4.0",
     "cuid": "^2.1.8",
-    "eslint": "^8.26.0",
+    "eslint": "^8.33.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-babel": "^5.3.1",
     "eslint-plugin-eslint-comments": "^3.2.0",
