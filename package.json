@@ -48,7 +48,7 @@
     "@types/jest": "^29.2.0",
     "@types/lodash": "^4.14.187",
     "@types/node": "^18",
-    "@typescript-eslint/eslint-plugin": "^5.46.1",
+    "@typescript-eslint/eslint-plugin": "^5.50.0",
     "@typescript-eslint/parser": "^5.46.1",
     "aws-xray-sdk-core": "^3.4.0",
     "cuid": "^2.1.8",
