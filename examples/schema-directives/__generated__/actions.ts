@@ -830,7 +830,8 @@ export function marshallAccount(
 
   const eav: Record<string, unknown> = {
     ':entity': 'Account',
-    ':effectiveDate': input.effectiveDate.toISOString(),
+    ':effectiveDate':
+      input.effectiveDate === null ? null : input.effectiveDate.toISOString(),
     ':externalId': input.externalId,
     ':hasEverSubscribed': input.hasEverSubscribed,
     ':vendor': input.vendor,
@@ -2369,7 +2370,7 @@ export function unmarshallUserSession(item: Record<string, any>): UserSession {
       ]),
     };
   }
-  if ('ttl' in item) {
+  if ('ttl' in item && item.ttl !== null) {
     result = {
       ...result,
       expires: unmarshallOptionalField(

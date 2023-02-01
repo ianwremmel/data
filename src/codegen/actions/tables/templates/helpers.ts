@@ -31,17 +31,15 @@ export function marshallField({
   columnName,
   fieldName,
   isDateType,
-  isRequired,
 }: Field): string {
   if (columnName === 'ttl') {
     return `Math.floor(input.${fieldName}.getTime()/1000)`;
   }
 
   if (isDateType) {
-    if (isRequired) {
-      return `input.${fieldName}.toISOString()`;
-    }
-    return `input.${fieldName}?.toISOString()`;
+    // Reminder: we don't care if it's required or not because we never want to
+    // pass undefined. Explicit nulls can be passed as-is.
+    return `input.${fieldName} === null ? null : input.${fieldName}.toISOString()`;
   }
   return `input.${fieldName}`;
 }

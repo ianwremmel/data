@@ -731,7 +731,8 @@ export function marshallAccount(
 
   const eav: Record<string, unknown> = {
     ':entity': 'Account',
-    ':effectiveDate': input.effectiveDate.toISOString(),
+    ':effectiveDate':
+      input.effectiveDate === null ? null : input.effectiveDate.toISOString(),
     ':externalId': input.externalId,
     ':vendor': input.vendor,
     ':updatedAt': now.getTime(),
@@ -865,7 +866,10 @@ export async function createSubscription(
     },
     Key: {
       pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
-      sk: ['SUBSCRIPTION', input.effectiveDate.toISOString()].join('#'),
+      sk: [
+        'SUBSCRIPTION',
+        input.effectiveDate === null ? null : input.effectiveDate.toISOString(),
+      ].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     ReturnItemCollectionMetrics: 'SIZE',
@@ -917,7 +921,10 @@ export async function readSubscription(
     ConsistentRead: false,
     Key: {
       pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
-      sk: ['SUBSCRIPTION', input.effectiveDate.toISOString()].join('#'),
+      sk: [
+        'SUBSCRIPTION',
+        input.effectiveDate === null ? null : input.effectiveDate.toISOString(),
+      ].join('#'),
     },
     ReturnConsumedCapacity: 'INDEXES',
     TableName: tableName,
@@ -1137,7 +1144,8 @@ export function marshallSubscription(
 
   const eav: Record<string, unknown> = {
     ':entity': 'Subscription',
-    ':effectiveDate': input.effectiveDate.toISOString(),
+    ':effectiveDate':
+      input.effectiveDate === null ? null : input.effectiveDate.toISOString(),
     ':externalId': input.externalId,
     ':vendor': input.vendor,
     ':updatedAt': now.getTime(),

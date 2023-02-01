@@ -39,17 +39,27 @@ ${requiredFields.map((field) => {
   };
 
 ${optionalFields
-  .map(
-    (field) =>
-      `  if (${field.columnNamesForRead
-        .map((c) => `('${c}' in item)`)
+  .map((field) => {
+    if (field.isDateType) {
+      return `  if (${field.columnNamesForRead
+        .map((c) => `('${c}' in item) && item.${c} !== null`)
         .join('||')}) {
     result = {
       ...result,
       ${unmarshallField(field)}
     }
-  }`
-  )
+  }`;
+    }
+
+    return `  if (${field.columnNamesForRead
+      .map((c) => `('${c}' in item)`)
+      .join('||')}) {
+    result = {
+      ...result,
+      ${unmarshallField(field)}
+    }
+  }`;
+  })
   .join('\n')}
 
   ${defineComputedOutputFields(fields, typeName)}
