@@ -90,6 +90,20 @@ directive @triggers(
   file.
   """
   handler: String!
+
+  """
+  List of model names that this handler should be allowed to query. The
+  CloudFormation resource will be updated accordingly.
+  @experimental
+  """
+  readableModels: [String!]
+
+  """
+  List of model names that this handler should be allowed to write. The
+  CloudFormation resource will be updated accordingly.
+  @experimental
+  """
+  writeableModels: [String!]
 ) repeatable on OBJECT
 
 """
