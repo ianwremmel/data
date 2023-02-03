@@ -8,11 +8,7 @@ import type {
 import {assertObjectType} from 'graphql';
 
 import {filterNull} from '../../common/filters';
-import {
-  getArgStringValue,
-  getOptionalArg,
-  getOptionalArgStringValue,
-} from '../helpers';
+import {getArgStringValue, getOptionalArg} from '../helpers';
 import {extractTableName} from '../parser';
 import type {
   ChangeDataCaptureConfig,

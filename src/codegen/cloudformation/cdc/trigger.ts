@@ -16,7 +16,13 @@ import {makeHandler} from './lambdas';
 /** Generates CDC config for a model */
 export function defineTriggerCdc(
   model: Model,
-  {handlerModuleId, event, sourceModelName}: ChangeDataCaptureTriggerConfig,
+  {
+    handlerModuleId,
+    event,
+    sourceModelName,
+    readableTables,
+    writableTables,
+  }: ChangeDataCaptureTriggerConfig,
   config: CloudformationPluginConfig,
   {outputFile}: {outputFile: string}
 ): CloudFormationFragment {
@@ -77,11 +83,11 @@ export const handler = makeTriggerHandler(dependencies, (record) => {
       functionName: handlerFunctionName,
       libImportPath,
       outputPath: handlerOutputPath,
-      readableTables: [],
+      readableTables,
       sourceModelName,
       tableName,
       template,
-      writableTables: [],
+      writableTables,
     })
   );
 }
