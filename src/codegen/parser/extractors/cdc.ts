@@ -70,13 +70,17 @@ export function getTargetTables(
   }
 
   assert(arg.value.kind === 'ListValue', `Expected ${fieldName} to be a list`);
-  return arg.value.values.map((v) => {
-    assert(
-      v.kind === 'StringValue',
-      `Expected @${directive.name.value} directive argument "${fieldName}" to be a list of strings`
-    );
-    return getTargetTable(schema, directive.name.value, v.value);
-  });
+  return Array.from(
+    new Set(
+      arg.value.values.map((v) => {
+        assert(
+          v.kind === 'StringValue',
+          `Expected @${directive.name.value} directive argument "${fieldName}" to be a list of strings`
+        );
+        return getTargetTable(schema, directive.name.value, v.value);
+      })
+    )
+  );
 }
 
 /** helper */
@@ -95,7 +99,7 @@ function extractEnricherConfig(
     sourceModelName: type.name,
     targetModelName,
     type: 'ENRICHER',
-    writeableTables: [getTargetTable(schema, type.name, targetModelName)],
+    writableTables: [getTargetTable(schema, type.name, targetModelName)],
   };
 }
 
@@ -133,9 +137,9 @@ function extractTriggersConfig(
   const event = getEvent(type, directive);
   const handlerModuleId = getArgStringValue('handler', directive);
 
-  const readableTables = getTargetTables('readableTables', schema, directive);
+  const readableTables = getTargetTables('readableModels', schema, directive);
 
-  const writeableTables = getTargetTables('writeableTables', schema, directive);
+  const writableTables = getTargetTables('writableModels', schema, directive);
 
   return {
     event,
@@ -143,7 +147,7 @@ function extractTriggersConfig(
     readableTables,
     sourceModelName: type.name,
     type: 'TRIGGER',
-    writeableTables,
+    writableTables,
   };
 }
 

@@ -20,7 +20,7 @@ export function defineModelEnricher(
     event,
     sourceModelName,
     targetModelName,
-    writeableTables,
+    writableTables,
   }: ChangeDataCaptureEnricherConfig,
   config: CloudformationPluginConfig,
   {outputFile}: {outputFile: string}
@@ -103,7 +103,7 @@ Update${targetModelName}Input
       sourceModelName,
       tableName,
       template,
-      writeableTables,
+      writableTables,
     })
   );
 }

@@ -11,7 +11,7 @@ export interface MakeHandlerOptions extends LambdaInput {
   readonly sourceModelName: string;
   readonly tableName: string;
   readonly template: string;
-  readonly writeableTables: readonly string[];
+  readonly writableTables: readonly string[];
 }
 
 /** generate the dispatcher lambda function */
@@ -25,7 +25,7 @@ export function makeHandler({
   sourceModelName,
   tableName,
   template,
-  writeableTables,
+  writableTables,
 }: MakeHandlerOptions) {
   writeLambda(outputPath, template);
 
@@ -93,7 +93,7 @@ export function makeHandler({
                 TableName: {Ref: targetTable},
               },
             })),
-            ...writeableTables.map((targetTable) => ({
+            ...writableTables.map((targetTable) => ({
               DynamoDBCrudPolicy: {
                 TableName: {Ref: targetTable},
               },

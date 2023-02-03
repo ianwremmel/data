@@ -81,7 +81,7 @@ export const handler = makeTriggerHandler(dependencies, (record) => {
       sourceModelName,
       tableName,
       template,
-      writeableTables: [],
+      writableTables: [],
     })
   );
 }

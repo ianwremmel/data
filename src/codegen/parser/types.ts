@@ -85,7 +85,7 @@ export interface ChangeDataCaptureEnricherConfig {
   readonly handlerModuleId: string;
   readonly sourceModelName: string;
   readonly targetModelName: string;
-  readonly writeableTables: readonly string[];
+  readonly writableTables: readonly string[];
   readonly type: 'ENRICHER';
 }
 
@@ -94,7 +94,7 @@ export interface ChangeDataCaptureTriggerConfig {
   readonly handlerModuleId: string;
   readonly readableTables: readonly string[];
   readonly sourceModelName: string;
-  readonly writeableTables: readonly string[];
+  readonly writableTables: readonly string[];
   readonly type: 'TRIGGER';
 }
 

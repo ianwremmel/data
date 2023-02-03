@@ -103,7 +103,7 @@ directive @triggers(
   CloudFormation resource will be updated accordingly.
   @experimental
   """
-  writeableModels: [String!]
+  writableModels: [String!]
 ) repeatable on OBJECT
 
 """

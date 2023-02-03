@@ -67,7 +67,7 @@ export const handler = makeModelChangeHandler(dependencies, (record) => {
       sourceModelName,
       tableName,
       template,
-      writeableTables: [targetTable],
+      writableTables: [targetTable],
     })
   );
 }
