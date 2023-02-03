@@ -63,10 +63,11 @@ export const handler = makeModelChangeHandler(dependencies, (record) => {
       functionName: handlerFunctionName,
       libImportPath,
       outputPath: handlerOutputPath,
+      readableTables: [],
       sourceModelName,
       tableName,
-      targetTable,
       template,
+      writeableTables: [targetTable],
     })
   );
 }

@@ -77,9 +77,11 @@ export const handler = makeTriggerHandler(dependencies, (record) => {
       functionName: handlerFunctionName,
       libImportPath,
       outputPath: handlerOutputPath,
+      readableTables: [],
       sourceModelName,
       tableName,
       template,
+      writeableTables: [],
     })
   );
 }

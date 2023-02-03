@@ -8,7 +8,11 @@ import type {
 import {assertObjectType} from 'graphql';
 
 import {filterNull} from '../../common/filters';
-import {getArgStringValue} from '../helpers';
+import {
+  getArgStringValue,
+  getOptionalArg,
+  getOptionalArgStringValue,
+} from '../helpers';
 import {extractTableName} from '../parser';
 import type {
   ChangeDataCaptureConfig,
@@ -55,6 +59,27 @@ function getTargetTable(
 }
 
 /** helper */
+export function getTargetTables(
+  fieldName: string,
+  schema: GraphQLSchema,
+  directive: ConstDirectiveNode
+): string[] {
+  const arg = getOptionalArg(fieldName, directive);
+  if (!arg) {
+    return [];
+  }
+
+  assert(arg.value.kind === 'ListValue', `Expected ${fieldName} to be a list`);
+  return arg.value.values.map((v) => {
+    assert(
+      v.kind === 'StringValue',
+      `Expected @${directive.name.value} directive argument "${fieldName}" to be a list of strings`
+    );
+    return getTargetTable(schema, directive.name.value, v.value);
+  });
+}
+
+/** helper */
 function extractEnricherConfig(
   schema: GraphQLSchema,
   type: GraphQLObjectType<unknown, unknown>,
@@ -69,8 +94,8 @@ function extractEnricherConfig(
     handlerModuleId,
     sourceModelName: type.name,
     targetModelName,
-    targetTable: getTargetTable(schema, type.name, targetModelName),
     type: 'ENRICHER',
+    writeableTables: [getTargetTable(schema, type.name, targetModelName)],
   };
 }
 
@@ -108,11 +133,17 @@ function extractTriggersConfig(
   const event = getEvent(type, directive);
   const handlerModuleId = getArgStringValue('handler', directive);
 
+  const readableTables = getTargetTables('readableTables', schema, directive);
+
+  const writeableTables = getTargetTables('writeableTables', schema, directive);
+
   return {
     event,
     handlerModuleId,
+    readableTables,
     sourceModelName: type.name,
     type: 'TRIGGER',
+    writeableTables,
   };
 }
 

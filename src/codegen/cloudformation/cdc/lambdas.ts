@@ -7,10 +7,11 @@ import {makeLogGroup} from '../fragments/log-group';
 
 export interface MakeHandlerOptions extends LambdaInput {
   readonly event: ChangeDataCaptureEvent;
+  readonly readableTables: readonly string[];
   readonly sourceModelName: string;
   readonly tableName: string;
-  readonly targetTable?: string;
   readonly template: string;
+  readonly writeableTables: readonly string[];
 }
 
 /** generate the dispatcher lambda function */
@@ -20,10 +21,11 @@ export function makeHandler({
   event,
   functionName,
   outputPath,
+  readableTables,
   sourceModelName,
   tableName,
-  targetTable,
   template,
+  writeableTables,
 }: MakeHandlerOptions) {
   writeLambda(outputPath, template);
 
@@ -86,11 +88,16 @@ export function makeHandler({
             'AWSXrayWriteOnlyAccess',
             'CloudWatchLambdaInsightsExecutionRolePolicy',
             {CloudWatchPutMetricPolicy: {}},
-            targetTable && {
+            ...readableTables.map((targetTable) => ({
+              DynamoDBReadPolicy: {
+                TableName: {Ref: targetTable},
+              },
+            })),
+            ...writeableTables.map((targetTable) => ({
               DynamoDBCrudPolicy: {
                 TableName: {Ref: targetTable},
               },
-            },
+            })),
             {
               SQSSendMessagePolicy: {
                 QueueName: {
