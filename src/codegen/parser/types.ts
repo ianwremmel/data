@@ -77,8 +77,7 @@ export type ChangeDataCaptureEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
 export type ChangeDataCaptureConfig =
   | ChangeDataCaptureEnricherConfig
-  | ChangeDataCaptureTriggerConfig
-  | LegacyChangeDataCaptureConfig;
+  | ChangeDataCaptureTriggerConfig;
 
 export interface ChangeDataCaptureEnricherConfig {
   readonly event: ChangeDataCaptureEvent;
@@ -96,14 +95,6 @@ export interface ChangeDataCaptureTriggerConfig {
   readonly sourceModelName: string;
   readonly writableTables: readonly string[];
   readonly type: 'TRIGGER';
-}
-
-export interface LegacyChangeDataCaptureConfig {
-  readonly event: ChangeDataCaptureEvent;
-  readonly handlerModuleId: string;
-  readonly sourceModelName: string;
-  readonly targetTable: string;
-  readonly type: 'CDC';
 }
 
 export type GSI = {

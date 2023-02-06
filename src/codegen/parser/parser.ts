@@ -438,7 +438,6 @@ function extractTableInfo(type: GraphQLObjectType<unknown, unknown>) {
         ) !== false
       : true,
     enableStreaming:
-      hasDirective('cdc', type) ||
       hasDirective('enriches', type) ||
       hasDirective('triggers', type) ||
       (!!tableDirective &&

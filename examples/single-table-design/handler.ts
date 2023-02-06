@@ -1,35 +1,45 @@
-import type {Subscription} from './__generated__/actions';
-import {
-  createAccount,
-  readAccount,
-  updateAccount,
+import type {
+  Account,
+  CreateAccountInput,
+  Subscription,
+  UpdateAccountInput,
 } from './__generated__/actions';
+import {readAccount} from './__generated__/actions';
 
-/** cdc handler */
-export async function handler(subscription: Subscription) {
-  try {
-    const {item: account} = await readAccount({
-      externalId: subscription.externalId,
-      vendor: subscription.vendor,
-    });
+/** cdc function */
+export async function load(subscription: Subscription): Promise<Account> {
+  const {item: account} = await readAccount({
+    externalId: subscription.externalId,
+    vendor: subscription.vendor,
+  });
 
-    if (subscription.effectiveDate > account.effectiveDate) {
-      await updateAccount({
-        ...account,
-        cancelled: subscription.cancelled,
-        effectiveDate: subscription.effectiveDate,
-        onFreeTrial: subscription.onFreeTrial,
-        planName: subscription.planName,
-      });
-    }
-  } catch (err) {
-    await createAccount({
-      cancelled: subscription.cancelled,
-      effectiveDate: subscription.effectiveDate,
-      externalId: subscription.externalId,
-      onFreeTrial: subscription.onFreeTrial,
-      planName: subscription.planName,
-      vendor: subscription.vendor,
-    });
-  }
+  return account;
+}
+
+/** cdc function */
+export async function create(
+  subscription: Subscription
+): Promise<CreateAccountInput> {
+  return {
+    cancelled: subscription.cancelled,
+    effectiveDate: subscription.effectiveDate,
+    externalId: subscription.externalId,
+    onFreeTrial: subscription.onFreeTrial,
+    planName: subscription.planName,
+    vendor: subscription.vendor,
+  };
+}
+
+/** cdc function */
+export async function update(
+  subscription: Subscription,
+  account: Account
+): Promise<UpdateAccountInput> {
+  return {
+    ...account,
+    cancelled: subscription.cancelled,
+    effectiveDate: subscription.effectiveDate,
+    onFreeTrial: subscription.onFreeTrial,
+    planName: subscription.planName,
+  };
 }

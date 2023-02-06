@@ -14,7 +14,6 @@ import type {
   ChangeDataCaptureConfig,
   ChangeDataCaptureEnricherConfig,
   ChangeDataCaptureTriggerConfig,
-  LegacyChangeDataCaptureConfig,
 } from '../types';
 
 /** Extracts CDC config for a type */
@@ -31,9 +30,7 @@ export function extractChangeDataCaptureConfig(
         if (directive.name.value === 'triggers') {
           return extractTriggersConfig(schema, type, directive);
         }
-        if (directive.name.value === 'cdc') {
-          return extractLegacyConfig(schema, type, directive);
-        }
+
         return null;
       })
       .filter(filterNull) ?? []
@@ -96,31 +93,6 @@ function extractEnricherConfig(
     targetModelName,
     type: 'ENRICHER',
     writableTables: [getTargetTable(schema, type.name, targetModelName)],
-  };
-}
-
-/** helper */
-function extractLegacyConfig(
-  schema: GraphQLSchema,
-  type: GraphQLObjectType<unknown, unknown>,
-  directive: ConstDirectiveNode
-): LegacyChangeDataCaptureConfig {
-  const event = getEvent(type, directive);
-
-  const handlerModuleId = getArgStringValue('handler', directive);
-
-  const targetTable = getTargetTable(
-    schema,
-    type.name,
-    getArgStringValue('produces', directive)
-  );
-
-  return {
-    event,
-    handlerModuleId,
-    sourceModelName: type.name,
-    targetTable,
-    type: 'CDC',
   };
 }
 
