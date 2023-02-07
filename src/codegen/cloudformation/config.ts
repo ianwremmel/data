@@ -40,6 +40,6 @@ export interface CloudformationPluginConfig {
     yamlConfig?: Partial<DumpOptions>;
   };
 
-  defaultDispatcherConfig?: HandlerConfig;
-  defaultHandlerConfig?: HandlerConfig;
+  readonly defaultDispatcherConfig?: HandlerConfig;
+  readonly defaultHandlerConfig?: HandlerConfig;
 }

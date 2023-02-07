@@ -158,10 +158,17 @@ export interface TTLConfig {
 }
 
 export interface LambdaConfig {
-  readonly timeout: Nullable<number>;
-  readonly memorySize: Nullable<number>;
+  readonly alarmActions: readonly string[];
+  readonly coldstartLatencyAlarm: number;
+  readonly latencyP99Alarm: number;
+  readonly memorySize: number;
+  readonly memoryUtilizationAlarm: number;
+  readonly okActions: readonly string[];
+  readonly timeout: number;
 }
 
-export type DispatcherConfig = LambdaConfig;
+export interface DispatcherConfig extends LambdaConfig {
+  readonly maxIteratorAgeAlarm: number;
+}
 
 export type HandlerConfig = LambdaConfig;

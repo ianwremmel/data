@@ -80,6 +80,11 @@ export type ColumnCase = 'CAMEL_CASE' | 'SNAKE_CASE';
 /** Configuration specific to a table dispatcher */
 export interface DispatcherConfig {
   lambdaConfig?: InputMaybe<LambdaConfig>;
+  /**
+   * Number of seconds behind that the Lambda iterator can get before firing an
+   * alarm.
+   */
+  maxIteratorAgeAlarm?: InputMaybe<Scalars['Int']>;
 }
 
 /** Configuration specific to a model handler */
@@ -89,7 +94,13 @@ export interface HandlerConfig {
 
 /** Reusable options for all generated lambdas */
 export interface LambdaConfig {
+  /** Milliseconds before firing the coldstart alarm */
+  coldstartLatencyAlarm?: InputMaybe<Scalars['Int']>;
+  /** Milliseconds before firing the latency alarm */
+  latencyP99Alarm?: InputMaybe<Scalars['Int']>;
   memory?: InputMaybe<Scalars['Int']>;
+  /** Percent (zero-to-one-hundred scale) memory utilization before firing the alarm */
+  memoryUtilizationAlarm?: InputMaybe<Scalars['Int']>;
   timeout?: InputMaybe<Scalars['Int']>;
 }
 

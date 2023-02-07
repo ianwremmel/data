@@ -11,7 +11,12 @@ function getDefaultLambdaConfig<CONFIG extends LambdaConfig>(
   config: CONFIG
 ): LambdaConfig {
   return {
+    alarmActions: config.alarmActions,
+    coldstartLatencyAlarm: config.coldstartLatencyAlarm,
+    latencyP99Alarm: config.latencyP99Alarm,
     memorySize: config.memorySize,
+    memoryUtilizationAlarm: config.memoryUtilizationAlarm,
+    okActions: config.okActions,
     timeout: config.timeout,
   };
 }
@@ -48,12 +53,18 @@ export function extractDispatcherConfig<
 >(config: CONFIG, directive: ConstDirectiveNode): DispatcherConfig {
   const arg = getOptionalArg('dispatcherConfig', directive);
   if (!arg) {
-    return getDefaultLambdaConfig(config.defaultDispatcherConfig);
+    return {
+      ...getDefaultLambdaConfig(config.defaultDispatcherConfig),
+      maxIteratorAgeAlarm: config.defaultDispatcherConfig.maxIteratorAgeAlarm,
+    };
   }
 
   assert(arg.value.kind === 'ObjectValue');
   arg.value.fields.find((f) => f.name.value === 'lambdaConfig');
-  return extractLambdaConfig(config.defaultDispatcherConfig, arg);
+  return {
+    ...extractLambdaConfig(config.defaultDispatcherConfig, arg),
+    maxIteratorAgeAlarm: config.defaultDispatcherConfig.maxIteratorAgeAlarm,
+  };
 }
 
 /** helper */

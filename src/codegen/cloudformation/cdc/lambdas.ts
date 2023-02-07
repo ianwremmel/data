@@ -1,5 +1,6 @@
 import {filterNull} from '../../common/filters';
 import type {ChangeDataCaptureEvent, HandlerConfig} from '../../parser';
+import {makeDLQAlarm, makeHandlerAlarms} from '../alarms';
 import {combineFragments} from '../fragments/combine-fragments';
 import type {LambdaInput} from '../fragments/lambda';
 import {writeLambda} from '../fragments/lambda';
@@ -19,7 +20,7 @@ export interface MakeHandlerOptions extends LambdaInput {
 export function makeHandler({
   buildProperties,
   codeUri,
-  handlerConfig: {timeout, memorySize},
+  handlerConfig,
   event,
   functionName,
   outputPath,
@@ -31,88 +32,94 @@ export function makeHandler({
 }: MakeHandlerOptions) {
   writeLambda(outputPath, template);
 
-  return combineFragments(makeLogGroup({functionName}), {
-    resources: {
-      [`${functionName}DLQ`]: {
-        Properties: {
-          KmsMasterKeyId: 'alias/aws/sqs',
-        },
-        Type: 'AWS::SQS::Queue',
-      },
-      [`${functionName}EventBridgeDLQ`]: {
-        Properties: {
-          KmsMasterKeyId: 'alias/aws/sqs',
-        },
-        Type: 'AWS::SQS::Queue',
-      },
-      [functionName]: {
-        Metadata: {
-          BuildMethod: 'esbuild',
-          BuildProperties: buildProperties,
-        },
-        Properties: {
-          CodeUri: codeUri,
-          DeadLetterQueue: {
-            TargetArn: {
-              'Fn::GetAtt': [`${functionName}EventBridgeDLQ`, 'Arn'],
-            },
-            Type: 'SQS',
+  const {timeout, memorySize} = handlerConfig;
+
+  return combineFragments(
+    makeLogGroup({functionName}),
+    makeHandlerAlarms(functionName, handlerConfig),
+    {
+      resources: {
+        [`${functionName}DLQ`]: {
+          Properties: {
+            KmsMasterKeyId: 'alias/aws/sqs',
           },
-          Events: {
-            [event]: {
-              Properties: {
-                DeadLetterConfig: {
-                  Arn: {'Fn::GetAtt': [`${functionName}DLQ`, 'Arn']},
-                },
-                EventBusName: 'default',
-                Pattern: {
-                  detail: {
-                    dynamodb: {
-                      NewImage: {
-                        _et: {
-                          S: [`${sourceModelName}`],
+          Type: 'AWS::SQS::Queue',
+        },
+        [`${functionName}EventBridgeDLQ`]: {
+          Properties: {
+            KmsMasterKeyId: 'alias/aws/sqs',
+          },
+          Type: 'AWS::SQS::Queue',
+        },
+        [functionName]: {
+          Metadata: {
+            BuildMethod: 'esbuild',
+            BuildProperties: buildProperties,
+          },
+          Properties: {
+            CodeUri: codeUri,
+            DeadLetterQueue: {
+              TargetArn: {
+                'Fn::GetAtt': [`${functionName}EventBridgeDLQ`, 'Arn'],
+              },
+              Type: 'SQS',
+            },
+            Events: {
+              [event]: {
+                Properties: {
+                  DeadLetterConfig: {
+                    Arn: {'Fn::GetAtt': [`${functionName}DLQ`, 'Arn']},
+                  },
+                  EventBusName: 'default',
+                  Pattern: {
+                    detail: {
+                      dynamodb: {
+                        NewImage: {
+                          _et: {
+                            S: [`${sourceModelName}`],
+                          },
                         },
                       },
                     },
+                    'detail-type':
+                      event === 'UPSERT' ? ['INSERT', 'MODIFY'] : [event],
+                    resources: [{'Fn::GetAtt': [tableName, 'Arn']}],
+                    source: [`${tableName}.${sourceModelName}`],
                   },
-                  'detail-type':
-                    event === 'UPSERT' ? ['INSERT', 'MODIFY'] : [event],
-                  resources: [{'Fn::GetAtt': [tableName, 'Arn']}],
-                  source: [`${tableName}.${sourceModelName}`],
+                },
+                Type: 'EventBridgeRule',
+              },
+            },
+            MemorySize: memorySize,
+            Policies: [
+              'AWSLambdaBasicExecutionRole',
+              'AWSLambda_ReadOnlyAccess',
+              'AWSXrayWriteOnlyAccess',
+              'CloudWatchLambdaInsightsExecutionRolePolicy',
+              {CloudWatchPutMetricPolicy: {}},
+              ...readableTables.map((targetTable) => ({
+                DynamoDBReadPolicy: {
+                  TableName: {Ref: targetTable},
+                },
+              })),
+              ...writableTables.map((targetTable) => ({
+                DynamoDBCrudPolicy: {
+                  TableName: {Ref: targetTable},
+                },
+              })),
+              {
+                SQSSendMessagePolicy: {
+                  QueueName: {
+                    'Fn::GetAtt': [`${functionName}DLQ`, 'QueueName'],
+                  },
                 },
               },
-              Type: 'EventBridgeRule',
-            },
+            ].filter(filterNull),
+            Timeout: timeout,
           },
-          MemorySize: memorySize,
-          Policies: [
-            'AWSLambdaBasicExecutionRole',
-            'AWSLambda_ReadOnlyAccess',
-            'AWSXrayWriteOnlyAccess',
-            'CloudWatchLambdaInsightsExecutionRolePolicy',
-            {CloudWatchPutMetricPolicy: {}},
-            ...readableTables.map((targetTable) => ({
-              DynamoDBReadPolicy: {
-                TableName: {Ref: targetTable},
-              },
-            })),
-            ...writableTables.map((targetTable) => ({
-              DynamoDBCrudPolicy: {
-                TableName: {Ref: targetTable},
-              },
-            })),
-            {
-              SQSSendMessagePolicy: {
-                QueueName: {
-                  'Fn::GetAtt': [`${functionName}DLQ`, 'QueueName'],
-                },
-              },
-            },
-          ].filter(filterNull),
-          Timeout: timeout,
+          Type: 'AWS::Serverless::Function',
         },
-        Type: 'AWS::Serverless::Function',
       },
-    },
-  });
+    }
+  );
 }

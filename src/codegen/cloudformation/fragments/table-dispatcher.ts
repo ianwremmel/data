@@ -1,5 +1,6 @@
 import {increasePathDepth} from '../../common/paths';
 import type {DispatcherConfig} from '../../parser';
+import {makeDispatcherAlarms} from '../alarms';
 import type {CloudFormationFragment} from '../types';
 
 import {combineFragments} from './combine-fragments';
@@ -18,7 +19,7 @@ export function makeTableDispatcher({
   batchSize = 10,
   buildProperties,
   dependenciesModuleId,
-  dispatcherConfig: {memorySize, timeout},
+  dispatcherConfig,
   codeUri,
   functionName,
   outputPath,
@@ -42,10 +43,11 @@ export const handler = makeDynamoDBStreamDispatcher({
 `
   );
 
+  const {memorySize, timeout} = dispatcherConfig;
+
   return combineFragments(
-    makeLogGroup({
-      functionName,
-    }),
+    makeLogGroup({functionName}),
+    makeDispatcherAlarms(functionName, dispatcherConfig),
     {
       resources: {
         [functionName]: {

@@ -9,6 +9,10 @@ import type {
 import yml from 'js-yaml';
 import {CLOUDFORMATION_SCHEMA} from 'js-yaml-cloudformation-schema';
 
+import {
+  defaultDispatcherConfig,
+  defaultHandlerConfig,
+} from '../common-plugin-config';
 import {filterNull} from '../common/filters';
 import {parse} from '../parser';
 
@@ -57,12 +61,12 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
     {
       ...config,
       defaultDispatcherConfig: {
-        memorySize: 384,
-        timeout: 60,
+        ...defaultDispatcherConfig,
+        ...config.defaultDispatcherConfig,
       },
       defaultHandlerConfig: {
-        memorySize: 256,
-        timeout: 30,
+        ...defaultHandlerConfig,
+        ...config.defaultHandlerConfig,
       },
     },
     info
