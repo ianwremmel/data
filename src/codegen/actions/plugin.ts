@@ -42,7 +42,17 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
     const {additionalImports, dependenciesModuleId, tables, models} = parse(
       schema,
       documents,
-      config,
+      {
+        ...config,
+        defaultDispatcherConfig: {
+          memorySize: 384,
+          timeout: 60,
+        },
+        defaultHandlerConfig: {
+          memorySize: 256,
+          timeout: 30,
+        },
+      },
       info
     );
     const content = `

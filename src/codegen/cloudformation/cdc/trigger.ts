@@ -17,6 +17,7 @@ import {makeHandler} from './lambdas';
 export function defineTriggerCdc(
   model: Model,
   {
+    handlerConfig,
     handlerModuleId,
     event,
     sourceModelName,
@@ -81,6 +82,7 @@ export const handler = makeTriggerHandler(dependencies, (record) => {
       dependenciesModuleId,
       event,
       functionName: handlerFunctionName,
+      handlerConfig,
       libImportPath,
       outputPath: handlerOutputPath,
       readableTables,

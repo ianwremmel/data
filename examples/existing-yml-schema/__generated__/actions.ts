@@ -56,8 +56,24 @@ export interface Scalars {
 /** CDC Event Types */
 export type CdcEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
-/** Possible case types for converting a fieldName to a DyanmoeDB column_name. */
+/** Possible case types for converting a fieldName to a DynamoDB column_name. */
 export type ColumnCase = 'CAMEL_CASE' | 'SNAKE_CASE';
+
+/** Configuration specific to a table dispatcher */
+export interface DispatcherConfig {
+  lambdaConfig?: InputMaybe<LambdaConfig>;
+}
+
+/** Configuration specific to a model handler */
+export interface HandlerConfig {
+  lambdaConfig?: InputMaybe<LambdaConfig>;
+}
+
+/** Reusable options for all generated lambdas */
+export interface LambdaConfig {
+  memory?: InputMaybe<Scalars['Int']>;
+  timeout?: InputMaybe<Scalars['Int']>;
+}
 
 /**
  * Models are DynamoDB tables with a key schema that may or may not include a sort

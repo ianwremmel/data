@@ -51,7 +51,22 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
   const outputFile = info?.outputFile;
   assert(outputFile, 'outputFile is required');
 
-  const {models, tables} = parse(schema, documents, config, info);
+  const {models, tables} = parse(
+    schema,
+    documents,
+    {
+      ...config,
+      defaultDispatcherConfig: {
+        memorySize: 384,
+        timeout: 60,
+      },
+      defaultHandlerConfig: {
+        memorySize: 256,
+        timeout: 30,
+      },
+    },
+    info
+  );
 
   const allResources = combineFragments(
     ...tables.map((table) =>

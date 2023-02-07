@@ -1,3 +1,5 @@
+import type {Nullable} from '../../types';
+
 export interface IntermediateRepresentation {
   readonly dependenciesModuleId: string;
   readonly additionalImports: readonly Import[];
@@ -14,11 +16,10 @@ export interface ComputeFunction extends Import {
   readonly isVirtual: boolean;
 }
 
-export interface Table {
+export interface BaseTable {
   readonly dependenciesModuleId: string;
   readonly enablePointInTimeRecovery: boolean;
   readonly enableStreaming: boolean;
-  readonly hasCdc: boolean;
   readonly hasPublicModels: boolean;
   readonly hasTtl: boolean;
   readonly libImportPath: string;
@@ -26,6 +27,17 @@ export interface Table {
   readonly secondaryIndexes: readonly TableSecondaryIndex[];
   readonly tableName: string;
 }
+
+export interface TableWithCdc extends BaseTable {
+  readonly dispatcherConfig: DispatcherConfig;
+  readonly hasCdc: true;
+}
+
+export interface TableWithoutCdc extends BaseTable {
+  readonly hasCdc: false;
+}
+
+export type Table = TableWithCdc | TableWithoutCdc;
 
 export interface TablePrimaryKeyConfig {
   readonly isComposite: boolean;
@@ -80,7 +92,9 @@ export type ChangeDataCaptureConfig =
   | ChangeDataCaptureTriggerConfig;
 
 export interface ChangeDataCaptureEnricherConfig {
+  readonly dispatcherConfig: DispatcherConfig;
   readonly event: ChangeDataCaptureEvent;
+  readonly handlerConfig: HandlerConfig;
   readonly handlerModuleId: string;
   readonly sourceModelName: string;
   readonly targetModelName: string;
@@ -89,7 +103,9 @@ export interface ChangeDataCaptureEnricherConfig {
 }
 
 export interface ChangeDataCaptureTriggerConfig {
+  readonly dispatcherConfig: DispatcherConfig;
   readonly event: ChangeDataCaptureEvent;
+  readonly handlerConfig: HandlerConfig;
   readonly handlerModuleId: string;
   readonly readableTables: readonly string[];
   readonly sourceModelName: string;
@@ -140,3 +156,12 @@ export interface TTLConfig {
   readonly fieldName: string;
   readonly duration?: number;
 }
+
+export interface LambdaConfig {
+  readonly timeout: Nullable<number>;
+  readonly memorySize: Nullable<number>;
+}
+
+export type DispatcherConfig = LambdaConfig;
+
+export type HandlerConfig = LambdaConfig;

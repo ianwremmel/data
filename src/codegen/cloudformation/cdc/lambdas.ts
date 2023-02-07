@@ -1,5 +1,5 @@
 import {filterNull} from '../../common/filters';
-import type {ChangeDataCaptureEvent} from '../../parser';
+import type {ChangeDataCaptureEvent, HandlerConfig} from '../../parser';
 import {combineFragments} from '../fragments/combine-fragments';
 import type {LambdaInput} from '../fragments/lambda';
 import {writeLambda} from '../fragments/lambda';
@@ -7,6 +7,7 @@ import {makeLogGroup} from '../fragments/log-group';
 
 export interface MakeHandlerOptions extends LambdaInput {
   readonly event: ChangeDataCaptureEvent;
+  readonly handlerConfig: HandlerConfig;
   readonly readableTables: readonly string[];
   readonly sourceModelName: string;
   readonly tableName: string;
@@ -18,6 +19,7 @@ export interface MakeHandlerOptions extends LambdaInput {
 export function makeHandler({
   buildProperties,
   codeUri,
+  handlerConfig: {timeout, memorySize},
   event,
   functionName,
   outputPath,
@@ -82,6 +84,7 @@ export function makeHandler({
               Type: 'EventBridgeRule',
             },
           },
+          MemorySize: memorySize,
           Policies: [
             'AWSLambdaBasicExecutionRole',
             'AWSLambda_ReadOnlyAccess',
@@ -106,6 +109,7 @@ export function makeHandler({
               },
             },
           ].filter(filterNull),
+          Timeout: timeout,
         },
         Type: 'AWS::Serverless::Function',
       },

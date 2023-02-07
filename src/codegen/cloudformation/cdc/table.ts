@@ -19,7 +19,8 @@ export function defineTableCdc(
     return {};
   }
 
-  const {dependenciesModuleId, libImportPath, tableName} = table;
+  const {dispatcherConfig, dependenciesModuleId, libImportPath, tableName} =
+    table;
 
   const dispatcherFileName = `dispatcher-${kebabCase(tableName)}`;
   const dispatcherFunctionName = `${tableName}CDCDispatcher`;
@@ -33,6 +34,7 @@ export function defineTableCdc(
       buildProperties: buildPropertiesWithDefaults(config.buildProperties),
       codeUri: dispatcherFileName,
       dependenciesModuleId,
+      dispatcherConfig,
       functionName: dispatcherFunctionName,
       libImportPath,
       outputPath: dispatcherOutputPath,

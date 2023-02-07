@@ -84,6 +84,7 @@ Resources:
               source:
                 - TableUserSession.UserSession
           Type: EventBridgeRule
+      MemorySize: 256
       Policies:
         - AWSLambdaBasicExecutionRole
         - AWSLambda_ReadOnlyAccess
@@ -95,6 +96,7 @@ Resources:
               Fn::GetAtt:
                 - FnTriggerUSUpsert7d1674e2DLQ
                 - QueueName
+      Timeout: 30
     Type: AWS::Serverless::Function
   FnTriggerUSUpsert7d1674e2DLQ:
     Properties:

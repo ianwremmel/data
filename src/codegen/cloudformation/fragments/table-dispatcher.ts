@@ -1,4 +1,5 @@
 import {increasePathDepth} from '../../common/paths';
+import type {DispatcherConfig} from '../../parser';
 import type {CloudFormationFragment} from '../types';
 
 import {combineFragments} from './combine-fragments';
@@ -8,21 +9,22 @@ import {makeLogGroup} from './log-group';
 
 export interface TableDispatcherInput
   extends LambdaInput,
-    LambdaDynamoDBEventInput {}
+    LambdaDynamoDBEventInput {
+  dispatcherConfig: DispatcherConfig;
+}
 
 /** cloudformation generator */
 export function makeTableDispatcher({
   batchSize = 10,
   buildProperties,
   dependenciesModuleId,
+  dispatcherConfig: {memorySize, timeout},
   codeUri,
   functionName,
   outputPath,
   libImportPath,
   maximumRetryAttempts = 3,
-  memorySize = 384,
   tableName,
-  timeout = 60,
 }: TableDispatcherInput): CloudFormationFragment {
   dependenciesModuleId = increasePathDepth(dependenciesModuleId);
 

@@ -32,8 +32,11 @@ import {
   isType,
 } from './helpers';
 import type {
+  BaseTable,
+  DispatcherConfig,
   Field,
   GSI,
+  HandlerConfig,
   IntermediateRepresentation,
   Model,
   PrimaryKeyConfig,
@@ -47,9 +50,173 @@ export interface Info {
   [key: string]: unknown;
   outputFile?: string;
   allPlugins?: Types.ConfiguredPlugin[];
-
   pluginContext?: {
     [key: string]: unknown;
+  };
+}
+
+/** helper */
+function extractModel<
+  CONFIG extends {
+    defaultDispatcherConfig: DispatcherConfig;
+    defaultHandlerConfig: HandlerConfig;
+  }
+>(
+  config: CONFIG,
+  schema: GraphQLSchema,
+  dependenciesModuleId: string,
+  typeName: string,
+  type: GraphQLObjectType
+): Model {
+  const fields = extractFields(type);
+  const fieldMap: Record<string, Field> = Object.fromEntries(
+    fields.map((field) => [field.fieldName, field] as const)
+  );
+
+  return {
+    changeDataCaptureConfig: extractChangeDataCaptureConfig(
+      config,
+      schema,
+      type
+    ),
+    consistent: hasDirective('consistent', type),
+    dependenciesModuleId,
+    fields,
+    isLedger: hasDirective('ledger', type),
+    isPublicModel: hasInterface('PublicModel', type),
+    libImportPath: '@ianwremmel/data',
+    primaryKey: extractPrimaryKey(type, fieldMap),
+    secondaryIndexes: extractSecondaryIndexes(type, fieldMap),
+    tableName: extractTableName(type),
+    ttlConfig: extractTTLConfig(type),
+    typeName: type.name,
+    ...extractTableInfo(type),
+  };
+}
+
+/* eslint-disable complexity */
+/** helper */
+function combineDispatcherConfig(table: Table, model: Model): DispatcherConfig {
+  const [cfg] = [
+    'dispatcherConfig' in table && table.dispatcherConfig,
+    ...(model.changeDataCaptureConfig?.map((cdc) => cdc.dispatcherConfig) ??
+      []),
+  ]
+    .filter(filterNull)
+    .map((config, index, configs) => {
+      Object.keys(config).forEach((key) => {
+        assert.strictEqual(
+          config[key as keyof typeof config],
+          configs[0][key as keyof typeof config],
+          `Please check the ChangeDataCaptureConfig definitions for ${model.typeName}. All ChangeDataCaptureConfig in the same table must have the same ${key} value.`
+        );
+      });
+      return config;
+    });
+
+  assert(cfg);
+
+  return cfg;
+}
+
+/* eslint-enable complexity */
+
+/** helper */
+function combineTableWithModel(
+  acc: Table,
+  model: Model,
+  dependenciesModuleId: string,
+  tableName: string
+): Table {
+  assert.equal(
+    acc.primaryKey.isComposite,
+    model.primaryKey.isComposite,
+    `Please check the Model definitions for ${tableName}. All Models in the same table must have the same type of primary key (either partition or composite).`
+  );
+  const secondaryIndexes = compareIndexes(
+    tableName,
+    acc.secondaryIndexes,
+    model.secondaryIndexes
+  );
+
+  const baseConfig: BaseTable = {
+    dependenciesModuleId,
+    enablePointInTimeRecovery:
+      acc.enablePointInTimeRecovery || model.enablePointInTimeRecovery,
+    enableStreaming: acc.enableStreaming || model.enableStreaming,
+    hasPublicModels: acc.hasPublicModels || model.isPublicModel,
+    hasTtl: acc.hasTtl || !!model.ttlConfig,
+    libImportPath: model.libImportPath,
+    primaryKey: {
+      isComposite: acc.primaryKey.isComposite,
+    },
+    secondaryIndexes,
+    tableName,
+  };
+
+  const hasCdc = acc.hasCdc || model.changeDataCaptureConfig.length > 0;
+  if (hasCdc) {
+    const dispatcherConfig = combineDispatcherConfig(acc, model);
+    assert(dispatcherConfig);
+    return {
+      ...baseConfig,
+      dispatcherConfig,
+      hasCdc: true,
+    };
+  }
+
+  return {
+    ...baseConfig,
+    hasCdc: false,
+  };
+}
+
+/** helper */
+function extractTableFromModel(
+  dependenciesModuleId: string,
+  tableName: string,
+  model: Model
+): Table {
+  const table: BaseTable = {
+    dependenciesModuleId,
+    enablePointInTimeRecovery: model.enablePointInTimeRecovery,
+    enableStreaming: model.enableStreaming,
+
+    hasPublicModels: model.isPublicModel,
+    hasTtl: !!model.ttlConfig,
+    libImportPath: model.libImportPath,
+    primaryKey: {
+      isComposite: model.primaryKey.isComposite,
+    },
+    secondaryIndexes: model.secondaryIndexes.map(
+      ({isComposite, name, type, projectionType, ...rest}) => ({
+        isComposite,
+        isSingleField: 'isSingleField' in rest ? rest.isSingleField : false,
+        name,
+        projectionType,
+        type,
+      })
+    ),
+    tableName,
+  };
+
+  const hasCdc = model.changeDataCaptureConfig.length > 0;
+  if (hasCdc) {
+    const dispatcherConfig = combineDispatcherConfig(
+      {...table, hasCdc: false},
+      model
+    );
+    assert(dispatcherConfig);
+    return {
+      ...table,
+      dispatcherConfig,
+      hasCdc: true,
+    };
+  }
+
+  return {
+    ...table,
+    hasCdc: false,
   };
 }
 
@@ -57,7 +224,13 @@ export interface Info {
  * Reads a set of GraphQL Schema files and produces an Intermediate
  * Representation.
  */
-export function parse<T extends {dependenciesModuleId: string}>(
+export function parse<
+  T extends {
+    defaultDispatcherConfig: DispatcherConfig;
+    defaultHandlerConfig: HandlerConfig;
+    dependenciesModuleId: string;
+  }
+>(
   schema: GraphQLSchema,
   documents: Types.DocumentFile[],
   config: T,
@@ -77,29 +250,15 @@ export function parse<T extends {dependenciesModuleId: string}>(
       const type = schema.getTypeMap()[typeName];
       return isObjectType(type) && hasInterface('Model', type);
     })
-    .map((typeName) => {
-      const type = assertObjectType(typesMap[typeName]);
-      const fields = extractFields(type);
-      const fieldMap: Record<string, Field> = Object.fromEntries(
-        fields.map((field) => [field.fieldName, field] as const)
-      );
-
-      return {
-        changeDataCaptureConfig: extractChangeDataCaptureConfig(schema, type),
-        consistent: hasDirective('consistent', type),
+    .map((typeName) =>
+      extractModel(
+        config,
+        schema,
         dependenciesModuleId,
-        fields,
-        isLedger: hasDirective('ledger', type),
-        isPublicModel: hasInterface('PublicModel', type),
-        libImportPath: '@ianwremmel/data',
-        primaryKey: extractPrimaryKey(type, fieldMap),
-        secondaryIndexes: extractSecondaryIndexes(type, fieldMap),
-        tableName: extractTableName(type),
-        ttlConfig: extractTTLConfig(type),
-        typeName: type.name,
-        ...extractTableInfo(type),
-      };
-    });
+        typeName,
+        assertObjectType(typesMap[typeName])
+      )
+    );
 
   const tables: Table[] = Array.from(
     models
@@ -117,57 +276,9 @@ export function parse<T extends {dependenciesModuleId: string}>(
     )
     .map(([tableName, [firstModel, ...tableModels]]) => {
       return tableModels.reduce(
-        (acc, model) => {
-          assert.equal(
-            acc.primaryKey.isComposite,
-            model.primaryKey.isComposite,
-            `Please check the Model definitions for ${tableName}. All Models in the same table must have the same type of primary key (either partition or composite).`
-          );
-          const secondaryIndexes = compareIndexes(
-            tableName,
-            acc.secondaryIndexes,
-            model.secondaryIndexes
-          );
-
-          return {
-            dependenciesModuleId,
-            enablePointInTimeRecovery:
-              acc.enablePointInTimeRecovery || model.enablePointInTimeRecovery,
-            enableStreaming: acc.enableStreaming || model.enableStreaming,
-            hasCdc: acc.hasCdc || model.changeDataCaptureConfig.length > 0,
-            hasPublicModels: acc.hasPublicModels || model.isPublicModel,
-            hasTtl: acc.hasTtl || !!model.ttlConfig,
-            libImportPath: model.libImportPath,
-            primaryKey: {
-              isComposite: acc.primaryKey.isComposite,
-            },
-            secondaryIndexes,
-            tableName,
-          };
-        },
-        {
-          dependenciesModuleId,
-          enablePointInTimeRecovery: firstModel.enablePointInTimeRecovery,
-          enableStreaming: firstModel.enableStreaming,
-          hasCdc: firstModel.changeDataCaptureConfig.length > 0,
-          hasPublicModels: firstModel.isPublicModel,
-          hasTtl: !!firstModel.ttlConfig,
-          libImportPath: firstModel.libImportPath,
-          primaryKey: {
-            isComposite: firstModel.primaryKey.isComposite,
-          },
-          secondaryIndexes: firstModel.secondaryIndexes.map(
-            ({isComposite, name, type, projectionType, ...rest}) => ({
-              isComposite,
-              isSingleField:
-                'isSingleField' in rest ? rest.isSingleField : false,
-              name,
-              projectionType,
-              type,
-            })
-          ),
-          tableName,
-        } as Table
+        (acc, model) =>
+          combineTableWithModel(acc, model, dependenciesModuleId, tableName),
+        extractTableFromModel(dependenciesModuleId, tableName, firstModel)
       );
     });
 

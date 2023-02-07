@@ -14,10 +14,20 @@ import type {
   ChangeDataCaptureConfig,
   ChangeDataCaptureEnricherConfig,
   ChangeDataCaptureTriggerConfig,
+  DispatcherConfig,
+  HandlerConfig,
 } from '../types';
 
+import {extractDispatcherConfig, extractHandlerConfig} from './lambda-config';
+
 /** Extracts CDC config for a type */
-export function extractChangeDataCaptureConfig(
+export function extractChangeDataCaptureConfig<
+  CONFIG extends {
+    defaultDispatcherConfig: DispatcherConfig;
+    defaultHandlerConfig: HandlerConfig;
+  }
+>(
+  config: CONFIG,
   schema: GraphQLSchema,
   type: GraphQLObjectType<unknown, unknown>
 ): ChangeDataCaptureConfig[] {
@@ -25,10 +35,10 @@ export function extractChangeDataCaptureConfig(
     type.astNode?.directives
       ?.map((directive) => {
         if (directive.name.value === 'enriches') {
-          return extractEnricherConfig(schema, type, directive);
+          return extractEnricherConfig(config, schema, type, directive);
         }
         if (directive.name.value === 'triggers') {
-          return extractTriggersConfig(schema, type, directive);
+          return extractTriggersConfig(config, schema, type, directive);
         }
 
         return null;
@@ -77,7 +87,13 @@ export function getTargetTables(
 }
 
 /** helper */
-function extractEnricherConfig(
+function extractEnricherConfig<
+  CONFIG extends {
+    defaultDispatcherConfig: DispatcherConfig;
+    defaultHandlerConfig: HandlerConfig;
+  }
+>(
+  config: CONFIG,
   schema: GraphQLSchema,
   type: GraphQLObjectType<unknown, unknown>,
   directive: ConstDirectiveNode
@@ -87,7 +103,9 @@ function extractEnricherConfig(
 
   const targetModelName = getArgStringValue('targetModel', directive);
   return {
+    dispatcherConfig: extractDispatcherConfig(config, directive),
     event,
+    handlerConfig: extractHandlerConfig(config, directive),
     handlerModuleId,
     sourceModelName: type.name,
     targetModelName,
@@ -97,7 +115,13 @@ function extractEnricherConfig(
 }
 
 /** helper */
-function extractTriggersConfig(
+function extractTriggersConfig<
+  CONFIG extends {
+    defaultDispatcherConfig: DispatcherConfig;
+    defaultHandlerConfig: HandlerConfig;
+  }
+>(
+  config: CONFIG,
   schema: GraphQLSchema,
   type: GraphQLObjectType<unknown, unknown>,
   directive: ConstDirectiveNode
@@ -110,7 +134,9 @@ function extractTriggersConfig(
   const writableTables = getTargetTables('writableModels', schema, directive);
 
   return {
+    dispatcherConfig: extractDispatcherConfig(config, directive),
     event,
+    handlerConfig: extractHandlerConfig(config, directive),
     handlerModuleId,
     readableTables,
     sourceModelName: type.name,
