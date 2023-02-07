@@ -8,7 +8,7 @@ type Subscription implements Model & Node & Timestamped & Versioned
     skPrefix: "SUBSCRIPTION"
     skFields: ["effectiveDate"]
   )
-  @cdc(event: "INSERT", handler: "../handler", produces: "Account")
+  @enriches(event: "INSERT", handler: "../handler", targetModel: "Account")
   @table(name: "TableAccounts") {
   cancelled: Boolean
   createdAt: Date!

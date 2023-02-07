@@ -1,3 +1,5 @@
+import type {HandlerConfig} from '../parser';
+
 export interface ActionPluginConfig {
   readonly dependenciesModuleId: string;
   /**
@@ -6,4 +8,7 @@ export interface ActionPluginConfig {
    * tooling and should never be used otherwise,
    */
   readonly legacyEmptySortFieldBehavior?: boolean;
+
+  readonly defaultDispatcherConfig?: HandlerConfig;
+  readonly defaultHandlerConfig?: HandlerConfig;
 }

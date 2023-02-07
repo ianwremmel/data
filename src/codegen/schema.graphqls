@@ -27,6 +27,45 @@ its primary key.
 directive @partitionKey(pkFields: [String!]!, pkPrefix: String) on OBJECT
 
 """
+Reusable options for all generated lambdas
+"""
+input LambdaConfig {
+  """
+  Milliseconds before firing the coldstart alarm
+  """
+  coldstartLatencyAlarm: Int
+  """
+  Milliseconds before firing the latency alarm
+  """
+  latencyP99Alarm: Int
+  memory: Int
+  timeout: Int
+  """
+  Percent (zero-to-one-hundred scale) memory utilization before firing the alarm
+  """
+  memoryUtilizationAlarm: Int
+}
+
+"""
+Configuration specific to a table dispatcher
+"""
+input DispatcherConfig {
+  lambdaConfig: LambdaConfig
+  """
+  Number of seconds behind that the Lambda iterator can get before firing an
+  alarm.
+  """
+  maxIteratorAgeAlarm: Int
+}
+
+"""
+Configuration specific to a model handler
+"""
+input HandlerConfig {
+  lambdaConfig: LambdaConfig
+}
+
+"""
 CDC Event Types
 """
 enum CdcEvent {
@@ -37,30 +76,15 @@ enum CdcEvent {
 }
 
 """
-Deprecated. Use @enriches or @triggers instead
-"""
-directive @cdc(
-  """
-  The type of change events to subscribe to.
-  """
-  event: CdcEvent!
-  """
-  Path to the requireable package that handles a specific event. Relative paths
-  are, unfortunately, relative to the _generated_ file, not the GraphQL schema
-  file.
-  """
-  handler: String!
-  """
-  The model type that will be updated by this stream.
-  """
-  produces: String!
-) repeatable on OBJECT
-
-"""
 Enriches the targetModel anytime there's a change to this model.
 """
 directive @enriches(
   """
+  Optional config to define the lambda parameters for the dispatcher and related
+  resources
+  """
+  dispatcherConfig: DispatcherConfig
+  """
   The type of change events to subscribe to.
   """
   event: CdcEvent!
@@ -70,6 +94,11 @@ directive @enriches(
   file.
   """
   handler: String!
+  """
+  Optional config to define the lambda parameters for the handler and related
+  resources
+  """
+  handlerConfig: HandlerConfig
   """
   The model type that will be updated by this stream.
   """
@@ -81,6 +110,11 @@ Triggers the specified handler whenever there's a change to this model.
 """
 directive @triggers(
   """
+  Optional config to define the lambda parameters for the dispatcher and related
+  resources
+  """
+  dispatcherConfig: DispatcherConfig
+  """
   The type of change events to subscribe to.
   """
   event: CdcEvent!
@@ -90,14 +124,17 @@ directive @triggers(
   file.
   """
   handler: String!
-
+  """
+  Optional config to define the lambda parameters for the handler and related
+  resources
+  """
+  handlerConfig: HandlerConfig
   """
   List of model names that this handler should be allowed to query. The
   CloudFormation resource will be updated accordingly.
   @experimental
   """
   readableModels: [String!]
-
   """
   List of model names that this handler should be allowed to write. The
   CloudFormation resource will be updated accordingly.
@@ -177,7 +214,7 @@ directive @secondaryIndex(
 ) repeatable on OBJECT
 
 """
-Possible case types for converting a fieldName to a DyanmoeDB column_name.
+Possible case types for converting a fieldName to a DynamoDB column_name.
 """
 enum ColumnCase {
   CAMEL_CASE
@@ -198,9 +235,10 @@ directive @table(
   enablePointInTimeRecovery: Boolean
   """
   Defaults to false. If true, enables stream events for the table. Note that
-  you don't need to set this if you're using @cdc. This is mostly here for
-  incrementally adopting the library; you can define you schema with graphql and
-  continue emitting stream events and follow up later with @cdc.
+  you don't need to set this if you're using @enriches or @triggers. This is
+  mostly here for incrementally adopting the library; you can define you schema
+  with graphql and continue emitting stream events and follow up later with
+  targeted cdc directives.
   """
   enableStreaming: Boolean
   """

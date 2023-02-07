@@ -16,6 +16,7 @@ import {makeHandler} from './lambdas';
 export function defineModelEnricher(
   model: Model,
   {
+    handlerConfig,
     handlerModuleId,
     event,
     sourceModelName,
@@ -97,6 +98,7 @@ Update${targetModelName}Input
       dependenciesModuleId,
       event,
       functionName: handlerFunctionName,
+      handlerConfig,
       libImportPath,
       outputPath: handlerOutputPath,
       readableTables: [],

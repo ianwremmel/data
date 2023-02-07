@@ -1,3 +1,5 @@
+import type {Nullable} from '../../types';
+
 export interface IntermediateRepresentation {
   readonly dependenciesModuleId: string;
   readonly additionalImports: readonly Import[];
@@ -14,11 +16,10 @@ export interface ComputeFunction extends Import {
   readonly isVirtual: boolean;
 }
 
-export interface Table {
+export interface BaseTable {
   readonly dependenciesModuleId: string;
   readonly enablePointInTimeRecovery: boolean;
   readonly enableStreaming: boolean;
-  readonly hasCdc: boolean;
   readonly hasPublicModels: boolean;
   readonly hasTtl: boolean;
   readonly libImportPath: string;
@@ -26,6 +27,17 @@ export interface Table {
   readonly secondaryIndexes: readonly TableSecondaryIndex[];
   readonly tableName: string;
 }
+
+export interface TableWithCdc extends BaseTable {
+  readonly dispatcherConfig: DispatcherConfig;
+  readonly hasCdc: true;
+}
+
+export interface TableWithoutCdc extends BaseTable {
+  readonly hasCdc: false;
+}
+
+export type Table = TableWithCdc | TableWithoutCdc;
 
 export interface TablePrimaryKeyConfig {
   readonly isComposite: boolean;
@@ -77,11 +89,12 @@ export type ChangeDataCaptureEvent = 'INSERT' | 'MODIFY' | 'REMOVE' | 'UPSERT';
 
 export type ChangeDataCaptureConfig =
   | ChangeDataCaptureEnricherConfig
-  | ChangeDataCaptureTriggerConfig
-  | LegacyChangeDataCaptureConfig;
+  | ChangeDataCaptureTriggerConfig;
 
 export interface ChangeDataCaptureEnricherConfig {
+  readonly dispatcherConfig: DispatcherConfig;
   readonly event: ChangeDataCaptureEvent;
+  readonly handlerConfig: HandlerConfig;
   readonly handlerModuleId: string;
   readonly sourceModelName: string;
   readonly targetModelName: string;
@@ -90,20 +103,14 @@ export interface ChangeDataCaptureEnricherConfig {
 }
 
 export interface ChangeDataCaptureTriggerConfig {
+  readonly dispatcherConfig: DispatcherConfig;
   readonly event: ChangeDataCaptureEvent;
+  readonly handlerConfig: HandlerConfig;
   readonly handlerModuleId: string;
   readonly readableTables: readonly string[];
   readonly sourceModelName: string;
   readonly writableTables: readonly string[];
   readonly type: 'TRIGGER';
-}
-
-export interface LegacyChangeDataCaptureConfig {
-  readonly event: ChangeDataCaptureEvent;
-  readonly handlerModuleId: string;
-  readonly sourceModelName: string;
-  readonly targetTable: string;
-  readonly type: 'CDC';
 }
 
 export type GSI = {
@@ -149,3 +156,19 @@ export interface TTLConfig {
   readonly fieldName: string;
   readonly duration?: number;
 }
+
+export interface LambdaConfig {
+  readonly alarmActions: readonly string[];
+  readonly coldstartLatencyAlarm: number;
+  readonly latencyP99Alarm: number;
+  readonly memorySize: number;
+  readonly memoryUtilizationAlarm: number;
+  readonly okActions: readonly string[];
+  readonly timeout: number;
+}
+
+export interface DispatcherConfig extends LambdaConfig {
+  readonly maxIteratorAgeAlarm: number;
+}
+
+export type HandlerConfig = LambdaConfig;

@@ -7,6 +7,10 @@ import type {
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
 
+import {
+  defaultDispatcherConfig,
+  defaultHandlerConfig,
+} from '../common-plugin-config';
 import {filterNull} from '../common/filters';
 import {parse} from '../parser';
 
@@ -42,7 +46,17 @@ export const plugin: PluginFunction<ActionPluginConfig> = (
     const {additionalImports, dependenciesModuleId, tables, models} = parse(
       schema,
       documents,
-      config,
+      {
+        ...config,
+        defaultDispatcherConfig: {
+          ...defaultDispatcherConfig,
+          ...config.defaultDispatcherConfig,
+        },
+        defaultHandlerConfig: {
+          ...defaultHandlerConfig,
+          ...config.defaultHandlerConfig,
+        },
+      },
       info
     );
     const content = `

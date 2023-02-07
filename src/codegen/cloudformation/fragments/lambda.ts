@@ -17,9 +17,7 @@ export interface LambdaInput {
   readonly dependenciesModuleId: string;
   readonly functionName: string;
   readonly libImportPath: string;
-  readonly memorySize?: number;
   readonly outputPath: string;
-  readonly timeout?: number;
 }
 
 export interface LambdaDynamoDBEventInput {

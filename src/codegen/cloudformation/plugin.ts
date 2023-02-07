@@ -9,12 +9,14 @@ import type {
 import yml from 'js-yaml';
 import {CLOUDFORMATION_SCHEMA} from 'js-yaml-cloudformation-schema';
 
+import {
+  defaultDispatcherConfig,
+  defaultHandlerConfig,
+} from '../common-plugin-config';
 import {filterNull} from '../common/filters';
 import {parse} from '../parser';
 
-import {defineModelCdc, defineTableCdc} from './cdc';
-import {defineModelEnricher} from './cdc/enricher';
-import {defineTriggerCdc} from './cdc/trigger';
+import {defineTableCdc, defineModelEnricher, defineTriggerCdc} from './cdc';
 import type {CloudformationPluginConfig} from './config';
 import {combineFragments} from './fragments/combine-fragments';
 import {defineTable} from './table';
@@ -53,7 +55,22 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
   const outputFile = info?.outputFile;
   assert(outputFile, 'outputFile is required');
 
-  const {models, tables} = parse(schema, documents, config, info);
+  const {models, tables} = parse(
+    schema,
+    documents,
+    {
+      ...config,
+      defaultDispatcherConfig: {
+        ...defaultDispatcherConfig,
+        ...config.defaultDispatcherConfig,
+      },
+      defaultHandlerConfig: {
+        ...defaultHandlerConfig,
+        ...config.defaultHandlerConfig,
+      },
+    },
+    info
+  );
 
   const allResources = combineFragments(
     ...tables.map((table) =>
@@ -61,15 +78,6 @@ export const plugin: PluginFunction<CloudformationPluginConfig> = (
         defineTableCdc(table, config, {outputFile}),
         defineTable(table)
       )
-    ),
-    ...models.flatMap((model) =>
-      model.changeDataCaptureConfig
-        .map((cdcConfig) =>
-          cdcConfig.type === 'CDC'
-            ? defineModelCdc(model, cdcConfig, config, {outputFile})
-            : null
-        )
-        .filter(filterNull)
     ),
     ...models.flatMap((model) =>
       model.changeDataCaptureConfig

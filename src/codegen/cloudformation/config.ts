@@ -1,5 +1,7 @@
 import type {DumpOptions} from 'js-yaml';
 
+import type {HandlerConfig} from '../parser';
+
 export interface CloudformationPluginConfig {
   /**
    * BuildProperties to be used with ESBuild Metadata for each generated
@@ -37,4 +39,7 @@ export interface CloudformationPluginConfig {
     format?: 'json' | 'yaml';
     yamlConfig?: Partial<DumpOptions>;
   };
+
+  readonly defaultDispatcherConfig?: HandlerConfig;
+  readonly defaultHandlerConfig?: HandlerConfig;
 }
