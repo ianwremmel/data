@@ -20,6 +20,7 @@ import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
 import type {MultiResultType, ResultType, QueryOptions} from '@ianwremmel/data';
 import {
   assert,
+  makeSortKeyForQuery,
   unmarshallRequiredField,
   unmarshallOptionalField,
   DataIntegrityError,
@@ -675,13 +676,11 @@ function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
     if (input.index === 'gsi1') {
       return {
         ':pk': ['PLAN', input.hasEverSubscribed].join('#'),
-        ':sk': [
+        ':sk': makeSortKeyForQuery(
           'PLAN',
-          'cancelled' in input && input.cancelled,
-          'indexedPlanName' in input && input.indexedPlanName,
-        ]
-          .filter(Boolean)
-          .join('#'),
+          ['cancelled', 'indexedPlanName'],
+          input
+        ),
       };
     }
     throw new Error(
@@ -690,7 +689,7 @@ function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
   } else {
     return {
       ':pk': ['ACCOUNT', input.vendor, input.externalId].join('#'),
-      ':sk': ['SUMMARY'].filter(Boolean).join('#'),
+      ':sk': makeSortKeyForQuery('SUMMARY', [], input),
     };
   }
 }
@@ -1390,9 +1389,7 @@ function makeEavForQueryRepository(
     if (input.index === 'gsi1') {
       return {
         ':pk': ['REPOSITORY', input.vendor, input.organization].join('#'),
-        ':sk': ['REPOSITORY', 'repo' in input && input.repo]
-          .filter(Boolean)
-          .join('#'),
+        ':sk': makeSortKeyForQuery('REPOSITORY', ['repo'], input),
       };
     } else if (input.index === 'token') {
       return {':pk': [input.token].join('#')};
@@ -1405,7 +1402,7 @@ function makeEavForQueryRepository(
   } else {
     return {
       ':pk': ['REPOSITORY', input.vendor, input.externalId].join('#'),
-      ':sk': ['REPOSITORY'].filter(Boolean).join('#'),
+      ':sk': makeSortKeyForQuery('REPOSITORY', [], input),
     };
   }
 }

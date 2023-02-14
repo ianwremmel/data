@@ -303,13 +303,12 @@ function compositeKeyValues({
   skFields: readonly Field[];
 }) {
   const pkFragment = makeKeyTemplate(pkPrefix, pkFields, 'read');
-  const skFragment = `['${skPrefix}', ${skFields
-    .map(({fieldName}) => `'${fieldName}' in input && input.${fieldName}`)
-    .join(', ')}].filter(Boolean).join('#')`;
 
   return `{
     ':pk': ${pkFragment},
-    ':sk': ${skFragment},
+    ':sk': makeSortKeyForQuery('${skPrefix}', [${skFields.map(
+    ({fieldName}) => `'${fieldName}'`
+  )}], input)
   }`;
 }
 
