@@ -20,6 +20,7 @@ import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
 import type {MultiResultType, ResultType, QueryOptions} from '@ianwremmel/data';
 import {
   assert,
+  makeSortKeyForQuery,
   unmarshallRequiredField,
   unmarshallOptionalField,
   DataIntegrityError,
@@ -596,9 +597,7 @@ function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
     if (input.index === 'lsi1') {
       return {
         ':pk': ['ACCOUNT', input.vendor, input.externalId].join('#'),
-        ':sk': ['INSTANCE', 'createdAt' in input && input.createdAt]
-          .filter(Boolean)
-          .join('#'),
+        ':sk': makeSortKeyForQuery('INSTANCE', ['createdAt'], input),
       };
     }
     throw new Error(
@@ -607,7 +606,7 @@ function makeEavForQueryAccount(input: QueryAccountInput): Record<string, any> {
   } else {
     return {
       ':pk': ['ACCOUNT', input.vendor, input.externalId].join('#'),
-      ':sk': ['SUMMARY'].filter(Boolean).join('#'),
+      ':sk': makeSortKeyForQuery('SUMMARY', [], input),
     };
   }
 }
@@ -1017,9 +1016,7 @@ function makeEavForQuerySubscription(
   } else {
     return {
       ':pk': ['ACCOUNT', input.vendor, input.externalId].join('#'),
-      ':sk': ['SUBSCRIPTION', 'effectiveDate' in input && input.effectiveDate]
-        .filter(Boolean)
-        .join('#'),
+      ':sk': makeSortKeyForQuery('SUBSCRIPTION', ['effectiveDate'], input),
     };
   }
 }

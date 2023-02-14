@@ -140,7 +140,7 @@ ${models
         `import {ServiceException} from '@aws-sdk/smithy-client';`,
         `import {NativeAttributeValue} from '@aws-sdk/util-dynamodb';`,
         `import Base64 from 'base64url';`,
-        `import {assert, unmarshallRequiredField, unmarshallOptionalField, DataIntegrityError, MultiResultType, NotFoundError, OptimisticLockingError, ResultType, QueryOptions, UnexpectedAwsError, UnexpectedError} from '${runtimeModuleId}';`,
+        `import {assert, makeSortKeyForQuery, unmarshallRequiredField, unmarshallOptionalField, DataIntegrityError, MultiResultType, NotFoundError, OptimisticLockingError, ResultType, QueryOptions, UnexpectedAwsError, UnexpectedError} from '${runtimeModuleId}';`,
         `import {${importFromDependencies}} from "${dependenciesModuleId}";`,
         ...additionalImports.map(
           ({importName, importPath}) =>

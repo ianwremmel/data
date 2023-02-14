@@ -20,6 +20,7 @@ import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
 import type {ResultType} from '@ianwremmel/data';
 import {
   assert,
+  makeSortKeyForQuery,
   unmarshallRequiredField,
   unmarshallOptionalField,
   DataIntegrityError,

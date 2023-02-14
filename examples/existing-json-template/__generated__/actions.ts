@@ -20,6 +20,7 @@ import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
 import type {MultiResultType, ResultType, QueryOptions} from '@ianwremmel/data';
 import {
   assert,
+  makeSortKeyForQuery,
   unmarshallRequiredField,
   unmarshallOptionalField,
   DataIntegrityError,
@@ -562,9 +563,7 @@ function makeEavForQueryUserLogin(
     if (input.index === 'gsi1') {
       return {
         ':pk': ['LOGIN', input.vendor, input.login].join('#'),
-        ':sk': ['MODIFIED', 'updatedAt' in input && input.updatedAt]
-          .filter(Boolean)
-          .join('#'),
+        ':sk': makeSortKeyForQuery('MODIFIED', ['updatedAt'], input),
       };
     }
     throw new Error(
@@ -573,9 +572,7 @@ function makeEavForQueryUserLogin(
   } else {
     return {
       ':pk': ['USER', input.vendor, input.externalId].join('#'),
-      ':sk': ['LOGIN', 'login' in input && input.login]
-        .filter(Boolean)
-        .join('#'),
+      ':sk': makeSortKeyForQuery('LOGIN', ['login'], input),
     };
   }
 }

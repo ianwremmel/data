@@ -20,6 +20,7 @@ import type {NativeAttributeValue} from '@aws-sdk/util-dynamodb';
 import type {MultiResultType, ResultType, QueryOptions} from '@ianwremmel/data';
 import {
   assert,
+  makeSortKeyForQuery,
   unmarshallRequiredField,
   unmarshallOptionalField,
   DataIntegrityError,
@@ -803,24 +804,12 @@ function makeEavForQueryCaseInstance(
           input.label,
           input.sha,
         ].join('#'),
-        ':sk': [
-          'INSTANCE',
-          'lineage' in input && input.lineage,
-          'retry' in input && input.retry,
-        ]
-          .filter(Boolean)
-          .join('#'),
+        ':sk': makeSortKeyForQuery('INSTANCE', ['lineage', 'retry'], input),
       };
     } else if (input.index === 'gsi2') {
       return {
         ':pk': ['CASE', input.vendor, input.repoId, input.branchName].join('#'),
-        ':sk': [
-          'INSTANCE',
-          'label' in input && input.label,
-          'sha' in input && input.sha,
-        ]
-          .filter(Boolean)
-          .join('#'),
+        ':sk': makeSortKeyForQuery('INSTANCE', ['label', 'sha'], input),
       };
     } else if (input.index === 'lsi1') {
       return {
@@ -832,9 +821,7 @@ function makeEavForQueryCaseInstance(
           input.label,
           input.lineage,
         ].join('#'),
-        ':sk': ['INSTANCE', 'createdAt' in input && input.createdAt]
-          .filter(Boolean)
-          .join('#'),
+        ':sk': makeSortKeyForQuery('INSTANCE', ['createdAt'], input),
       };
     } else if (input.index === 'lsi2') {
       return {
@@ -846,13 +833,11 @@ function makeEavForQueryCaseInstance(
           input.label,
           input.lineage,
         ].join('#'),
-        ':sk': [
+        ':sk': makeSortKeyForQuery(
           'INSTANCE',
-          'conclusion' in input && input.conclusion,
-          'createdAt' in input && input.createdAt,
-        ]
-          .filter(Boolean)
-          .join('#'),
+          ['conclusion', 'createdAt'],
+          input
+        ),
       };
     }
     throw new Error(
@@ -868,13 +853,7 @@ function makeEavForQueryCaseInstance(
         input.label,
         input.lineage,
       ].join('#'),
-      ':sk': [
-        'INSTANCE',
-        'sha' in input && input.sha,
-        'retry' in input && input.retry,
-      ]
-        .filter(Boolean)
-        .join('#'),
+      ':sk': makeSortKeyForQuery('INSTANCE', ['sha', 'retry'], input),
     };
   }
 }
@@ -1658,9 +1637,7 @@ function makeEavForQueryCaseSummary(
           input.branchName,
           input.label,
         ].join('#'),
-        ':sk': ['SUMMARY', 'stability' in input && input.stability]
-          .filter(Boolean)
-          .join('#'),
+        ':sk': makeSortKeyForQuery('SUMMARY', ['stability'], input),
       };
     } else if (input.index === 'lsi2') {
       return {
@@ -1671,9 +1648,7 @@ function makeEavForQueryCaseSummary(
           input.branchName,
           input.label,
         ].join('#'),
-        ':sk': ['SUMMARY', 'duration' in input && input.duration]
-          .filter(Boolean)
-          .join('#'),
+        ':sk': makeSortKeyForQuery('SUMMARY', ['duration'], input),
       };
     }
     throw new Error(
@@ -1688,9 +1663,7 @@ function makeEavForQueryCaseSummary(
         input.branchName,
         input.label,
       ].join('#'),
-      ':sk': ['SUMMARY', 'lineage' in input && input.lineage]
-        .filter(Boolean)
-        .join('#'),
+      ':sk': makeSortKeyForQuery('SUMMARY', ['lineage'], input),
     };
   }
 }
@@ -2390,7 +2363,7 @@ function makeEavForQueryFileTiming(
         ':pk': ['BRANCH', input.vendor, input.repoId, input.branchName].join(
           '#'
         ),
-        ':sk': ['FILE'].filter(Boolean).join('#'),
+        ':sk': makeSortKeyForQuery('FILE', [], input),
       };
     } else if (input.index === 'lsi1') {
       return {
@@ -2401,9 +2374,7 @@ function makeEavForQueryFileTiming(
           input.branchName,
           input.label,
         ].join('#'),
-        ':sk': ['FILE', 'duration' in input && input.duration]
-          .filter(Boolean)
-          .join('#'),
+        ':sk': makeSortKeyForQuery('FILE', ['duration'], input),
       };
     }
     throw new Error(
@@ -2418,9 +2389,7 @@ function makeEavForQueryFileTiming(
         input.branchName,
         input.label,
       ].join('#'),
-      ':sk': ['FILE', 'filename' in input && input.filename]
-        .filter(Boolean)
-        .join('#'),
+      ':sk': makeSortKeyForQuery('FILE', ['filename'], input),
     };
   }
 }
