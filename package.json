@@ -24,7 +24,7 @@
   },
   "engines": {
     "node": "18.x",
-    "npm": "8.x"
+    "npm": ">= 8"
   },
   "keywords": [],
   "author": "Ian Remmel <1182361+ianwremmel@users.noreply.github.com>",
