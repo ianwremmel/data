@@ -101,13 +101,13 @@ initialize_localstack () {
   log "Ensuing LocalStack is dependencies are installed"
   pip3 install --upgrade pyopenssl
   pip3 install localstack awscli-local[ver1] aws-sam-cli-local
-  docker pull localstack/localstack
+  docker pull localstack/localstack:1.3
 
   log "Starting LocalStack"
-  PROVIDER_OVERRIDE_LAMBDA=asf localstack start -d
+  docker-compose up -d
 
   log "Waiting for LocalStack startup..."
-  localstack wait -t 30
+  npx wait-on http://127.0.0.1:4566
   log "Startup complete"
 
   return 0

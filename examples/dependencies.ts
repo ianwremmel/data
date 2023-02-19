@@ -96,6 +96,23 @@ export async function captureAsyncFunction<R>(
   });
 }
 
+/**
+ * From WithTelemetry. In this case, we don't have anything to do for the
+ * examples, but one possible use might be
+ * @example
+ *
+ * ```
+ * export function captureAsyncRootFunction<E, C, R>(fn: (e: E, c: C) => Promise<R>) :(e: E, c: C) => Promise<R> {
+ *   return Sentry.AWSLambda.wrapHandler(fn);
+ * }
+ * ```
+ */
+export function captureAsyncRootFunction<E, C, R>(
+  fn: (e: E, c: C) => Promise<R>
+): (e: E, c: C) => Promise<R> {
+  return fn;
+}
+
 /** Generates unique, random ids */
 export function idGenerator() {
   return cuid();
