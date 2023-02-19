@@ -7,7 +7,7 @@ export default function credentials() {
     // Set fake credentials for localstack
     process.env.AWS_ACCESS_KEY_ID = 'test';
     process.env.AWS_SECRET_ACCESS_KEY = 'test';
-    process.env.AWS_ENDPOINT = 'http://localhost:4566';
+    process.env.AWS_ENDPOINT = 'http://127.0.0.1:4566';
     process.env.AWS_REGION = 'us-east-1';
   } else if (process.env.TEST_MODE === 'aws') {
     if (process.env.CI) {
