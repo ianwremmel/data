@@ -10,3 +10,6 @@ reports
 
 # Ignore editor config directories
 .idea
+
+# Docker stuff
+volume
