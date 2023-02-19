@@ -22,8 +22,8 @@ export function makeTriggerHandler(
   DynamoDBRecord,
   unknown
 > {
-  const {captureAsyncFunction} = dependencies;
-  return async (event, context) =>
+  const {captureAsyncFunction, captureAsyncRootFunction} = dependencies;
+  return captureAsyncRootFunction(async (event, context) =>
     captureAsyncFunction(
       `${event.resources[0]} process`,
       makeLambdaOTelAttributes(context),
@@ -36,5 +36,6 @@ export function makeTriggerHandler(
         // appropriate create* method passed in here right now.
         await cb(unmarshalledRecord, context);
       }
-    );
+    )
+  );
 }

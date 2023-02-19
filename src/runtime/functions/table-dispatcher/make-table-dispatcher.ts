@@ -61,8 +61,8 @@ async function handleRecord(
 export function makeDynamoDBStreamDispatcher(
   dependencies: WithEventBridge & WithTableName & WithTelemetry
 ): DynamoDBStreamHandler {
-  const {captureAsyncFunction} = dependencies;
-  return async (event, context) =>
+  const {captureAsyncFunction, captureAsyncRootFunction} = dependencies;
+  return captureAsyncRootFunction(async (event, context) =>
     captureAsyncFunction(
       'aws:dynamodb process',
       makeLambdaOTelAttributes(context),
@@ -72,7 +72,7 @@ export function makeDynamoDBStreamDispatcher(
 
         const promises = event.Records.map(
           async (record) =>
-            await dependencies.captureAsyncFunction(
+            await captureAsyncFunction(
               'aws:dynamodb process record',
               {
                 'faas.document.collection':
@@ -101,5 +101,6 @@ export function makeDynamoDBStreamDispatcher(
           })),
         };
       }
-    );
+    )
+  );
 }
