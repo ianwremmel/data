@@ -5,14 +5,18 @@ import {BaseDataLibraryError} from './base-error';
  * latest version
  */
 export class OptimisticLockingError<
-  PK extends object
+  PK extends object,
+  TYPENAME extends string
 > extends BaseDataLibraryError {
+  readonly primaryKey: PK;
+  readonly typeName: TYPENAME;
+
   /** constructor */
-  constructor(typeName: string, primaryKey: PK) {
+  constructor(typeName: TYPENAME, primaryKey: PK) {
     super(
-      `${typeName} with id ${JSON.stringify(
-        primaryKey
-      )} is out of date. Please refresh and try again.`
+      `${typeName} with specified primaryKey is out of date. Please refresh and try again.`
     );
+    this.primaryKey = primaryKey;
+    this.typeName = typeName;
   }
 }

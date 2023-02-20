@@ -10,9 +10,18 @@ describe('AlreadyExistsError', () => {
   it('stringifies', () => {
     const err = new AlreadyExistsError('User', {id: '123'});
     expect(err).toMatchInlineSnapshot(
-      `[Error: User with id {"id":"123"} already exists. Please switch to updateUser instead of createUser.]`
+      `[Error: User with specified primaryKey already exists. Please switch to updateUser instead of createUser.]`
     );
     expect(err.cause).toMatchInlineSnapshot(`undefined`);
+    expect(err.primaryKey).toMatchInlineSnapshot(`
+      {
+        "id": "123",
+      }
+    `);
+    expect(err.typeName).toMatchInlineSnapshot(`"User"`);
+    expect(JSON.stringify(err)).toMatchInlineSnapshot(
+      `"{"primaryKey":{"id":"123"},"typeName":"User"}"`
+    );
   });
 });
 
@@ -20,9 +29,18 @@ describe('NotFoundError', () => {
   it('stringifies', () => {
     const err = new NotFoundError('User', {id: '123'});
     expect(err).toMatchInlineSnapshot(
-      `[Error: No User found with id {"id":"123"}]`
+      `[Error: No User found with specified primaryKey]`
     );
     expect(err.cause).toMatchInlineSnapshot(`undefined`);
+    expect(err.primaryKey).toMatchInlineSnapshot(`
+      {
+        "id": "123",
+      }
+    `);
+    expect(err.typeName).toMatchInlineSnapshot(`"User"`);
+    expect(JSON.stringify(err)).toMatchInlineSnapshot(
+      `"{"primaryKey":{"id":"123"},"typeName":"User"}"`
+    );
   });
 });
 
@@ -30,9 +48,18 @@ describe('OptimisticLockingError', () => {
   it('stringifies', () => {
     const err = new OptimisticLockingError('User', {id: '123'});
     expect(err).toMatchInlineSnapshot(
-      `[Error: User with id {"id":"123"} is out of date. Please refresh and try again.]`
+      `[Error: User with specified primaryKey is out of date. Please refresh and try again.]`
     );
     expect(err.cause).toMatchInlineSnapshot(`undefined`);
+    expect(err.primaryKey).toMatchInlineSnapshot(`
+      {
+        "id": "123",
+      }
+    `);
+    expect(err.typeName).toMatchInlineSnapshot(`"User"`);
+    expect(JSON.stringify(err)).toMatchInlineSnapshot(
+      `"{"primaryKey":{"id":"123"},"typeName":"User"}"`
+    );
   });
 });
 
@@ -58,6 +85,7 @@ describe('UnexpectedAwsError', () => {
     expect(err.cause).toMatchInlineSnapshot(
       `[FakeAwsError: Something bad happened]`
     );
+    expect(JSON.stringify(err)).toMatchInlineSnapshot(`"{}"`);
   });
 });
 
@@ -66,5 +94,6 @@ describe('UnexpectedError', () => {
     const err = new UnexpectedError(new Error('Something bad happened'));
     expect(err).toMatchInlineSnapshot(`[Error: An unexpected error occurred]`);
     expect(err.cause).toMatchInlineSnapshot(`[Error: Something bad happened]`);
+    expect(JSON.stringify(err)).toMatchInlineSnapshot(`"{}"`);
   });
 });

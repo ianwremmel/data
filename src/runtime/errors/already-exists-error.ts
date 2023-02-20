@@ -5,14 +5,18 @@ import {BaseDataLibraryError} from './base-error';
  * already existing when createItem is called.
  */
 export class AlreadyExistsError<
-  PK extends object
+  PK extends object,
+  TYPENAME extends string
 > extends BaseDataLibraryError {
+  readonly primaryKey: PK;
+  readonly typeName: TYPENAME;
+
   /** constructor */
-  constructor(typeName: string, primaryKey: PK) {
+  constructor(typeName: TYPENAME, primaryKey: PK) {
     super(
-      `${typeName} with id ${JSON.stringify(
-        primaryKey
-      )} already exists. Please switch to update${typeName} instead of create${typeName}.`
+      `${typeName} with specified primaryKey already exists. Please switch to update${typeName} instead of create${typeName}.`
     );
+    this.primaryKey = primaryKey;
+    this.typeName = typeName;
   }
 }
