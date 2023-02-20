@@ -3,6 +3,7 @@ import type {Field, PrimaryKeyConfig, SecondaryIndex} from '../../../parser';
 import {ensureTableTemplate} from './ensure-table';
 import {
   getTypeScriptTypeForField,
+  handleCommonErrors,
   makeKeyTemplate,
   objectToString,
 } from './helpers';
@@ -77,19 +78,24 @@ export async function query${typeName}(input: Readonly<Query${typeName}Input>, {
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Items: items = [], LastEvaluatedKey: lastEvaluatedKey} = await ddbDocClient.send(new QueryCommand(commandInput));
+  try {
+    const {ConsumedCapacity: capacity, Items: items = [], LastEvaluatedKey: lastEvaluatedKey} = await ddbDocClient.send(new QueryCommand(commandInput));
 
-  assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
+    assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
-  return {
-    capacity,
-    hasNextPage: !!lastEvaluatedKey,
-    items: items.map((item) => {
-      assert(item._et === '${typeName}', () => new DataIntegrityError(\`Query result included at item with type \${item._et}. Only ${typeName} was expected.\`));
-      return unmarshall${typeName}(item);
-    }),
-    nextToken: lastEvaluatedKey
-  };
+    return {
+      capacity,
+      hasNextPage: !!lastEvaluatedKey,
+      items: items.map((item) => {
+        assert(item._et === '${typeName}', () => new DataIntegrityError(\`Query result included at item with type \${item._et}. Only ${typeName} was expected.\`));
+        return unmarshall${typeName}(item);
+      }),
+      nextToken: lastEvaluatedKey
+    };
+  }
+  catch (err) {
+    ${handleCommonErrors()}
+  }
 }
 
 /** queries the ${typeName} table by primary key using a node id */

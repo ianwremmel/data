@@ -3,7 +3,7 @@ import type {Field, TTLConfig, Model} from '../../../parser';
 import {defineComputedInputFields, inputName} from '../computed-fields';
 
 import {ensureTableTemplate} from './ensure-table';
-import {objectToString} from './helpers';
+import {handleCommonErrors, objectToString} from './helpers';
 
 export interface UpdateItemTplInput {
   readonly fields: readonly Field[];
@@ -106,10 +106,7 @@ ${ensureTableTemplate(tableName)}
       }
       throw new OptimisticLockingError('${typeName}', ${marshallPrimaryKey});
     }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
+    ${handleCommonErrors()}
   }
 }`;
 }

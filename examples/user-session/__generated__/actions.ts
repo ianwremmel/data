@@ -23,6 +23,9 @@ import {
   makeSortKeyForQuery,
   unmarshallRequiredField,
   unmarshallOptionalField,
+  AlreadyExistsError,
+  AssertionError,
+  BaseDataLibraryError,
   DataIntegrityError,
   MultiResultType,
   NotFoundError,
@@ -206,54 +209,70 @@ export async function createUserSession(
     UpdateExpression,
   } = marshallUserSession(input, now);
 
-  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
-  // cannot return the newly written values.
-  const commandInput: UpdateCommandInput = {
-    ConditionExpression: 'attribute_not_exists(#pk)',
-    ExpressionAttributeNames: {
-      ...ExpressionAttributeNames,
-      '#createdAt': '_ct',
-    },
-    ExpressionAttributeValues: {
-      ...ExpressionAttributeValues,
-      ':createdAt': now.getTime(),
-    },
-    Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnItemCollectionMetrics: 'SIZE',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: [
-      ...UpdateExpression.split(', '),
-      '#createdAt = :createdAt',
-    ].join(', '),
-  };
+  try {
+    // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+    // cannot return the newly written values.
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_not_exists(#pk)',
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
+      Key: {pk: ['USER_SESSION', input.sessionId].join('#')},
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: [
+        ...UpdateExpression.split(', '),
+        '#createdAt = :createdAt',
+      ].join(', '),
+    };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB to return an Attributes prop.');
-  assert(
-    item._et === 'UserSession',
-    () =>
-      new DataIntegrityError(
-        `Expected to write UserSession but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
+    assert(
+      item._et === 'UserSession',
+      () =>
+        new DataIntegrityError(
+          `Expected to write UserSession but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallUserSession(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallUserSession(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new AlreadyExistsError('UserSession', {
+        pk: ['USER_SESSION', input.sessionId].join('#'),
+      });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type BlindWriteUserSessionInput = Omit<
@@ -306,31 +325,41 @@ export async function blindWriteUserSession(
     UpdateExpression: ue,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-  assert(
-    item._et === 'UserSession',
-    () =>
-      new DataIntegrityError(
-        `Expected to write UserSession but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'UserSession',
+      () =>
+        new DataIntegrityError(
+          `Expected to write UserSession but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallUserSession(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallUserSession(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type DeleteUserSessionOutput = ResultType<void>;
@@ -372,6 +401,10 @@ export async function deleteUserSession(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('UserSession', input);
     }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
     }
@@ -395,31 +428,41 @@ export async function readUserSession(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand(commandInput)
-  );
+  try {
+    const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+      new GetCommand(commandInput)
+    );
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, () => new NotFoundError('UserSession', input));
-  assert(
-    item._et === 'UserSession',
-    () =>
-      new DataIntegrityError(
-        `Expected ${JSON.stringify(input)} to load a UserSession but loaded ${
-          item._et
-        } instead`
-      )
-  );
+    assert(item, () => new NotFoundError('UserSession', input));
+    assert(
+      item._et === 'UserSession',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify(input)} to load a UserSession but loaded ${
+            item._et
+          } instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallUserSession(item),
-    metrics: undefined,
-  };
+    return {
+      capacity,
+      item: unmarshallUserSession(item),
+      metrics: undefined,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type UpdateUserSessionInput = Omit<
@@ -500,6 +543,10 @@ export async function updateUserSession(
       throw new OptimisticLockingError('UserSession', {
         sessionId: input.sessionId,
       });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
     }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);

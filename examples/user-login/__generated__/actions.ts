@@ -23,6 +23,9 @@ import {
   makeSortKeyForQuery,
   unmarshallRequiredField,
   unmarshallOptionalField,
+  AlreadyExistsError,
+  AssertionError,
+  BaseDataLibraryError,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
@@ -204,57 +207,74 @@ export async function createUserLogin(
     UpdateExpression,
   } = marshallUserLogin(input, now);
 
-  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
-  // cannot return the newly written values.
-  const commandInput: UpdateCommandInput = {
-    ConditionExpression: 'attribute_not_exists(#pk)',
-    ExpressionAttributeNames: {
-      ...ExpressionAttributeNames,
-      '#createdAt': '_ct',
-    },
-    ExpressionAttributeValues: {
-      ...ExpressionAttributeValues,
-      ':createdAt': now.getTime(),
-    },
-    Key: {
-      pk: ['USER', input.vendor, input.externalId].join('#'),
-      sk: ['LOGIN', input.login].join('#'),
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnItemCollectionMetrics: 'SIZE',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: [
-      ...UpdateExpression.split(', '),
-      '#createdAt = :createdAt',
-    ].join(', '),
-  };
+  try {
+    // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+    // cannot return the newly written values.
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_not_exists(#pk)',
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
+      Key: {
+        pk: ['USER', input.vendor, input.externalId].join('#'),
+        sk: ['LOGIN', input.login].join('#'),
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: [
+        ...UpdateExpression.split(', '),
+        '#createdAt = :createdAt',
+      ].join(', '),
+    };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB to return an Attributes prop.');
-  assert(
-    item._et === 'UserLogin',
-    () =>
-      new DataIntegrityError(
-        `Expected to write UserLogin but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
+    assert(
+      item._et === 'UserLogin',
+      () =>
+        new DataIntegrityError(
+          `Expected to write UserLogin but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallUserLogin(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallUserLogin(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new AlreadyExistsError('UserLogin', {
+        pk: ['USER', input.vendor, input.externalId].join('#'),
+        sk: ['LOGIN', input.login].join('#'),
+      });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type BlindWriteUserLoginInput = Omit<
@@ -309,31 +329,41 @@ export async function blindWriteUserLogin(
     UpdateExpression: ue,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-  assert(
-    item._et === 'UserLogin',
-    () =>
-      new DataIntegrityError(
-        `Expected to write UserLogin but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'UserLogin',
+      () =>
+        new DataIntegrityError(
+          `Expected to write UserLogin but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallUserLogin(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallUserLogin(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type DeleteUserLoginOutput = ResultType<void>;
@@ -378,6 +408,10 @@ export async function deleteUserLogin(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('UserLogin', input);
     }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
     }
@@ -404,31 +438,41 @@ export async function readUserLogin(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand(commandInput)
-  );
+  try {
+    const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+      new GetCommand(commandInput)
+    );
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, () => new NotFoundError('UserLogin', input));
-  assert(
-    item._et === 'UserLogin',
-    () =>
-      new DataIntegrityError(
-        `Expected ${JSON.stringify(input)} to load a UserLogin but loaded ${
-          item._et
-        } instead`
-      )
-  );
+    assert(item, () => new NotFoundError('UserLogin', input));
+    assert(
+      item._et === 'UserLogin',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify(input)} to load a UserLogin but loaded ${
+            item._et
+          } instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallUserLogin(item),
-    metrics: undefined,
-  };
+    return {
+      capacity,
+      item: unmarshallUserLogin(item),
+      metrics: undefined,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type UpdateUserLoginInput = Omit<
@@ -519,6 +563,10 @@ export async function updateUserLogin(
         login: input.login,
         vendor: input.vendor,
       });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
     }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
@@ -632,32 +680,42 @@ export async function queryUserLogin(
     TableName: tableName,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    Items: items = [],
-    LastEvaluatedKey: lastEvaluatedKey,
-  } = await ddbDocClient.send(new QueryCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      Items: items = [],
+      LastEvaluatedKey: lastEvaluatedKey,
+    } = await ddbDocClient.send(new QueryCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  return {
-    capacity,
-    hasNextPage: !!lastEvaluatedKey,
-    items: items.map((item) => {
-      assert(
-        item._et === 'UserLogin',
-        () =>
-          new DataIntegrityError(
-            `Query result included at item with type ${item._et}. Only UserLogin was expected.`
-          )
-      );
-      return unmarshallUserLogin(item);
-    }),
-    nextToken: lastEvaluatedKey,
-  };
+    return {
+      capacity,
+      hasNextPage: !!lastEvaluatedKey,
+      items: items.map((item) => {
+        assert(
+          item._et === 'UserLogin',
+          () =>
+            new DataIntegrityError(
+              `Query result included at item with type ${item._et}. Only UserLogin was expected.`
+            )
+        );
+        return unmarshallUserLogin(item);
+      }),
+      nextToken: lastEvaluatedKey,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 /** queries the UserLogin table by primary key using a node id */

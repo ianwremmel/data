@@ -1,7 +1,10 @@
 import {BaseDataLibraryError} from './base-error';
 
-/** Thrown when the requested item cannot be found */
-export class NotFoundError<
+/**
+ * Similar to OptimisticLockingError, but thrown in the special case of the item
+ * already existing when createItem is called.
+ */
+export class AlreadyExistsError<
   PK extends object,
   TYPENAME extends string
 > extends BaseDataLibraryError {
@@ -10,7 +13,9 @@ export class NotFoundError<
 
   /** constructor */
   constructor(typeName: TYPENAME, primaryKey: PK) {
-    super(`No ${typeName} found with specified primaryKey`);
+    super(
+      `${typeName} with specified primaryKey already exists. Please switch to update${typeName} instead of create${typeName}.`
+    );
     this.primaryKey = primaryKey;
     this.typeName = typeName;
   }

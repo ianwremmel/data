@@ -29,4 +29,4 @@ export function assert(
   }
 }
 
-export {fail, strictEqual, notStrictEqual} from 'assert';
+export {fail, strictEqual, notStrictEqual, AssertionError} from 'assert';
