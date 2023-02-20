@@ -3,7 +3,7 @@ import type {Field, TTLConfig, Model} from '../../../parser';
 import {defineComputedInputFields, inputName} from '../computed-fields';
 
 import {ensureTableTemplate} from './ensure-table';
-import {objectToString} from './helpers';
+import {handleCommonErrors, objectToString} from './helpers';
 import {
   indexHasField,
   indexToEANPart,
@@ -112,17 +112,22 @@ ${ensureTableTemplate(tableName)}
     UpdateExpression: ue,
   }
 
-  const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand(commandInput));
+  try {
+    const {ConsumedCapacity: capacity, ItemCollectionMetrics: metrics, Attributes: item} = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
+    assert(capacity, 'Expected ConsumedCapacity to be returned. This is a bug in codegen.');
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-  assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected to write ${typeName} but wrote \${item?._et} instead\`));
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(item._et === '${typeName}', () => new DataIntegrityError(\`Expected to write ${typeName} but wrote \${item?._et} instead\`));
 
-  return {
-    capacity,
-    item: unmarshall${typeName}(item),
-    metrics,
+    return {
+      capacity,
+      item: unmarshall${typeName}(item),
+      metrics,
+    }
+  }
+  catch (err) {
+    ${handleCommonErrors()}
   }
 }
 `;

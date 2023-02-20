@@ -23,6 +23,9 @@ import {
   makeSortKeyForQuery,
   unmarshallRequiredField,
   unmarshallOptionalField,
+  AlreadyExistsError,
+  AssertionError,
+  BaseDataLibraryError,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
@@ -249,73 +252,97 @@ export async function createCaseInstance(
     UpdateExpression,
   } = marshallCaseInstance(input, now);
 
-  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
-  // cannot return the newly written values.
-  const commandInput: UpdateCommandInput = {
-    ConditionExpression: 'attribute_not_exists(#pk)',
-    ExpressionAttributeNames: {
-      ...ExpressionAttributeNames,
-      '#createdAt': '_ct',
+  try {
+    // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+    // cannot return the newly written values.
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_not_exists(#pk)',
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
 
-      '#lsi1sk': 'lsi1sk',
-      '#lsi2sk': 'lsi2sk',
-    },
-    ExpressionAttributeValues: {
-      ...ExpressionAttributeValues,
-      ':createdAt': now.getTime(),
+        '#lsi1sk': 'lsi1sk',
+        '#lsi2sk': 'lsi2sk',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
 
-      ':lsi1sk': ['INSTANCE', now.getTime()].join('#'),
-      ':lsi2sk': ['INSTANCE', input.conclusion, now.getTime()].join('#'),
-    },
-    Key: {
-      pk: [
-        'CASE',
-        input.vendor,
-        input.repoId,
-        input.branchName,
-        input.label,
-        input.lineage,
-      ].join('#'),
-      sk: ['INSTANCE', input.sha, input.retry].join('#'),
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnItemCollectionMetrics: 'SIZE',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: [
-      ...UpdateExpression.split(', '),
-      '#createdAt = :createdAt',
+        ':lsi1sk': ['INSTANCE', now.getTime()].join('#'),
+        ':lsi2sk': ['INSTANCE', input.conclusion, now.getTime()].join('#'),
+      },
+      Key: {
+        pk: [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+          input.lineage,
+        ].join('#'),
+        sk: ['INSTANCE', input.sha, input.retry].join('#'),
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: [
+        ...UpdateExpression.split(', '),
+        '#createdAt = :createdAt',
 
-      '#lsi1sk = :lsi1sk',
-      '#lsi2sk = :lsi2sk',
-    ].join(', '),
-  };
+        '#lsi1sk = :lsi1sk',
+        '#lsi2sk = :lsi2sk',
+      ].join(', '),
+    };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB to return an Attributes prop.');
-  assert(
-    item._et === 'CaseInstance',
-    () =>
-      new DataIntegrityError(
-        `Expected to write CaseInstance but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
+    assert(
+      item._et === 'CaseInstance',
+      () =>
+        new DataIntegrityError(
+          `Expected to write CaseInstance but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallCaseInstance(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallCaseInstance(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new AlreadyExistsError('CaseInstance', {
+        pk: [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+          input.lineage,
+        ].join('#'),
+        sk: ['INSTANCE', input.sha, input.retry].join('#'),
+      });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type BlindWriteCaseInstanceInput = Omit<
@@ -397,31 +424,41 @@ export async function blindWriteCaseInstance(
     UpdateExpression: ue,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-  assert(
-    item._et === 'CaseInstance',
-    () =>
-      new DataIntegrityError(
-        `Expected to write CaseInstance but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'CaseInstance',
+      () =>
+        new DataIntegrityError(
+          `Expected to write CaseInstance but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallCaseInstance(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallCaseInstance(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type DeleteCaseInstanceOutput = ResultType<void>;
@@ -473,6 +510,10 @@ export async function deleteCaseInstance(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('CaseInstance', input);
     }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
     }
@@ -506,31 +547,41 @@ export async function readCaseInstance(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand(commandInput)
-  );
+  try {
+    const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+      new GetCommand(commandInput)
+    );
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, () => new NotFoundError('CaseInstance', input));
-  assert(
-    item._et === 'CaseInstance',
-    () =>
-      new DataIntegrityError(
-        `Expected ${JSON.stringify(input)} to load a CaseInstance but loaded ${
-          item._et
-        } instead`
-      )
-  );
+    assert(item, () => new NotFoundError('CaseInstance', input));
+    assert(
+      item._et === 'CaseInstance',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify(
+            input
+          )} to load a CaseInstance but loaded ${item._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallCaseInstance(item),
-    metrics: undefined,
-  };
+    return {
+      capacity,
+      item: unmarshallCaseInstance(item),
+      metrics: undefined,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type UpdateCaseInstanceInput = Omit<
@@ -640,6 +691,10 @@ export async function updateCaseInstance(
         sha: input.sha,
         vendor: input.vendor,
       });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
     }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
@@ -931,32 +986,42 @@ export async function queryCaseInstance(
     TableName: tableName,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    Items: items = [],
-    LastEvaluatedKey: lastEvaluatedKey,
-  } = await ddbDocClient.send(new QueryCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      Items: items = [],
+      LastEvaluatedKey: lastEvaluatedKey,
+    } = await ddbDocClient.send(new QueryCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  return {
-    capacity,
-    hasNextPage: !!lastEvaluatedKey,
-    items: items.map((item) => {
-      assert(
-        item._et === 'CaseInstance',
-        () =>
-          new DataIntegrityError(
-            `Query result included at item with type ${item._et}. Only CaseInstance was expected.`
-          )
-      );
-      return unmarshallCaseInstance(item);
-    }),
-    nextToken: lastEvaluatedKey,
-  };
+    return {
+      capacity,
+      hasNextPage: !!lastEvaluatedKey,
+      items: items.map((item) => {
+        assert(
+          item._et === 'CaseInstance',
+          () =>
+            new DataIntegrityError(
+              `Query result included at item with type ${item._et}. Only CaseInstance was expected.`
+            )
+        );
+        return unmarshallCaseInstance(item);
+      }),
+      nextToken: lastEvaluatedKey,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 /** queries the CaseInstance table by primary key using a node id */
@@ -1200,63 +1265,86 @@ export async function createCaseSummary(
     UpdateExpression,
   } = marshallCaseSummary(input, now);
 
-  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
-  // cannot return the newly written values.
-  const commandInput: UpdateCommandInput = {
-    ConditionExpression: 'attribute_not_exists(#pk)',
-    ExpressionAttributeNames: {
-      ...ExpressionAttributeNames,
-      '#createdAt': '_ct',
-    },
-    ExpressionAttributeValues: {
-      ...ExpressionAttributeValues,
-      ':createdAt': now.getTime(),
-    },
-    Key: {
-      pk: [
-        'CASE',
-        input.vendor,
-        input.repoId,
-        input.branchName,
-        input.label,
-      ].join('#'),
-      sk: ['SUMMARY', input.lineage].join('#'),
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnItemCollectionMetrics: 'SIZE',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: [
-      ...UpdateExpression.split(', '),
-      '#createdAt = :createdAt',
-    ].join(', '),
-  };
+  try {
+    // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+    // cannot return the newly written values.
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_not_exists(#pk)',
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
+      Key: {
+        pk: [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+        ].join('#'),
+        sk: ['SUMMARY', input.lineage].join('#'),
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: [
+        ...UpdateExpression.split(', '),
+        '#createdAt = :createdAt',
+      ].join(', '),
+    };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB to return an Attributes prop.');
-  assert(
-    item._et === 'CaseSummary',
-    () =>
-      new DataIntegrityError(
-        `Expected to write CaseSummary but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
+    assert(
+      item._et === 'CaseSummary',
+      () =>
+        new DataIntegrityError(
+          `Expected to write CaseSummary but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallCaseSummary(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallCaseSummary(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new AlreadyExistsError('CaseSummary', {
+        pk: [
+          'CASE',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+        ].join('#'),
+        sk: ['SUMMARY', input.lineage].join('#'),
+      });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type BlindWriteCaseSummaryInput = Omit<
@@ -1317,31 +1405,41 @@ export async function blindWriteCaseSummary(
     UpdateExpression: ue,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-  assert(
-    item._et === 'CaseSummary',
-    () =>
-      new DataIntegrityError(
-        `Expected to write CaseSummary but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'CaseSummary',
+      () =>
+        new DataIntegrityError(
+          `Expected to write CaseSummary but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallCaseSummary(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallCaseSummary(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type DeleteCaseSummaryOutput = ResultType<void>;
@@ -1392,6 +1490,10 @@ export async function deleteCaseSummary(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('CaseSummary', input);
     }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
     }
@@ -1424,31 +1526,41 @@ export async function readCaseSummary(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand(commandInput)
-  );
+  try {
+    const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+      new GetCommand(commandInput)
+    );
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, () => new NotFoundError('CaseSummary', input));
-  assert(
-    item._et === 'CaseSummary',
-    () =>
-      new DataIntegrityError(
-        `Expected ${JSON.stringify(input)} to load a CaseSummary but loaded ${
-          item._et
-        } instead`
-      )
-  );
+    assert(item, () => new NotFoundError('CaseSummary', input));
+    assert(
+      item._et === 'CaseSummary',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify(input)} to load a CaseSummary but loaded ${
+            item._et
+          } instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallCaseSummary(item),
-    metrics: undefined,
-  };
+    return {
+      capacity,
+      item: unmarshallCaseSummary(item),
+      metrics: undefined,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type UpdateCaseSummaryInput = Omit<
@@ -1551,6 +1663,10 @@ export async function updateCaseSummary(
         repoId: input.repoId,
         vendor: input.vendor,
       });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
     }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
@@ -1729,32 +1845,42 @@ export async function queryCaseSummary(
     TableName: tableName,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    Items: items = [],
-    LastEvaluatedKey: lastEvaluatedKey,
-  } = await ddbDocClient.send(new QueryCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      Items: items = [],
+      LastEvaluatedKey: lastEvaluatedKey,
+    } = await ddbDocClient.send(new QueryCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  return {
-    capacity,
-    hasNextPage: !!lastEvaluatedKey,
-    items: items.map((item) => {
-      assert(
-        item._et === 'CaseSummary',
-        () =>
-          new DataIntegrityError(
-            `Query result included at item with type ${item._et}. Only CaseSummary was expected.`
-          )
-      );
-      return unmarshallCaseSummary(item);
-    }),
-    nextToken: lastEvaluatedKey,
-  };
+    return {
+      capacity,
+      hasNextPage: !!lastEvaluatedKey,
+      items: items.map((item) => {
+        assert(
+          item._et === 'CaseSummary',
+          () =>
+            new DataIntegrityError(
+              `Query result included at item with type ${item._et}. Only CaseSummary was expected.`
+            )
+        );
+        return unmarshallCaseSummary(item);
+      }),
+      nextToken: lastEvaluatedKey,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 /** queries the CaseSummary table by primary key using a node id */
@@ -1939,63 +2065,86 @@ export async function createFileTiming(
     UpdateExpression,
   } = marshallFileTiming(input, now);
 
-  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
-  // cannot return the newly written values.
-  const commandInput: UpdateCommandInput = {
-    ConditionExpression: 'attribute_not_exists(#pk)',
-    ExpressionAttributeNames: {
-      ...ExpressionAttributeNames,
-      '#createdAt': '_ct',
-    },
-    ExpressionAttributeValues: {
-      ...ExpressionAttributeValues,
-      ':createdAt': now.getTime(),
-    },
-    Key: {
-      pk: [
-        'TIMING',
-        input.vendor,
-        input.repoId,
-        input.branchName,
-        input.label,
-      ].join('#'),
-      sk: ['FILE', input.filename].join('#'),
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnItemCollectionMetrics: 'SIZE',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: [
-      ...UpdateExpression.split(', '),
-      '#createdAt = :createdAt',
-    ].join(', '),
-  };
+  try {
+    // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+    // cannot return the newly written values.
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_not_exists(#pk)',
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
+      Key: {
+        pk: [
+          'TIMING',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+        ].join('#'),
+        sk: ['FILE', input.filename].join('#'),
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: [
+        ...UpdateExpression.split(', '),
+        '#createdAt = :createdAt',
+      ].join(', '),
+    };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB to return an Attributes prop.');
-  assert(
-    item._et === 'FileTiming',
-    () =>
-      new DataIntegrityError(
-        `Expected to write FileTiming but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
+    assert(
+      item._et === 'FileTiming',
+      () =>
+        new DataIntegrityError(
+          `Expected to write FileTiming but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallFileTiming(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallFileTiming(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new AlreadyExistsError('FileTiming', {
+        pk: [
+          'TIMING',
+          input.vendor,
+          input.repoId,
+          input.branchName,
+          input.label,
+        ].join('#'),
+        sk: ['FILE', input.filename].join('#'),
+      });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type BlindWriteFileTimingInput = Omit<
@@ -2056,31 +2205,41 @@ export async function blindWriteFileTiming(
     UpdateExpression: ue,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-  assert(
-    item._et === 'FileTiming',
-    () =>
-      new DataIntegrityError(
-        `Expected to write FileTiming but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'FileTiming',
+      () =>
+        new DataIntegrityError(
+          `Expected to write FileTiming but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallFileTiming(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallFileTiming(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type DeleteFileTimingOutput = ResultType<void>;
@@ -2131,6 +2290,10 @@ export async function deleteFileTiming(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('FileTiming', input);
     }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
     }
@@ -2163,31 +2326,41 @@ export async function readFileTiming(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand(commandInput)
-  );
+  try {
+    const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+      new GetCommand(commandInput)
+    );
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, () => new NotFoundError('FileTiming', input));
-  assert(
-    item._et === 'FileTiming',
-    () =>
-      new DataIntegrityError(
-        `Expected ${JSON.stringify(input)} to load a FileTiming but loaded ${
-          item._et
-        } instead`
-      )
-  );
+    assert(item, () => new NotFoundError('FileTiming', input));
+    assert(
+      item._et === 'FileTiming',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify(input)} to load a FileTiming but loaded ${
+            item._et
+          } instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallFileTiming(item),
-    metrics: undefined,
-  };
+    return {
+      capacity,
+      item: unmarshallFileTiming(item),
+      metrics: undefined,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type UpdateFileTimingInput = Omit<
@@ -2290,6 +2463,10 @@ export async function updateFileTiming(
         repoId: input.repoId,
         vendor: input.vendor,
       });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
     }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
@@ -2455,32 +2632,42 @@ export async function queryFileTiming(
     TableName: tableName,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    Items: items = [],
-    LastEvaluatedKey: lastEvaluatedKey,
-  } = await ddbDocClient.send(new QueryCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      Items: items = [],
+      LastEvaluatedKey: lastEvaluatedKey,
+    } = await ddbDocClient.send(new QueryCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  return {
-    capacity,
-    hasNextPage: !!lastEvaluatedKey,
-    items: items.map((item) => {
-      assert(
-        item._et === 'FileTiming',
-        () =>
-          new DataIntegrityError(
-            `Query result included at item with type ${item._et}. Only FileTiming was expected.`
-          )
-      );
-      return unmarshallFileTiming(item);
-    }),
-    nextToken: lastEvaluatedKey,
-  };
+    return {
+      capacity,
+      hasNextPage: !!lastEvaluatedKey,
+      items: items.map((item) => {
+        assert(
+          item._et === 'FileTiming',
+          () =>
+            new DataIntegrityError(
+              `Query result included at item with type ${item._et}. Only FileTiming was expected.`
+            )
+        );
+        return unmarshallFileTiming(item);
+      }),
+      nextToken: lastEvaluatedKey,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 /** queries the FileTiming table by primary key using a node id */

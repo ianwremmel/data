@@ -1,5 +1,5 @@
 import {ensureTableTemplate} from './ensure-table';
-import {objectToString} from './helpers';
+import {handleCommonErrors, objectToString} from './helpers';
 
 export interface DeleteItemTplInput {
   readonly key: Record<string, string>;
@@ -46,10 +46,7 @@ ${ensureTableTemplate(tableName)}
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('${typeName}', input);
     }
-    if (err instanceof ServiceException) {
-      throw new UnexpectedAwsError(err);
-    }
-    throw new UnexpectedError(err);
+    ${handleCommonErrors()}
   }
 }
 `;

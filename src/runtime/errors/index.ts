@@ -1,3 +1,4 @@
+export * from './already-exists-error';
 export * from './base-error';
 export * from './data-integrity-error';
 export * from './not-found-error';

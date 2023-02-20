@@ -23,6 +23,9 @@ import {
   makeSortKeyForQuery,
   unmarshallRequiredField,
   unmarshallOptionalField,
+  AlreadyExistsError,
+  AssertionError,
+  BaseDataLibraryError,
   DataIntegrityError,
   NotFoundError,
   OptimisticLockingError,
@@ -257,63 +260,80 @@ export async function createAccount(
     UpdateExpression,
   } = marshallAccount(input, now);
 
-  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
-  // cannot return the newly written values.
-  const commandInput: UpdateCommandInput = {
-    ConditionExpression: 'attribute_not_exists(#pk)',
-    ExpressionAttributeNames: {
-      ...ExpressionAttributeNames,
-      '#createdAt': '_ct',
+  try {
+    // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+    // cannot return the newly written values.
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_not_exists(#pk)',
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
 
-      '#lsi1sk': 'lsi1sk',
-    },
-    ExpressionAttributeValues: {
-      ...ExpressionAttributeValues,
-      ':createdAt': now.getTime(),
+        '#lsi1sk': 'lsi1sk',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
 
-      ':lsi1sk': ['INSTANCE', now.getTime()].join('#'),
-    },
-    Key: {
-      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
-      sk: ['SUMMARY'].join('#'),
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnItemCollectionMetrics: 'SIZE',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: [
-      ...UpdateExpression.split(', '),
-      '#createdAt = :createdAt',
+        ':lsi1sk': ['INSTANCE', now.getTime()].join('#'),
+      },
+      Key: {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: ['SUMMARY'].join('#'),
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: [
+        ...UpdateExpression.split(', '),
+        '#createdAt = :createdAt',
 
-      '#lsi1sk = :lsi1sk',
-    ].join(', '),
-  };
+        '#lsi1sk = :lsi1sk',
+      ].join(', '),
+    };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB to return an Attributes prop.');
-  assert(
-    item._et === 'Account',
-    () =>
-      new DataIntegrityError(
-        `Expected to write Account but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
+    assert(
+      item._et === 'Account',
+      () =>
+        new DataIntegrityError(
+          `Expected to write Account but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallAccount(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallAccount(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new AlreadyExistsError('Account', {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: ['SUMMARY'].join('#'),
+      });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type BlindWriteAccountInput = Omit<
@@ -379,31 +399,41 @@ export async function blindWriteAccount(
     UpdateExpression: ue,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-  assert(
-    item._et === 'Account',
-    () =>
-      new DataIntegrityError(
-        `Expected to write Account but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'Account',
+      () =>
+        new DataIntegrityError(
+          `Expected to write Account but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallAccount(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallAccount(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type DeleteAccountOutput = ResultType<void>;
@@ -448,6 +478,10 @@ export async function deleteAccount(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('Account', input);
     }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
     }
@@ -474,31 +508,41 @@ export async function readAccount(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand(commandInput)
-  );
+  try {
+    const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+      new GetCommand(commandInput)
+    );
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, () => new NotFoundError('Account', input));
-  assert(
-    item._et === 'Account',
-    () =>
-      new DataIntegrityError(
-        `Expected ${JSON.stringify(input)} to load a Account but loaded ${
-          item._et
-        } instead`
-      )
-  );
+    assert(item, () => new NotFoundError('Account', input));
+    assert(
+      item._et === 'Account',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify(input)} to load a Account but loaded ${
+            item._et
+          } instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallAccount(item),
-    metrics: undefined,
-  };
+    return {
+      capacity,
+      item: unmarshallAccount(item),
+      metrics: undefined,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type UpdateAccountInput = Omit<
@@ -586,6 +630,10 @@ export async function updateAccount(
         externalId: input.externalId,
         vendor: input.vendor,
       });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
     }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
@@ -696,32 +744,42 @@ export async function queryAccount(
     TableName: tableName,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    Items: items = [],
-    LastEvaluatedKey: lastEvaluatedKey,
-  } = await ddbDocClient.send(new QueryCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      Items: items = [],
+      LastEvaluatedKey: lastEvaluatedKey,
+    } = await ddbDocClient.send(new QueryCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  return {
-    capacity,
-    hasNextPage: !!lastEvaluatedKey,
-    items: items.map((item) => {
-      assert(
-        item._et === 'Account',
-        () =>
-          new DataIntegrityError(
-            `Query result included at item with type ${item._et}. Only Account was expected.`
-          )
-      );
-      return unmarshallAccount(item);
-    }),
-    nextToken: lastEvaluatedKey,
-  };
+    return {
+      capacity,
+      hasNextPage: !!lastEvaluatedKey,
+      items: items.map((item) => {
+        assert(
+          item._et === 'Account',
+          () =>
+            new DataIntegrityError(
+              `Query result included at item with type ${item._et}. Only Account was expected.`
+            )
+        );
+        return unmarshallAccount(item);
+      }),
+      nextToken: lastEvaluatedKey,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 /** queries the Account table by primary key using a node id */
@@ -909,57 +967,74 @@ export async function createScheduledEmail(
     UpdateExpression,
   } = marshallScheduledEmail(input, now);
 
-  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
-  // cannot return the newly written values.
-  const commandInput: UpdateCommandInput = {
-    ConditionExpression: 'attribute_not_exists(#pk)',
-    ExpressionAttributeNames: {
-      ...ExpressionAttributeNames,
-      '#createdAt': '_ct',
-    },
-    ExpressionAttributeValues: {
-      ...ExpressionAttributeValues,
-      ':createdAt': now.getTime(),
-    },
-    Key: {
-      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
-      sk: ['SCHEDULED_EMAIL', input.template].join('#'),
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnItemCollectionMetrics: 'SIZE',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: [
-      ...UpdateExpression.split(', '),
-      '#createdAt = :createdAt',
-    ].join(', '),
-  };
+  try {
+    // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+    // cannot return the newly written values.
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_not_exists(#pk)',
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
+      Key: {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: ['SCHEDULED_EMAIL', input.template].join('#'),
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: [
+        ...UpdateExpression.split(', '),
+        '#createdAt = :createdAt',
+      ].join(', '),
+    };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB to return an Attributes prop.');
-  assert(
-    item._et === 'ScheduledEmail',
-    () =>
-      new DataIntegrityError(
-        `Expected to write ScheduledEmail but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
+    assert(
+      item._et === 'ScheduledEmail',
+      () =>
+        new DataIntegrityError(
+          `Expected to write ScheduledEmail but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallScheduledEmail(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallScheduledEmail(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new AlreadyExistsError('ScheduledEmail', {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: ['SCHEDULED_EMAIL', input.template].join('#'),
+      });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type BlindWriteScheduledEmailInput = Omit<
@@ -1015,31 +1090,41 @@ export async function blindWriteScheduledEmail(
     UpdateExpression: ue,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-  assert(
-    item._et === 'ScheduledEmail',
-    () =>
-      new DataIntegrityError(
-        `Expected to write ScheduledEmail but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'ScheduledEmail',
+      () =>
+        new DataIntegrityError(
+          `Expected to write ScheduledEmail but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallScheduledEmail(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallScheduledEmail(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type DeleteScheduledEmailOutput = ResultType<void>;
@@ -1084,6 +1169,10 @@ export async function deleteScheduledEmail(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('ScheduledEmail', input);
     }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
     }
@@ -1110,31 +1199,41 @@ export async function readScheduledEmail(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand(commandInput)
-  );
+  try {
+    const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+      new GetCommand(commandInput)
+    );
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, () => new NotFoundError('ScheduledEmail', input));
-  assert(
-    item._et === 'ScheduledEmail',
-    () =>
-      new DataIntegrityError(
-        `Expected ${JSON.stringify(
-          input
-        )} to load a ScheduledEmail but loaded ${item._et} instead`
-      )
-  );
+    assert(item, () => new NotFoundError('ScheduledEmail', input));
+    assert(
+      item._et === 'ScheduledEmail',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify(
+            input
+          )} to load a ScheduledEmail but loaded ${item._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallScheduledEmail(item),
-    metrics: undefined,
-  };
+    return {
+      capacity,
+      item: unmarshallScheduledEmail(item),
+      metrics: undefined,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type UpdateScheduledEmailInput = Omit<
@@ -1226,6 +1325,10 @@ export async function updateScheduledEmail(
         template: input.template,
         vendor: input.vendor,
       });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
     }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
@@ -1322,32 +1425,42 @@ export async function queryScheduledEmail(
     TableName: tableName,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    Items: items = [],
-    LastEvaluatedKey: lastEvaluatedKey,
-  } = await ddbDocClient.send(new QueryCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      Items: items = [],
+      LastEvaluatedKey: lastEvaluatedKey,
+    } = await ddbDocClient.send(new QueryCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  return {
-    capacity,
-    hasNextPage: !!lastEvaluatedKey,
-    items: items.map((item) => {
-      assert(
-        item._et === 'ScheduledEmail',
-        () =>
-          new DataIntegrityError(
-            `Query result included at item with type ${item._et}. Only ScheduledEmail was expected.`
-          )
-      );
-      return unmarshallScheduledEmail(item);
-    }),
-    nextToken: lastEvaluatedKey,
-  };
+    return {
+      capacity,
+      hasNextPage: !!lastEvaluatedKey,
+      items: items.map((item) => {
+        assert(
+          item._et === 'ScheduledEmail',
+          () =>
+            new DataIntegrityError(
+              `Query result included at item with type ${item._et}. Only ScheduledEmail was expected.`
+            )
+        );
+        return unmarshallScheduledEmail(item);
+      }),
+      nextToken: lastEvaluatedKey,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 /** queries the ScheduledEmail table by primary key using a node id */
@@ -1525,57 +1638,74 @@ export async function createSentEmail(
     UpdateExpression,
   } = marshallSentEmail(input, now);
 
-  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
-  // cannot return the newly written values.
-  const commandInput: UpdateCommandInput = {
-    ConditionExpression: 'attribute_not_exists(#pk)',
-    ExpressionAttributeNames: {
-      ...ExpressionAttributeNames,
-      '#createdAt': '_ct',
-    },
-    ExpressionAttributeValues: {
-      ...ExpressionAttributeValues,
-      ':createdAt': now.getTime(),
-    },
-    Key: {
-      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
-      sk: ['TEMPLATE', input.template, now.getTime()].join('#'),
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnItemCollectionMetrics: 'SIZE',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: [
-      ...UpdateExpression.split(', '),
-      '#createdAt = :createdAt',
-    ].join(', '),
-  };
+  try {
+    // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+    // cannot return the newly written values.
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_not_exists(#pk)',
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
+      Key: {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: ['TEMPLATE', input.template, now.getTime()].join('#'),
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: [
+        ...UpdateExpression.split(', '),
+        '#createdAt = :createdAt',
+      ].join(', '),
+    };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB to return an Attributes prop.');
-  assert(
-    item._et === 'SentEmail',
-    () =>
-      new DataIntegrityError(
-        `Expected to write SentEmail but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
+    assert(
+      item._et === 'SentEmail',
+      () =>
+        new DataIntegrityError(
+          `Expected to write SentEmail but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallSentEmail(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallSentEmail(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new AlreadyExistsError('SentEmail', {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: ['TEMPLATE', input.template, now.getTime()].join('#'),
+      });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type BlindWriteSentEmailInput = Omit<
@@ -1636,31 +1766,41 @@ export async function blindWriteSentEmail(
     UpdateExpression: ue,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-  assert(
-    item._et === 'SentEmail',
-    () =>
-      new DataIntegrityError(
-        `Expected to write SentEmail but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'SentEmail',
+      () =>
+        new DataIntegrityError(
+          `Expected to write SentEmail but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallSentEmail(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallSentEmail(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type DeleteSentEmailOutput = ResultType<void>;
@@ -1705,6 +1845,10 @@ export async function deleteSentEmail(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('SentEmail', input);
     }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
     }
@@ -1731,31 +1875,41 @@ export async function readSentEmail(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand(commandInput)
-  );
+  try {
+    const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+      new GetCommand(commandInput)
+    );
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, () => new NotFoundError('SentEmail', input));
-  assert(
-    item._et === 'SentEmail',
-    () =>
-      new DataIntegrityError(
-        `Expected ${JSON.stringify(input)} to load a SentEmail but loaded ${
-          item._et
-        } instead`
-      )
-  );
+    assert(item, () => new NotFoundError('SentEmail', input));
+    assert(
+      item._et === 'SentEmail',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify(input)} to load a SentEmail but loaded ${
+            item._et
+          } instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallSentEmail(item),
-    metrics: undefined,
-  };
+    return {
+      capacity,
+      item: unmarshallSentEmail(item),
+      metrics: undefined,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type UpdateSentEmailInput = Omit<SentEmail, 'id' | 'updatedAt'>;
@@ -1846,6 +2000,10 @@ export async function updateSentEmail(
         template: input.template,
         vendor: input.vendor,
       });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
     }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
@@ -1942,32 +2100,42 @@ export async function querySentEmail(
     TableName: tableName,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    Items: items = [],
-    LastEvaluatedKey: lastEvaluatedKey,
-  } = await ddbDocClient.send(new QueryCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      Items: items = [],
+      LastEvaluatedKey: lastEvaluatedKey,
+    } = await ddbDocClient.send(new QueryCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  return {
-    capacity,
-    hasNextPage: !!lastEvaluatedKey,
-    items: items.map((item) => {
-      assert(
-        item._et === 'SentEmail',
-        () =>
-          new DataIntegrityError(
-            `Query result included at item with type ${item._et}. Only SentEmail was expected.`
-          )
-      );
-      return unmarshallSentEmail(item);
-    }),
-    nextToken: lastEvaluatedKey,
-  };
+    return {
+      capacity,
+      hasNextPage: !!lastEvaluatedKey,
+      items: items.map((item) => {
+        assert(
+          item._et === 'SentEmail',
+          () =>
+            new DataIntegrityError(
+              `Query result included at item with type ${item._et}. Only SentEmail was expected.`
+            )
+        );
+        return unmarshallSentEmail(item);
+      }),
+      nextToken: lastEvaluatedKey,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 /** queries the SentEmail table by primary key using a node id */
@@ -2125,60 +2293,84 @@ export async function createSubscription(
     UpdateExpression,
   } = marshallSubscription(input, now);
 
-  // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
-  // cannot return the newly written values.
-  const commandInput: UpdateCommandInput = {
-    ConditionExpression: 'attribute_not_exists(#pk)',
-    ExpressionAttributeNames: {
-      ...ExpressionAttributeNames,
-      '#createdAt': '_ct',
-    },
-    ExpressionAttributeValues: {
-      ...ExpressionAttributeValues,
-      ':createdAt': now.getTime(),
-    },
-    Key: {
-      pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
-      sk: [
-        'SUBSCRIPTION',
-        input.effectiveDate === null ? null : input.effectiveDate.toISOString(),
-      ].join('#'),
-    },
-    ReturnConsumedCapacity: 'INDEXES',
-    ReturnItemCollectionMetrics: 'SIZE',
-    ReturnValues: 'ALL_NEW',
-    TableName: tableName,
-    UpdateExpression: [
-      ...UpdateExpression.split(', '),
-      '#createdAt = :createdAt',
-    ].join(', '),
-  };
+  try {
+    // Reminder: we use UpdateCommand rather than PutCommand because PutCommand
+    // cannot return the newly written values.
+    const commandInput: UpdateCommandInput = {
+      ConditionExpression: 'attribute_not_exists(#pk)',
+      ExpressionAttributeNames: {
+        ...ExpressionAttributeNames,
+        '#createdAt': '_ct',
+      },
+      ExpressionAttributeValues: {
+        ...ExpressionAttributeValues,
+        ':createdAt': now.getTime(),
+      },
+      Key: {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: [
+          'SUBSCRIPTION',
+          input.effectiveDate === null
+            ? null
+            : input.effectiveDate.toISOString(),
+        ].join('#'),
+      },
+      ReturnConsumedCapacity: 'INDEXES',
+      ReturnItemCollectionMetrics: 'SIZE',
+      ReturnValues: 'ALL_NEW',
+      TableName: tableName,
+      UpdateExpression: [
+        ...UpdateExpression.split(', '),
+        '#createdAt = :createdAt',
+      ].join(', '),
+    };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB to return an Attributes prop.');
-  assert(
-    item._et === 'Subscription',
-    () =>
-      new DataIntegrityError(
-        `Expected to write Subscription but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB to return an Attributes prop.');
+    assert(
+      item._et === 'Subscription',
+      () =>
+        new DataIntegrityError(
+          `Expected to write Subscription but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallSubscription(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallSubscription(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof ConditionalCheckFailedException) {
+      throw new AlreadyExistsError('Subscription', {
+        pk: ['ACCOUNT', input.vendor, input.externalId].join('#'),
+        sk: [
+          'SUBSCRIPTION',
+          input.effectiveDate === null
+            ? null
+            : input.effectiveDate.toISOString(),
+        ].join('#'),
+      });
+    }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type BlindWriteSubscriptionInput = Omit<
@@ -2236,31 +2428,41 @@ export async function blindWriteSubscription(
     UpdateExpression: ue,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    ItemCollectionMetrics: metrics,
-    Attributes: item,
-  } = await ddbDocClient.send(new UpdateCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      ItemCollectionMetrics: metrics,
+      Attributes: item,
+    } = await ddbDocClient.send(new UpdateCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, 'Expected DynamoDB ot return an Attributes prop.');
-  assert(
-    item._et === 'Subscription',
-    () =>
-      new DataIntegrityError(
-        `Expected to write Subscription but wrote ${item?._et} instead`
-      )
-  );
+    assert(item, 'Expected DynamoDB ot return an Attributes prop.');
+    assert(
+      item._et === 'Subscription',
+      () =>
+        new DataIntegrityError(
+          `Expected to write Subscription but wrote ${item?._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallSubscription(item),
-    metrics,
-  };
+    return {
+      capacity,
+      item: unmarshallSubscription(item),
+      metrics,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type DeleteSubscriptionOutput = ResultType<void>;
@@ -2310,6 +2512,10 @@ export async function deleteSubscription(
     if (err instanceof ConditionalCheckFailedException) {
       throw new NotFoundError('Subscription', input);
     }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
     }
@@ -2339,31 +2545,41 @@ export async function readSubscription(
     TableName: tableName,
   };
 
-  const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
-    new GetCommand(commandInput)
-  );
+  try {
+    const {ConsumedCapacity: capacity, Item: item} = await ddbDocClient.send(
+      new GetCommand(commandInput)
+    );
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  assert(item, () => new NotFoundError('Subscription', input));
-  assert(
-    item._et === 'Subscription',
-    () =>
-      new DataIntegrityError(
-        `Expected ${JSON.stringify(input)} to load a Subscription but loaded ${
-          item._et
-        } instead`
-      )
-  );
+    assert(item, () => new NotFoundError('Subscription', input));
+    assert(
+      item._et === 'Subscription',
+      () =>
+        new DataIntegrityError(
+          `Expected ${JSON.stringify(
+            input
+          )} to load a Subscription but loaded ${item._et} instead`
+        )
+    );
 
-  return {
-    capacity,
-    item: unmarshallSubscription(item),
-    metrics: undefined,
-  };
+    return {
+      capacity,
+      item: unmarshallSubscription(item),
+      metrics: undefined,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 export type UpdateSubscriptionInput = Omit<
@@ -2460,6 +2676,10 @@ export async function updateSubscription(
         vendor: input.vendor,
       });
     }
+
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
     if (err instanceof ServiceException) {
       throw new UnexpectedAwsError(err);
     }
@@ -2553,32 +2773,42 @@ export async function querySubscription(
     TableName: tableName,
   };
 
-  const {
-    ConsumedCapacity: capacity,
-    Items: items = [],
-    LastEvaluatedKey: lastEvaluatedKey,
-  } = await ddbDocClient.send(new QueryCommand(commandInput));
+  try {
+    const {
+      ConsumedCapacity: capacity,
+      Items: items = [],
+      LastEvaluatedKey: lastEvaluatedKey,
+    } = await ddbDocClient.send(new QueryCommand(commandInput));
 
-  assert(
-    capacity,
-    'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
-  );
+    assert(
+      capacity,
+      'Expected ConsumedCapacity to be returned. This is a bug in codegen.'
+    );
 
-  return {
-    capacity,
-    hasNextPage: !!lastEvaluatedKey,
-    items: items.map((item) => {
-      assert(
-        item._et === 'Subscription',
-        () =>
-          new DataIntegrityError(
-            `Query result included at item with type ${item._et}. Only Subscription was expected.`
-          )
-      );
-      return unmarshallSubscription(item);
-    }),
-    nextToken: lastEvaluatedKey,
-  };
+    return {
+      capacity,
+      hasNextPage: !!lastEvaluatedKey,
+      items: items.map((item) => {
+        assert(
+          item._et === 'Subscription',
+          () =>
+            new DataIntegrityError(
+              `Query result included at item with type ${item._et}. Only Subscription was expected.`
+            )
+        );
+        return unmarshallSubscription(item);
+      }),
+      nextToken: lastEvaluatedKey,
+    };
+  } catch (err) {
+    if (err instanceof AssertionError || err instanceof BaseDataLibraryError) {
+      throw err;
+    }
+    if (err instanceof ServiceException) {
+      throw new UnexpectedAwsError(err);
+    }
+    throw new UnexpectedError(err);
+  }
 }
 
 /** queries the Subscription table by primary key using a node id */
