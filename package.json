@@ -38,7 +38,7 @@
     "@commitlint/cli": "^17.1.2",
     "@commitlint/config-conventional": "^17.1.0",
     "@faker-js/faker": "^7.6.0",
-    "@graphql-codegen/cli": "^2.13.8",
+    "@graphql-codegen/cli": "^3.1.0",
     "@graphql-codegen/typescript": "^2.8.0",
     "@graphql-eslint/eslint-plugin": "^3.12.0",
     "@ianwremmel/data": "*",
