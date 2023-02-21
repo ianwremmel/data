@@ -4,14 +4,16 @@ import {BaseDataLibraryError} from './base-error';
 export class NotFoundError<
   PK extends object,
   TYPENAME extends string
-> extends BaseDataLibraryError {
+> extends BaseDataLibraryError<{primaryKey: PK; typename: TYPENAME}> {
   readonly primaryKey: PK;
   readonly typeName: TYPENAME;
 
   /** constructor */
-  constructor(typeName: TYPENAME, primaryKey: PK) {
-    super(`No ${typeName} found with specified primaryKey`);
+  constructor(typename: TYPENAME, primaryKey: PK) {
+    super(`No ${typename} found with specified primaryKey`, {
+      telemetry: {primaryKey, typename},
+    });
     this.primaryKey = primaryKey;
-    this.typeName = typeName;
+    this.typeName = typename;
   }
 }

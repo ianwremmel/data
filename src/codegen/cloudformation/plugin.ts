@@ -9,11 +9,11 @@ import type {
 import yml from 'js-yaml';
 import {CLOUDFORMATION_SCHEMA} from 'js-yaml-cloudformation-schema';
 
+import {filterNull} from '../common/filters';
 import {
   defaultDispatcherConfig,
   defaultHandlerConfig,
 } from '../common-plugin-config';
-import {filterNull} from '../common/filters';
 import {parse} from '../parser';
 
 import {defineTableCdc, defineModelEnricher, defineTriggerCdc} from './cdc';
