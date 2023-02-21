@@ -7,11 +7,11 @@ import type {
   PluginFunction,
 } from '@graphql-codegen/plugin-helpers';
 
+import {filterNull} from '../common/filters';
 import {
   defaultDispatcherConfig,
   defaultHandlerConfig,
 } from '../common-plugin-config';
-import {filterNull} from '../common/filters';
 import {parse} from '../parser';
 
 import type {ActionPluginConfig} from './config';
