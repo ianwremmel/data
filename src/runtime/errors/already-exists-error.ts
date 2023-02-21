@@ -7,16 +7,17 @@ import {BaseDataLibraryError} from './base-error';
 export class AlreadyExistsError<
   PK extends object,
   TYPENAME extends string
-> extends BaseDataLibraryError {
+> extends BaseDataLibraryError<{primaryKey: PK; typename: TYPENAME}> {
   readonly primaryKey: PK;
   readonly typeName: TYPENAME;
 
   /** constructor */
-  constructor(typeName: TYPENAME, primaryKey: PK) {
+  constructor(typename: TYPENAME, primaryKey: PK) {
     super(
-      `${typeName} with specified primaryKey already exists. Please switch to update${typeName} instead of create${typeName}.`
+      `${typename} with specified primaryKey already exists. Please switch to update${typename} instead of create${typename}.`,
+      {telemetry: {primaryKey, typename}}
     );
     this.primaryKey = primaryKey;
-    this.typeName = typeName;
+    this.typeName = typename;
   }
 }

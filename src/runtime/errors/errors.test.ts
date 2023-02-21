@@ -20,7 +20,7 @@ describe('AlreadyExistsError', () => {
     `);
     expect(err.typeName).toMatchInlineSnapshot(`"User"`);
     expect(JSON.stringify(err)).toMatchInlineSnapshot(
-      `"{"primaryKey":{"id":"123"},"typeName":"User"}"`
+      `"{"telemetry":{"primaryKey":{"id":"123"},"typename":"User"},"primaryKey":{"id":"123"},"typeName":"User"}"`
     );
   });
 });
@@ -39,7 +39,7 @@ describe('NotFoundError', () => {
     `);
     expect(err.typeName).toMatchInlineSnapshot(`"User"`);
     expect(JSON.stringify(err)).toMatchInlineSnapshot(
-      `"{"primaryKey":{"id":"123"},"typeName":"User"}"`
+      `"{"telemetry":{"primaryKey":{"id":"123"},"typename":"User"},"primaryKey":{"id":"123"},"typeName":"User"}"`
     );
   });
 });
@@ -58,7 +58,7 @@ describe('OptimisticLockingError', () => {
     `);
     expect(err.typeName).toMatchInlineSnapshot(`"User"`);
     expect(JSON.stringify(err)).toMatchInlineSnapshot(
-      `"{"primaryKey":{"id":"123"},"typeName":"User"}"`
+      `"{"telemetry":{"primaryKey":{"id":"123"},"typename":"User"},"primaryKey":{"id":"123"},"typeName":"User"}"`
     );
   });
 });
@@ -85,7 +85,7 @@ describe('UnexpectedAwsError', () => {
     expect(err.cause).toMatchInlineSnapshot(
       `[FakeAwsError: Something bad happened]`
     );
-    expect(JSON.stringify(err)).toMatchInlineSnapshot(`"{}"`);
+    expect(JSON.stringify(err)).toMatchInlineSnapshot(`"{"telemetry":{}}"`);
   });
 });
 
@@ -94,6 +94,6 @@ describe('UnexpectedError', () => {
     const err = new UnexpectedError(new Error('Something bad happened'));
     expect(err).toMatchInlineSnapshot(`[Error: An unexpected error occurred]`);
     expect(err.cause).toMatchInlineSnapshot(`[Error: Something bad happened]`);
-    expect(JSON.stringify(err)).toMatchInlineSnapshot(`"{}"`);
+    expect(JSON.stringify(err)).toMatchInlineSnapshot(`"{"telemetry":{}}"`);
   });
 });

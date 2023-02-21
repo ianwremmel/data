@@ -7,16 +7,17 @@ import {BaseDataLibraryError} from './base-error';
 export class OptimisticLockingError<
   PK extends object,
   TYPENAME extends string
-> extends BaseDataLibraryError {
+> extends BaseDataLibraryError<{primaryKey: PK; typename: TYPENAME}> {
   readonly primaryKey: PK;
   readonly typeName: TYPENAME;
 
   /** constructor */
-  constructor(typeName: TYPENAME, primaryKey: PK) {
+  constructor(typename: TYPENAME, primaryKey: PK) {
     super(
-      `${typeName} with specified primaryKey is out of date. Please refresh and try again.`
+      `${typename} with specified primaryKey is out of date. Please refresh and try again.`,
+      {telemetry: {primaryKey, typename}}
     );
     this.primaryKey = primaryKey;
-    this.typeName = typeName;
+    this.typeName = typename;
   }
 }
