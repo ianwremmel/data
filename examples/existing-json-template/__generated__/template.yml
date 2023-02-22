@@ -21,8 +21,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableUserLogin
-      Value:
-        Ref: TableUserLogin
     Value:
       Ref: TableUserLogin
 Parameters:

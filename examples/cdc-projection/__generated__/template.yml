@@ -27,8 +27,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableAccount
-      Value:
-        Ref: TableAccount
     Value:
       Ref: TableAccount
   TableSubscription:
@@ -36,8 +34,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableSubscription
-      Value:
-        Ref: TableSubscription
     Value:
       Ref: TableSubscription
 Parameters:

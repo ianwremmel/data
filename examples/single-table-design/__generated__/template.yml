@@ -27,8 +27,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableAccounts
-      Value:
-        Ref: TableAccounts
     Value:
       Ref: TableAccounts
   TableEmail:
@@ -36,8 +34,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableEmail
-      Value:
-        Ref: TableEmail
     Value:
       Ref: TableEmail
 Parameters:

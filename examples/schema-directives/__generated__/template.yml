@@ -25,8 +25,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableAccount
-      Value:
-        Ref: TableAccount
     Value:
       Ref: TableAccount
   TableApplicationData:
@@ -34,8 +32,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableApplicationData
-      Value:
-        Ref: TableApplicationData
     Value:
       Ref: TableApplicationData
   TableUserSessions:
@@ -43,8 +39,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableUserSessions
-      Value:
-        Ref: TableUserSessions
     Value:
       Ref: TableUserSessions
 Parameters:
