@@ -1,13 +1,10 @@
 import assert from 'assert';
 
-import {SpanKind} from '@opentelemetry/api';
-import type {DynamoDBRecord, EventBridgeHandler} from 'aws-lambda';
-
 import type {WithTelemetry} from '../../dependencies';
 import {NotFoundError} from '../../errors';
 import type {ResultType} from '../../types';
-import {unmarshallRecord} from '../common/unmarshall-record';
-import {makeLambdaOTelAttributes} from '../telemetry';
+import type {Handler} from '../common/handlers';
+import {makeEventBridgeHandler} from '../common/handlers';
 
 type Loader<SOURCE, TARGET> = (record: SOURCE) => Promise<TARGET>;
 type Creator<SOURCE, TARGET> = (record: SOURCE) => Promise<TARGET | undefined>;
@@ -45,32 +42,16 @@ export function makeEnricher<
   dependencies: WithTelemetry,
   enricher: Projector<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>,
   sdk: SDK<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>
-): EventBridgeHandler<
-  Exclude<DynamoDBRecord['eventName'], undefined> | string,
-  DynamoDBRecord,
-  unknown
-> {
-  const {captureAsyncFunction, captureAsyncRootFunction} = dependencies;
+): Handler {
   const {unmarshallSourceModel} = sdk;
 
-  return captureAsyncRootFunction(async (event, context) =>
-    captureAsyncFunction(
-      `${event.resources[0]} process`,
-      makeLambdaOTelAttributes(context),
-      SpanKind.CONSUMER,
-      async () => {
-        const ddbRecord = event.detail;
-        const unmarshalledRecord = unmarshallRecord(ddbRecord);
-        assert(unmarshalledRecord.dynamodb?.NewImage);
-        const source = unmarshallSourceModel(
-          unmarshalledRecord.dynamodb?.NewImage
-        );
-        assert(source);
+  return makeEventBridgeHandler(dependencies, async (unmarshalledRecord) => {
+    assert(unmarshalledRecord.dynamodb?.NewImage);
+    const source = unmarshallSourceModel(unmarshalledRecord.dynamodb?.NewImage);
+    assert(source);
 
-        await enrich(dependencies, enricher, sdk, source);
-      }
-    )
-  );
+    await enrich(dependencies, enricher, sdk, source);
+  });
 }
 
 /** Enriches the source model into the target model */
