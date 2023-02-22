@@ -13,6 +13,7 @@
 -   [Usage](#usage)
     -   [Codegen](#codegen)
     -   [Runtime](#runtime)
+-   [Change Data Capture](#change-data-capture)
 -   [Known Issues](#known-issues)
 -   [Maintainer](#maintainer)
 -   [Contribute](#contribute)
@@ -85,6 +86,35 @@ All Errors thrown or rethrown by this library (except `AssertionError` which is
 the default Node `AssertionError`) or generated code are instance of
 `BaseDataLibraryError`, which is a subclass of `Error`. Rethrown errors always
 have a `cause` property that is the original error.
+
+## Change Data Capture
+
+Several schema directives (`@enriches` and `@triggers` at time of writing)
+generate CloudFormation resources to support change data capture. In general,
+this means:
+
+-   The decorated model's table has a DynamoDB Stream enabled
+-   Regardless of the number of directives per model or the number of models,
+    exactly one lambda listens to the stream
+-   That Lambda function pushes each stream event to EventBridge
+-   Each directive has a corresponding EventBridge rule that push a filtered
+    subset of events into an SQS queue
+-   Each SQS queue has a corresponding Lambda that handles the events
+
+Why all the indirection? Filtering, multiple responders, and retries.
+
+There's no Dead Letter Queue for a DynamoDB stream, so we want the stream
+handler to be as failsafe as possible. That means it has to do as little as
+possible. Ideally, we'd push directly into an SQS queue, but then we only get
+one handler per table when we want one handler per directive per Model.
+
+EventBridge lets us 1. attach multiple handlers to the same DynamoDB stream
+event and 2. filter events those event so that the we only push matching events
+into the queue for a given model's directive.
+
+Finally, there's an SQS queue in front of each function so that we can push
+failures to its Dead Letter Queue and retry them manually when the underlying
+issue is fixed.
 
 ## Known Issues
 

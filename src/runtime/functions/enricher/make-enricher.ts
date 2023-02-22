@@ -4,7 +4,7 @@ import type {WithTelemetry} from '../../dependencies';
 import {NotFoundError} from '../../errors';
 import type {ResultType} from '../../types';
 import type {Handler} from '../common/handlers';
-import {makeEventBridgeHandler} from '../common/handlers';
+import {makeSqsHandler} from '../common/handlers';
 
 type Loader<SOURCE, TARGET> = (record: SOURCE) => Promise<TARGET>;
 type Creator<SOURCE, TARGET> = (record: SOURCE) => Promise<TARGET | undefined>;
@@ -45,7 +45,7 @@ export function makeEnricher<
 ): Handler {
   const {unmarshallSourceModel} = sdk;
 
-  return makeEventBridgeHandler(dependencies, async (unmarshalledRecord) => {
+  return makeSqsHandler(dependencies, async (unmarshalledRecord) => {
     assert(unmarshalledRecord.dynamodb?.NewImage);
     const source = unmarshallSourceModel(unmarshalledRecord.dynamodb?.NewImage);
     assert(source);

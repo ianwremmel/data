@@ -61,38 +61,17 @@ Resources:
         Target: es2020
     Properties:
       CodeUri: trigger--user-session--upsert
-      DeadLetterQueue:
-        TargetArn:
-          Fn::GetAtt:
-            - FnTriggerUSUpsert7d1674e2EventBridgeDLQ
-            - Arn
-        Type: SQS
       Events:
-        UPSERT:
+        Stream:
           Properties:
-            DeadLetterConfig:
-              Arn:
-                Fn::GetAtt:
-                  - FnTriggerUSUpsert7d1674e2DLQ
-                  - Arn
-            EventBusName: default
-            Pattern:
-              detail:
-                dynamodb:
-                  NewImage:
-                    _et:
-                      S:
-                        - UserSession
-              detail-type:
-                - INSERT
-                - MODIFY
-              resources:
-                - Fn::GetAtt:
-                    - TableUserSession
-                    - Arn
-              source:
-                - TableUserSession.UserSession
-          Type: EventBridgeRule
+            BatchSize: 10
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+            Queue:
+              Fn::GetAtt:
+                - FnTriggerUSUpsert7d1674e2Queue
+                - Arn
+          Type: SQS
       MemorySize: 256
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -157,34 +136,6 @@ Resources:
       Threshold: 0
       TreatMissingData: notBreaching
     Type: AWS::CloudWatch::Alarm
-  FnTriggerUSUpsert7d1674e2EventBridgeDLQ:
-    Properties:
-      KmsMasterKeyId: alias/aws/sqs
-    Type: AWS::SQS::Queue
-  FnTriggerUSUpsert7d1674e2EventBridgeDLQDLQAlarm:
-    Condition: CreateChangeDataCaptureAlarmsCondition
-    Properties:
-      ActionsEnabled: true
-      AlarmActions: []
-      AlarmDescription: FnTriggerUSUpsert7d1674e2EventBridgeDLQ DLQ has messages
-      AlarmName: FnTriggerUSUpsert7d1674e2EventBridgeDLQ DLQ
-      ComparisonOperator: GreaterThanThreshold
-      DatapointsToAlarm: 1
-      Dimensions:
-        - Name: QueueName
-          Value:
-            Fn::GetAtt:
-              - FnTriggerUSUpsert7d1674e2EventBridgeDLQ
-              - QueueName
-      EvaluationPeriods: 1
-      MetricName: ApproximateNumberOfMessagesVisible
-      Namespace: AWS/SQS
-      OKActions: []
-      Period: 60
-      Statistic: Sum
-      Threshold: 0
-      TreatMissingData: notBreaching
-    Type: AWS::CloudWatch::Alarm
   FnTriggerUSUpsert7d1674e2LambdaP99Alarm:
     Condition: CreateChangeDataCaptureAlarmsCondition
     Properties:
@@ -237,6 +188,66 @@ Resources:
       Threshold: 80
       TreatMissingData: notBreaching
     Type: AWS::CloudWatch::Alarm
+  FnTriggerUSUpsert7d1674e2Queue:
+    Properties:
+      KmsMasterKeyId: alias/aws/sqs
+      RedrivePolicy:
+        deadLetterTargetArn:
+          Fn::GetAtt:
+            - FnTriggerUSUpsert7d1674e2DLQ
+            - Arn
+        maxReceiveCount: 3
+      VisibilityTimeout: 320
+    Type: AWS::SQS::Queue
+  FnTriggerUSUpsert7d1674e2QueuePolicy:
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - sqs:SendMessage
+            Condition:
+              ArnEquals:
+                aws:SourceArn:
+                  Fn::GetAtt:
+                    - FnTriggerUSUpsert7d1674e2Rule
+                    - Arn
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Resource:
+              Fn::GetAtt:
+                - FnTriggerUSUpsert7d1674e2Queue
+                - Arn
+            Sid: Allow EventBridge to send messages to the queue
+      Queues:
+        - Ref: FnTriggerUSUpsert7d1674e2Queue
+    Type: AWS::SQS::QueuePolicy
+  FnTriggerUSUpsert7d1674e2Rule:
+    Properties:
+      EventBusName: default
+      EventPattern:
+        detail:
+          dynamodb:
+            NewImage:
+              _et:
+                S:
+                  - UserSession
+        detail-type:
+          - INSERT
+          - MODIFY
+        resources:
+          - Fn::GetAtt:
+              - TableUserSession
+              - Arn
+        source:
+          - TableUserSession.UserSession
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - FnTriggerUSUpsert7d1674e2Queue
+              - Arn
+          Id: FnTriggerUSUpsert7d1674e2
+    Type: AWS::Events::Rule
   TableUserSession:
     Properties:
       AttributeDefinitions:

@@ -70,37 +70,17 @@ Resources:
         Target: es2020
     Properties:
       CodeUri: enricher--subscription--insert--account
-      DeadLetterQueue:
-        TargetArn:
-          Fn::GetAtt:
-            - FnHandlerSInsertAa23d7fc7EventBridgeDLQ
-            - Arn
-        Type: SQS
       Events:
-        INSERT:
+        Stream:
           Properties:
-            DeadLetterConfig:
-              Arn:
-                Fn::GetAtt:
-                  - FnHandlerSInsertAa23d7fc7DLQ
-                  - Arn
-            EventBusName: default
-            Pattern:
-              detail:
-                dynamodb:
-                  NewImage:
-                    _et:
-                      S:
-                        - Subscription
-              detail-type:
-                - INSERT
-              resources:
-                - Fn::GetAtt:
-                    - TableAccounts
-                    - Arn
-              source:
-                - TableAccounts.Subscription
-          Type: EventBridgeRule
+            BatchSize: 10
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+            Queue:
+              Fn::GetAtt:
+                - FnHandlerSInsertAa23d7fc7Queue
+                - Arn
+          Type: SQS
       MemorySize: 256
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -168,34 +148,6 @@ Resources:
       Threshold: 0
       TreatMissingData: notBreaching
     Type: AWS::CloudWatch::Alarm
-  FnHandlerSInsertAa23d7fc7EventBridgeDLQ:
-    Properties:
-      KmsMasterKeyId: alias/aws/sqs
-    Type: AWS::SQS::Queue
-  FnHandlerSInsertAa23d7fc7EventBridgeDLQDLQAlarm:
-    Condition: CreateChangeDataCaptureAlarmsCondition
-    Properties:
-      ActionsEnabled: true
-      AlarmActions: []
-      AlarmDescription: FnHandlerSInsertAa23d7fc7EventBridgeDLQ DLQ has messages
-      AlarmName: FnHandlerSInsertAa23d7fc7EventBridgeDLQ DLQ
-      ComparisonOperator: GreaterThanThreshold
-      DatapointsToAlarm: 1
-      Dimensions:
-        - Name: QueueName
-          Value:
-            Fn::GetAtt:
-              - FnHandlerSInsertAa23d7fc7EventBridgeDLQ
-              - QueueName
-      EvaluationPeriods: 1
-      MetricName: ApproximateNumberOfMessagesVisible
-      Namespace: AWS/SQS
-      OKActions: []
-      Period: 60
-      Statistic: Sum
-      Threshold: 0
-      TreatMissingData: notBreaching
-    Type: AWS::CloudWatch::Alarm
   FnHandlerSInsertAa23d7fc7LambdaP99Alarm:
     Condition: CreateChangeDataCaptureAlarmsCondition
     Properties:
@@ -248,6 +200,65 @@ Resources:
       Threshold: 80
       TreatMissingData: notBreaching
     Type: AWS::CloudWatch::Alarm
+  FnHandlerSInsertAa23d7fc7Queue:
+    Properties:
+      KmsMasterKeyId: alias/aws/sqs
+      RedrivePolicy:
+        deadLetterTargetArn:
+          Fn::GetAtt:
+            - FnHandlerSInsertAa23d7fc7DLQ
+            - Arn
+        maxReceiveCount: 3
+      VisibilityTimeout: 320
+    Type: AWS::SQS::Queue
+  FnHandlerSInsertAa23d7fc7QueuePolicy:
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - sqs:SendMessage
+            Condition:
+              ArnEquals:
+                aws:SourceArn:
+                  Fn::GetAtt:
+                    - FnHandlerSInsertAa23d7fc7Rule
+                    - Arn
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Resource:
+              Fn::GetAtt:
+                - FnHandlerSInsertAa23d7fc7Queue
+                - Arn
+            Sid: Allow EventBridge to send messages to the queue
+      Queues:
+        - Ref: FnHandlerSInsertAa23d7fc7Queue
+    Type: AWS::SQS::QueuePolicy
+  FnHandlerSInsertAa23d7fc7Rule:
+    Properties:
+      EventBusName: default
+      EventPattern:
+        detail:
+          dynamodb:
+            NewImage:
+              _et:
+                S:
+                  - Subscription
+        detail-type:
+          - INSERT
+        resources:
+          - Fn::GetAtt:
+              - TableAccounts
+              - Arn
+        source:
+          - TableAccounts.Subscription
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - FnHandlerSInsertAa23d7fc7Queue
+              - Arn
+          Id: FnHandlerSInsertAa23d7fc7
+    Type: AWS::Events::Rule
   TableAccounts:
     Properties:
       AttributeDefinitions:
