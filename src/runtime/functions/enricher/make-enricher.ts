@@ -43,22 +43,16 @@ export function makeEnricher<
   UPDATE_TARGET_INPUT
 >(
   dependencies: WithTelemetry,
-  {
-    create,
-    load,
-    update,
-  }: Projector<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>,
-  {
-    createTargetModel,
-    unmarshallSourceModel,
-    updateTargetModel,
-  }: SDK<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>
+  enricher: Projector<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>,
+  sdk: SDK<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>
 ): EventBridgeHandler<
   Exclude<DynamoDBRecord['eventName'], undefined> | string,
   DynamoDBRecord,
   unknown
 > {
   const {captureAsyncFunction, captureAsyncRootFunction} = dependencies;
+  const {unmarshallSourceModel} = sdk;
+
   return captureAsyncRootFunction(async (event, context) =>
     captureAsyncFunction(
       `${event.resources[0]} process`,
@@ -73,23 +67,35 @@ export function makeEnricher<
         );
         assert(source);
 
-        try {
-          const item = await load(source);
-
-          const modelToUpdate = await update(source, item);
-          if (modelToUpdate) {
-            return await updateTargetModel(modelToUpdate);
-          }
-        } catch (err) {
-          if (err instanceof NotFoundError) {
-            const modelToCreate = await create(source);
-            if (modelToCreate) {
-              return await createTargetModel(modelToCreate);
-            }
-          }
-          throw err;
-        }
+        await enrich(dependencies, enricher, sdk, source);
       }
     )
   );
+}
+
+/** Enriches the source model into the target model */
+async function enrich<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>(
+  dependencies: WithTelemetry,
+  enricher: Projector<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>,
+  sdk: SDK<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>,
+  source: SOURCE
+) {
+  const {create, load, update} = enricher;
+  const {createTargetModel, updateTargetModel} = sdk;
+  try {
+    const item = await load(source);
+
+    const modelToUpdate = await update(source, item);
+    if (modelToUpdate) {
+      return await updateTargetModel(modelToUpdate);
+    }
+  } catch (err) {
+    if (err instanceof NotFoundError) {
+      const modelToCreate = await create(source);
+      if (modelToCreate) {
+        return await createTargetModel(modelToCreate);
+      }
+    }
+    throw err;
+  }
 }
