@@ -38,7 +38,7 @@
     "@commitlint/cli": "^17.1.2",
     "@commitlint/config-conventional": "^17.1.0",
     "@faker-js/faker": "^7.6.0",
-    "@graphql-codegen/cli": "^2.13.8",
+    "@graphql-codegen/cli": "^2.16.1",
     "@graphql-codegen/typescript": "^2.8.0",
     "@graphql-eslint/eslint-plugin": "^3.12.0",
     "@ianwremmel/data": "*",
@@ -82,6 +82,7 @@
   },
   "dependencies": {
     "@code-like-a-carpenter/exception": "^1.0.0",
+    "@code-like-a-carpenter/parallel": "^1.1.0",
     "@graphql-codegen/plugin-helpers": "^3.1.1",
     "@types/aws-lambda": "^8.10.108",
     "base64url": "^3.0.1",

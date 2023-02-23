@@ -184,7 +184,6 @@ export function defineTable({
         Description: `The name of the DynamoDB table for ${tableName}`,
         Export: {
           Name: {'Fn::Sub': `\${AWS::StackName}-${tableName}`},
-          Value: {Ref: tableName},
         },
         Value: {Ref: tableName},
       },

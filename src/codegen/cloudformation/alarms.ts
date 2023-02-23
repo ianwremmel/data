@@ -257,11 +257,6 @@ export function makeHandlerAlarms(
         config.alarmActions,
         config.okActions
       ),
-      ...makeDLQAlarm(
-        `${functionName}EventBridgeDLQ`,
-        config.alarmActions,
-        config.okActions
-      ),
       ...makeLatencyP99Alarm(
         functionName,
         config.latencyP99Alarm,

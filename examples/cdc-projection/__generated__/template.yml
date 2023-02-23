@@ -27,8 +27,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableAccount
-      Value:
-        Ref: TableAccount
     Value:
       Ref: TableAccount
   TableSubscription:
@@ -36,8 +34,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableSubscription
-      Value:
-        Ref: TableSubscription
     Value:
       Ref: TableSubscription
 Parameters:
@@ -74,37 +70,17 @@ Resources:
         Target: es2020
     Properties:
       CodeUri: enricher--subscription--insert--account
-      DeadLetterQueue:
-        TargetArn:
-          Fn::GetAtt:
-            - FnHandlerSInsertAa23d7fc7EventBridgeDLQ
-            - Arn
-        Type: SQS
       Events:
-        INSERT:
+        Stream:
           Properties:
-            DeadLetterConfig:
-              Arn:
-                Fn::GetAtt:
-                  - FnHandlerSInsertAa23d7fc7DLQ
-                  - Arn
-            EventBusName: default
-            Pattern:
-              detail:
-                dynamodb:
-                  NewImage:
-                    _et:
-                      S:
-                        - Subscription
-              detail-type:
-                - INSERT
-              resources:
-                - Fn::GetAtt:
-                    - TableSubscription
-                    - Arn
-              source:
-                - TableSubscription.Subscription
-          Type: EventBridgeRule
+            BatchSize: 10
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+            Queue:
+              Fn::GetAtt:
+                - FnHandlerSInsertAa23d7fc7Queue
+                - Arn
+          Type: SQS
       MemorySize: 256
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -146,7 +122,11 @@ Resources:
     Type: AWS::CloudWatch::Alarm
   FnHandlerSInsertAa23d7fc7DLQ:
     Properties:
-      KmsMasterKeyId: alias/aws/sqs
+      KmsMasterKeyId:
+        Fn::If:
+          - IsProd
+          - Ref: FnHandlerSInsertAa23d7fc7QueueKey
+          - AWS::NoValue
     Type: AWS::SQS::Queue
   FnHandlerSInsertAa23d7fc7DLQDLQAlarm:
     Condition: CreateChangeDataCaptureAlarmsCondition
@@ -162,34 +142,6 @@ Resources:
           Value:
             Fn::GetAtt:
               - FnHandlerSInsertAa23d7fc7DLQ
-              - QueueName
-      EvaluationPeriods: 1
-      MetricName: ApproximateNumberOfMessagesVisible
-      Namespace: AWS/SQS
-      OKActions: []
-      Period: 60
-      Statistic: Sum
-      Threshold: 0
-      TreatMissingData: notBreaching
-    Type: AWS::CloudWatch::Alarm
-  FnHandlerSInsertAa23d7fc7EventBridgeDLQ:
-    Properties:
-      KmsMasterKeyId: alias/aws/sqs
-    Type: AWS::SQS::Queue
-  FnHandlerSInsertAa23d7fc7EventBridgeDLQDLQAlarm:
-    Condition: CreateChangeDataCaptureAlarmsCondition
-    Properties:
-      ActionsEnabled: true
-      AlarmActions: []
-      AlarmDescription: FnHandlerSInsertAa23d7fc7EventBridgeDLQ DLQ has messages
-      AlarmName: FnHandlerSInsertAa23d7fc7EventBridgeDLQ DLQ
-      ComparisonOperator: GreaterThanThreshold
-      DatapointsToAlarm: 1
-      Dimensions:
-        - Name: QueueName
-          Value:
-            Fn::GetAtt:
-              - FnHandlerSInsertAa23d7fc7EventBridgeDLQ
               - QueueName
       EvaluationPeriods: 1
       MetricName: ApproximateNumberOfMessagesVisible
@@ -252,6 +204,140 @@ Resources:
       Threshold: 80
       TreatMissingData: notBreaching
     Type: AWS::CloudWatch::Alarm
+  FnHandlerSInsertAa23d7fc7Queue:
+    Properties:
+      Fn::If:
+        - IsProd
+        - KmsMasterKeyId:
+            Ref: FnHandlerSInsertAa23d7fc7QueueKey
+          RedrivePolicy:
+            deadLetterTargetArn:
+              Fn::GetAtt:
+                - FnHandlerSInsertAa23d7fc7DLQ
+                - Arn
+            maxReceiveCount: 3
+          VisibilityTimeout: 320
+        - RedrivePolicy:
+            deadLetterTargetArn:
+              Fn::GetAtt:
+                - FnHandlerSInsertAa23d7fc7DLQ
+                - Arn
+            maxReceiveCount: 3
+          VisibilityTimeout: 320
+    Type: AWS::SQS::Queue
+  FnHandlerSInsertAa23d7fc7QueueKey:
+    Condition: IsProd
+    Properties:
+      KeyPolicy:
+        Statement:
+          - Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Resource: '*'
+            Sid: Allow EventBridge to use the Key
+          - Action:
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
+            Resource: '*'
+            Sid: Allow administration of the key
+          - Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Condition:
+              StringEquals:
+                kms:CallerAccount:
+                  Fn::Sub: ${AWS::AccountId}
+                kms:ViaService: sqs.us-east-1.amazonaws.com
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Resource: '*'
+            Sid: >-
+              Allow access through Simple Queue Service (SQS) for all principals
+              in the account that are authorized to use SQS
+          - Action:
+              - kms:Describe*
+              - kms:Get*
+              - kms:List*
+              - kms:RevokeGrant
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
+            Resource: '*'
+            Sid: Allow direct access to key metadata to the account
+        Version: '2012-10-17'
+      PendingWindowInDays: 7
+    Type: AWS::KMS::Key
+  FnHandlerSInsertAa23d7fc7QueuePolicy:
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - sqs:SendMessage
+            Condition:
+              ArnEquals:
+                aws:SourceArn:
+                  Fn::GetAtt:
+                    - FnHandlerSInsertAa23d7fc7Rule
+                    - Arn
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Resource:
+              Fn::GetAtt:
+                - FnHandlerSInsertAa23d7fc7Queue
+                - Arn
+            Sid: Allow EventBridge to send messages to the queue
+      Queues:
+        - Ref: FnHandlerSInsertAa23d7fc7Queue
+    Type: AWS::SQS::QueuePolicy
+  FnHandlerSInsertAa23d7fc7Rule:
+    Properties:
+      EventBusName: default
+      EventPattern:
+        detail:
+          dynamodb:
+            NewImage:
+              _et:
+                S:
+                  - Subscription
+        detail-type:
+          - INSERT
+        resources:
+          - Fn::GetAtt:
+              - TableSubscription
+              - Arn
+        source:
+          - TableSubscription.Subscription
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - FnHandlerSInsertAa23d7fc7Queue
+              - Arn
+          Id: FnHandlerSInsertAa23d7fc7
+    Type: AWS::Events::Rule
   TableAccount:
     Properties:
       AttributeDefinitions:

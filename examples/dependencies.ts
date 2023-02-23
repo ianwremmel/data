@@ -73,6 +73,7 @@ export const ddbDocClient = DynamoDBDocumentClient.from(ddb, translateConfig);
 
 /** From WithTelemetry */
 export function captureException(err: unknown) {
+  console.error({err});
   if (err instanceof Error) {
     getSegment()?.addError(err);
   } else {

@@ -25,8 +25,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableCaseInstance
-      Value:
-        Ref: TableCaseInstance
     Value:
       Ref: TableCaseInstance
   TableCaseSummary:
@@ -34,8 +32,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableCaseSummary
-      Value:
-        Ref: TableCaseSummary
     Value:
       Ref: TableCaseSummary
   TableFileTiming:
@@ -43,8 +39,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-TableFileTiming
-      Value:
-        Ref: TableFileTiming
     Value:
       Ref: TableFileTiming
 Parameters:

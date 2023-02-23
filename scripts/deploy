@@ -48,6 +48,7 @@ deploy_one () {
 
   local stackname
   stackname="$(get_stack_name "$example")"
+  stagename="development"
 
   local cmd
   case "$provider" in
@@ -56,6 +57,10 @@ deploy_one () {
       ;;
     localstack)
       cmd="samlocal"
+      # There seems to be a bug with localstack and conditionals. false
+      # conditions break the deploy without explanation, so in localstack where
+      # costs don't matter, we'll deploy in production mode.
+      stagename="production"
       ;;
     *)
       log "Unknown provider $provider"
@@ -70,6 +75,7 @@ deploy_one () {
     --no-fail-on-empty-changeset \
     --resolve-s3 \
     --stack-name "$stackname" \
+    --parameter-overrides "ParameterKey=StageName,ParameterValue=$stagename" \
     --region "${AWS_REGION:-us-east-1}"
 }
 
@@ -101,7 +107,7 @@ initialize_localstack () {
   log "Ensuing LocalStack is dependencies are installed"
   pip3 install --upgrade pyopenssl
   pip3 install localstack awscli-local[ver1] aws-sam-cli-local
-  docker pull localstack/localstack:1.3
+  docker pull localstack/localstack:1.4
 
   log "Starting LocalStack"
   docker-compose up -d

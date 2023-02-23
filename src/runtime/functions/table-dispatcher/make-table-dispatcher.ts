@@ -24,21 +24,21 @@ async function handleRecord(
   try {
     const modelName = record.dynamodb?.NewImage?._et.S;
 
+    const entry = {
+      Detail: JSON.stringify(record),
+      DetailType: record.eventName,
+      Resources: record.eventSourceARN
+        ? [record.eventSourceARN.split('/stream')[0]]
+        : [],
+      Source: [tableName, modelName].join('.'),
+      Time: record.dynamodb?.ApproximateCreationDateTime
+        ? new Date(record.dynamodb.ApproximateCreationDateTime)
+        : undefined,
+    };
+
     await eventBridge.send(
       new PutEventsCommand({
-        Entries: [
-          {
-            Detail: JSON.stringify(record),
-            DetailType: record.eventName,
-            Resources: record.eventSourceARN
-              ? [record.eventSourceARN.split('/stream')[0]]
-              : [],
-            Source: [tableName, modelName].join('.'),
-            Time: record.dynamodb?.ApproximateCreationDateTime
-              ? new Date(record.dynamodb.ApproximateCreationDateTime)
-              : undefined,
-          },
-        ],
+        Entries: [entry],
       })
     );
   } catch (err) {
