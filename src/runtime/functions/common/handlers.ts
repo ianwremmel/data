@@ -1,6 +1,13 @@
 import {parallelMap} from '@code-like-a-carpenter/parallel';
-import {SpanKind} from '@opentelemetry/api';
-import type {Context, SQSHandler} from 'aws-lambda';
+import {runWithNewSpan} from '@code-like-a-carpenter/telemetry';
+import type {Link} from '@opentelemetry/api';
+import {
+  context as contextAPI,
+  propagation,
+  SpanKind,
+  trace,
+} from '@opentelemetry/api';
+import type {Context, SQSHandler, SQSRecord} from 'aws-lambda';
 
 import {assert} from '../../assert';
 import type {WithTelemetry} from '../../dependencies';
@@ -23,43 +30,56 @@ export function makeSqsHandler(
   dependencies: WithTelemetry,
   cb: Callback
 ): Handler {
-  const {captureAsyncFunction, captureAsyncRootFunction, captureException} =
-    dependencies;
+  const {captureAsyncRootFunction, captureException} = dependencies;
 
   return captureAsyncRootFunction(async (event, context) => {
+    const links = new Map<SQSRecord, Link>();
+    const eventSources = new Set<string>();
+
+    for (const record of event.Records) {
+      const traceHeader = record.messageAttributes?.AWSTraceHeader?.stringValue;
+      if (traceHeader) {
+        const ctx = propagation.extract(contextAPI.active(), traceHeader);
+        const spanCtx = trace.getSpanContext(ctx);
+        if (spanCtx) {
+          links.set(record, {context: spanCtx});
+        }
+      }
+      eventSources.add(record.eventSource);
+    }
+
     const eventSource =
-      event.Records.reduce(
-        (acc, record) => acc.add(record.eventSource),
-        new Set<string>()
-      ).size === 1
+      eventSources.size === 1
         ? event.Records[0].eventSource
         : 'multiple_sources';
 
-    // Note that https://opentelemetry.io/docs/reference/specification/trace/semantic_conventions/instrumentation/aws-lambda/#sqs-event
-    // indicates that we should attach the event source context as a linked
-    // span, but until I remove `captureAsyncFunction` in favor of using OTel
-    // directly, that's not practical.
-    return captureAsyncFunction(
+    return runWithNewSpan(
       `${eventSource} process`,
       {
-        ...makeLambdaOTelAttributes(context),
-        'faas.trigger': 'pubsub',
-        'message.operation': 'process',
-        'message.source.kind': 'queue',
-        'message.system': 'AmazonSQS',
+        attributes: {
+          ...makeLambdaOTelAttributes(context),
+          'faas.trigger': 'pubsub',
+          'message.operation': 'process',
+          'message.source.kind': 'queue',
+          'message.system': 'AmazonSQS',
+        },
+        kind: SpanKind.CONSUMER,
+        links: Array.from(links.values()),
       },
-      SpanKind.CONSUMER,
       async () => {
         const results = await parallelMap(event.Records, async (record) => {
-          await captureAsyncFunction(
+          await runWithNewSpan(
             `${eventSource} process`,
             {
-              'faas.trigger': 'pubsub',
-              'message.operation': 'process',
-              'message.source.kind': 'queue',
-              'message.system': 'AmazonSQS',
+              attributes: {
+                'faas.trigger': 'pubsub',
+                'message.operation': 'process',
+                'message.source.kind': 'queue',
+                'message.system': 'AmazonSQS',
+              },
+              kind: SpanKind.CONSUMER,
+              links: links.has(record) ? [links.get(record)!] : [],
             },
-            SpanKind.CONSUMER,
             async () => {
               const eventBridgeRecord = JSON.parse(record.body);
 
@@ -78,7 +98,10 @@ export function makeSqsHandler(
               try {
                 return await cb(unmarshalledRecord, context);
               } catch (err) {
-                captureException(err);
+                // Technically this exception is escaping the span, but only for
+                // use in crafting batchItemFailures. At this point, it's been
+                // "handled".
+                captureException(err, false);
                 throw err;
               }
             }

@@ -1,3 +1,4 @@
+import {runWithNewSpan} from '@code-like-a-carpenter/telemetry';
 import {SpanKind} from '@opentelemetry/api';
 import type {Context, DynamoDBRecord, EventBridgeHandler} from 'aws-lambda';
 
@@ -22,12 +23,11 @@ export function makeModelChangeHandler(
   DynamoDBRecord,
   unknown
 > {
-  const {captureAsyncFunction, captureAsyncRootFunction} = dependencies;
+  const {captureAsyncRootFunction} = dependencies;
   return captureAsyncRootFunction(async (event, context) =>
-    captureAsyncFunction(
+    runWithNewSpan(
       `${event.resources[0]} process`,
-      makeLambdaOTelAttributes(context),
-      SpanKind.CONSUMER,
+      {attributes: makeLambdaOTelAttributes(context), kind: SpanKind.CONSUMER},
       async () => {
         const ddbRecord = event.detail;
         const unmarshalledRecord = unmarshallRecord(ddbRecord);
