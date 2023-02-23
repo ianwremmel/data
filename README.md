@@ -162,10 +162,6 @@ export const captureException = (error: unknown, escaped = true) => {
 
 ## Known Issues
 
--   Even though Dead Letter Queues are configured for CDC handlers, the Start
-    DLQ Redrive button in the AWS console is disabled.
--   Generated lambdas are not tested in CI because of limitations in localstack,
-    but they are tested manually against really AWS from time to time.
 -   There's a branch where I've started working on OpenSearch support, but
     thanks to the localstack issues described above and the time it takes to
     deploy an actual OpenSearch cluster, there's no practical way to test it.
