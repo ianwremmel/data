@@ -101,7 +101,7 @@ initialize_localstack () {
   log "Ensuing LocalStack is dependencies are installed"
   pip3 install --upgrade pyopenssl
   pip3 install localstack awscli-local[ver1] aws-sam-cli-local
-  docker pull localstack/localstack:1.3
+  docker pull localstack/localstack:1.4
 
   log "Starting LocalStack"
   docker-compose up -d
