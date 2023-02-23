@@ -1,5 +1,4 @@
 import type {EventBridgeClient} from '@aws-sdk/client-eventbridge';
-import type {SpanKind} from '@opentelemetry/api';
 
 export interface WithTableName {
   tableName: string;
@@ -10,27 +9,19 @@ export interface WithEventBridge {
 }
 
 export interface WithTelemetry {
-  captureException(error: unknown): void;
-
   /**
-   * Wraps the function in a Span of some kind (XRay, OpenTelemetry, Sentry, etc)
-   * @param name
-   * @param attributes
-   * @param kind
-   * @param fn
+   * This is probably just a wrapper around `captureException` from
+   * `@code-like-a-carpenter/telemetry`, but by making it an injectable instead
+   * of importing it directly, you have the opportunity to use additional code,
+   * for example, you might also want to ship the error to Sentry.
+   * @param error
+   * @param escaped - indicates if the error was not caught and handled
    */
-  captureAsyncFunction<R>(
-    name: string,
-    attributes: Record<string, boolean | number | string | undefined>,
-    kind: SpanKind,
-    fn: () => Promise<R>
-  ): Promise<R>;
+  captureException(error: unknown, escaped?: boolean): void;
 
   /**
    * Wraps a root function in all the necessary initialization logic relevant to
-   * your Telemetry system. In most cases, this probably _should not_ start a
-   * new span, since that'll be handled by a separate call to
-   * `captureAsyncFunction`
+   * your Telemetry system.
    */
   captureAsyncRootFunction<E, C, R>(
     fn: (e: E, c: C) => Promise<R>

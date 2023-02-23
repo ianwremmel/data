@@ -81,22 +81,6 @@ export function captureException(err: unknown) {
   }
 }
 
-/** From WithTelemetry */
-export async function captureAsyncFunction<R>(
-  name: string,
-  attributes: Record<string, boolean | number | string | undefined>,
-  kind: SpanKind,
-  fn: () => Promise<R>
-): Promise<R> {
-  return captureAsyncFunc(name, async (subsegment) => {
-    try {
-      return await fn();
-    } finally {
-      subsegment?.close();
-    }
-  });
-}
-
 /**
  * From WithTelemetry. In this case, we don't have anything to do for the
  * examples, but one possible use might be

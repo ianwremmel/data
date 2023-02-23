@@ -1,4 +1,5 @@
 import {PutEventsCommand} from '@aws-sdk/client-eventbridge';
+import {runWithNewSpan} from '@code-like-a-carpenter/telemetry';
 import {SpanKind} from '@opentelemetry/api';
 import type {Context, DynamoDBRecord, DynamoDBStreamHandler} from 'aws-lambda';
 
@@ -42,14 +43,14 @@ async function handleRecord(
       })
     );
   } catch (err) {
-    captureException(err);
+    captureException(err, false);
 
     if (!record.dynamodb?.SequenceNumber) {
       const err2 = new BaseDataLibraryError(
         'Missing SequenceNumber. Did you forget to set FunctionResponseTypes in your CloudFormation template?',
         {cause: err}
       );
-      captureException(err2);
+      captureException(err2, true);
       throw err2;
     }
 
@@ -61,20 +62,22 @@ async function handleRecord(
 export function makeDynamoDBStreamDispatcher(
   dependencies: WithEventBridge & WithTableName & WithTelemetry
 ): DynamoDBStreamHandler {
-  const {captureAsyncFunction, captureAsyncRootFunction} = dependencies;
+  const {captureAsyncRootFunction} = dependencies;
   return captureAsyncRootFunction(async (event, context) =>
-    captureAsyncFunction(
+    runWithNewSpan(
       'aws:dynamodb process',
-      makeLambdaOTelAttributes(context),
-      SpanKind.CONSUMER,
+      {
+        attributes: makeLambdaOTelAttributes(context),
+        kind: SpanKind.CONSUMER,
+      },
       async () => {
         const batchItemFailures: string[] = [];
 
-        const promises = event.Records.map(
-          async (record) =>
-            await captureAsyncFunction(
-              'aws:dynamodb process record',
-              {
+        const promises = event.Records.map(async (record) =>
+          runWithNewSpan(
+            'aws:dynamodb process record',
+            {
+              attributes: {
                 'faas.document.collection':
                   record.eventSourceARN?.split('/')[1],
                 'faas.document.name': JSON.stringify(record.dynamodb?.Keys),
@@ -83,14 +86,14 @@ export function makeDynamoDBStreamDispatcher(
                   record.dynamodb?.ApproximateCreationDateTime,
                 'faas.trigger': 'datasource',
               },
-              SpanKind.CONSUMER,
-              () =>
-                handleRecord(dependencies, record, context, batchItemFailures)
-            )
+              kind: SpanKind.CONSUMER,
+            },
+            () => handleRecord(dependencies, record, context, batchItemFailures)
+          )
         );
 
         // handleRecord should take care of capturing add suppressing any
-        // processing errors and sending  them to the appropriate
+        // processing errors and sending them to the appropriate
         // XRay/OTel/Segment service, however we want to bubble up any other
         // errors (for example, missing AWS payload pieces).
         await Promise.all(promises);
