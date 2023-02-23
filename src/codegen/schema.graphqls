@@ -30,20 +30,8 @@ directive @partitionKey(pkFields: [String!]!, pkPrefix: String) on OBJECT
 Reusable options for all generated lambdas
 """
 input LambdaConfig {
-  """
-  Milliseconds before firing the coldstart alarm
-  """
-  coldstartLatencyAlarm: Int
-  """
-  Milliseconds before firing the latency alarm
-  """
-  latencyP99Alarm: Int
   memory: Int
   timeout: Int
-  """
-  Percent (zero-to-one-hundred scale) memory utilization before firing the alarm
-  """
-  memoryUtilizationAlarm: Int
 }
 
 """
@@ -51,11 +39,6 @@ Configuration specific to a table dispatcher
 """
 input DispatcherConfig {
   lambdaConfig: LambdaConfig
-  """
-  Number of seconds behind that the Lambda iterator can get before firing an
-  alarm.
-  """
-  maxIteratorAgeAlarm: Int
 }
 
 """
