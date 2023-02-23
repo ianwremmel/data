@@ -16,6 +16,7 @@
 -   [Potential Costs](#potential-costs)
     -   [Change Data Capture](#change-data-capture)
     -   [Observability](#observability)
+        -   [Alarms](#alarms)
     -   [Known Issues](#known-issues)
     -   [Maintainer](#maintainer)
     -   [Contribute](#contribute)
@@ -100,11 +101,6 @@ well).
     $1/month. This cannot be avoided without disabling encryption entirely
     because there doesn't appear to be any way to grant EventBridge permission
     to use the AWS-managed default key.
--   A number of CloudWatch alarms are provisioned for each Lambda (depending on
-    its type). You should definitely enable these alarms in production, but by
-    default they're disabled unless the Parameter
-    `CreateChangeDataCaptureAlarms` is set. Each alarm costs $0.20/month and
-    there are around 5 alarms per Lambda.
 
 ## Change Data Capture
 
@@ -158,6 +154,100 @@ export const captureException = (error: unknown, escaped = true) => {
     clcCaptureException(error);
     Sentry.captureException(error);
 };
+```
+
+### Alarms
+
+This library no longer generates CloudWatch alarms. Instead, you'll want to
+post-process the output template to generate alarms that work well with your
+alerts.
+
+You'll want to generate at least the following alarms:
+
+-   EventBridge invocation failures for every `AWS::Events::Rule`
+-   Messages in a Dead Letter Queue for every `AWS::SQS::Queue` with "DLQ" in
+    the name
+-   SQS Queue Age for any queue that's not a Dead Letter Queue
+-   SQS Queue Size for any queue that's not a Dead Letter Queue
+-   Lambda invocation errors
+-   Lambda memory usage
+-   Lambda duration
+-   Lambda coldstart duration
+-   Lambda Max Iterator Age for DynamoDB Stream listeners (i.e., any Lambda that
+    starts with "TableDispatcher"
+
+> Note that coldstart duration and memory usage require the LambdaInsights Layer
+> to be enabled, which can get quite expensive if you have invocations.
+
+Here's an example of how you might create an alarm for a Dead Letter Queue that
+triggers any time there are messages in the queue.
+
+```ts
+const tpl = yml.load(readFileSync(fullInputPath, 'utf8'), {
+    schema: CLOUDFORMATION_SCHEMA,
+}) as ServerlessApplicationModel;
+
+import yml from 'js-yaml';
+import {CLOUDFORMATION_SCHEMA} from 'js-yaml-cloudformation-schema';
+
+Object.entries(tpl.Resources)
+    .filter(([, resource]) => resource.Type === 'AWS::SQS::Queue')
+    .filter(
+        ([name]) => name.includes('DeadLetterQueue') || name.includes('DLQ')
+    )
+    .forEach(([name]) => {
+        Object.assign(tpl.Resources, makeDLQAlarm(name));
+    });
+
+export function makeDLQAlarm(queueName: string) {
+    return {
+        [`${queueName}ThresholdAlarm`]: {
+            Properties: {
+                ActionsEnabled: true,
+                AlarmActions: [{Ref: 'PagerdutyAlarmTopic'}],
+                AlarmDescription: {
+                    'Fn::Sub': [
+                        // eslint-disable-next-line no-template-curly-in-string
+                        'Dead Letter present in ${DeadLetterQueueName}',
+                        {
+                            DeadLetterQueueName: {
+                                'Fn::GetAtt': `${queueName}.QueueName`,
+                            },
+                        },
+                    ],
+                },
+                AlarmName: {
+                    'Fn::Sub': [
+                        // eslint-disable-next-line no-template-curly-in-string
+                        '/aws/sqs/sum-dead-letter/${DeadLetterQueueName}',
+                        {
+                            DeadLetterQueueName: {
+                                'Fn::GetAtt': `${queueName}.QueueName`,
+                            },
+                        },
+                    ],
+                },
+                ComparisonOperator: 'GreaterThanThreshold',
+                DatapointsToAlarm: 1,
+                Dimensions: [
+                    {
+                        Name: 'QueueName',
+                        Value: {'Fn::GetAtt': `${queueName}.QueueName`},
+                    },
+                ],
+                EvaluationPeriods: 1,
+                MetricName: 'ApproximateNumberOfMessagesVisible',
+                Namespace: 'AWS/SQS',
+                OKActions: [{Ref: 'PagerdutyAlarmTopic'}],
+                Period: 60,
+                Statistic: 'Sum',
+                Threshold: 0,
+                TreatMissingData: 'notBreaching',
+            },
+            Type: 'AWS::CloudWatch::Alarm',
+        },
+    };
+}
 ```
 
 ## Known Issues

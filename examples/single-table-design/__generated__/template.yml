@@ -1,9 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Conditions:
-  CreateChangeDataCaptureAlarmsCondition:
-    Fn::Equals:
-      - Ref: CreateChangeDataCaptureAlarms
-      - 'true'
   IsProd:
     Fn::Equals:
       - Ref: StageName
@@ -37,13 +33,6 @@ Outputs:
     Value:
       Ref: TableEmail
 Parameters:
-  CreateChangeDataCaptureAlarms:
-    AllowedValues:
-      - 'true'
-      - 'false'
-    Default: 'true'
-    Description: Controls whether or not CloudWatch alarms are deployed
-    Type: String
   LogRetentionInDays:
     Default: 3
     Description: Log retention in days
@@ -98,28 +87,6 @@ Resources:
                 - QueueName
       Timeout: 30
     Type: AWS::Serverless::Function
-  FnHandlerSInsertAa23d7fc7ColdstartLatencyAlarm:
-    Condition: CreateChangeDataCaptureAlarmsCondition
-    Properties:
-      ActionsEnabled: true
-      AlarmActions: []
-      AlarmDescription: FnHandlerSInsertAa23d7fc7 Coldstart Latency > 500ms
-      AlarmName: FnHandlerSInsertAa23d7fc7 Coldstart Latency
-      ComparisonOperator: GreaterThanThreshold
-      DatapointsToAlarm: 3
-      Dimensions:
-        - Name: function_name
-          Value:
-            Ref: FnHandlerSInsertAa23d7fc7
-      EvaluationPeriods: 5
-      MetricName: init_duration
-      Namespace: LambdaInsights
-      OKActions: []
-      Period: 60
-      Statistic: Maximum
-      Threshold: 500
-      TreatMissingData: notBreaching
-    Type: AWS::CloudWatch::Alarm
   FnHandlerSInsertAa23d7fc7DLQ:
     Properties:
       KmsMasterKeyId:
@@ -128,53 +95,6 @@ Resources:
           - Ref: FnHandlerSInsertAa23d7fc7QueueKey
           - AWS::NoValue
     Type: AWS::SQS::Queue
-  FnHandlerSInsertAa23d7fc7DLQDLQAlarm:
-    Condition: CreateChangeDataCaptureAlarmsCondition
-    Properties:
-      ActionsEnabled: true
-      AlarmActions: []
-      AlarmDescription: FnHandlerSInsertAa23d7fc7DLQ DLQ has messages
-      AlarmName: FnHandlerSInsertAa23d7fc7DLQ DLQ
-      ComparisonOperator: GreaterThanThreshold
-      DatapointsToAlarm: 1
-      Dimensions:
-        - Name: QueueName
-          Value:
-            Fn::GetAtt:
-              - FnHandlerSInsertAa23d7fc7DLQ
-              - QueueName
-      EvaluationPeriods: 1
-      MetricName: ApproximateNumberOfMessagesVisible
-      Namespace: AWS/SQS
-      OKActions: []
-      Period: 60
-      Statistic: Sum
-      Threshold: 0
-      TreatMissingData: notBreaching
-    Type: AWS::CloudWatch::Alarm
-  FnHandlerSInsertAa23d7fc7LambdaP99Alarm:
-    Condition: CreateChangeDataCaptureAlarmsCondition
-    Properties:
-      ActionsEnabled: true
-      AlarmActions: []
-      AlarmDescription: FnHandlerSInsertAa23d7fc7 P99 Latency > 1000ms
-      AlarmName: FnHandlerSInsertAa23d7fc7 Lambda Latency (P99)
-      ComparisonOperator: GreaterThanThreshold
-      DatapointsToAlarm: 3
-      Dimensions:
-        - Name: FunctionName
-          Value:
-            Ref: FnHandlerSInsertAa23d7fc7
-      EvaluationPeriods: 5
-      ExtendedStatistic: p99
-      MetricName: Duration
-      Namespace: AWS/Lambda
-      OKActions: []
-      Period: 60
-      Threshold: 1000
-      TreatMissingData: notBreaching
-      Unit: Milliseconds
-    Type: AWS::CloudWatch::Alarm
   FnHandlerSInsertAa23d7fc7LogGroup:
     Properties:
       LogGroupName:
@@ -182,28 +102,6 @@ Resources:
       RetentionInDays:
         Ref: LogRetentionInDays
     Type: AWS::Logs::LogGroup
-  FnHandlerSInsertAa23d7fc7MemoryUsageAlarm:
-    Condition: CreateChangeDataCaptureAlarmsCondition
-    Properties:
-      ActionsEnabled: true
-      AlarmActions: []
-      AlarmDescription: FnHandlerSInsertAa23d7fc7 Memory Usage > 80%
-      AlarmName: FnHandlerSInsertAa23d7fc7 Memory Usage
-      ComparisonOperator: GreaterThanThreshold
-      DatapointsToAlarm: 3
-      Dimensions:
-        - Name: function_name
-          Value:
-            Ref: FnHandlerSInsertAa23d7fc7
-      EvaluationPeriods: 5
-      MetricName: memory_utilization
-      Namespace: LambdaInsights
-      OKActions: []
-      Period: 60
-      Statistic: Maximum
-      Threshold: 80
-      TreatMissingData: notBreaching
-    Type: AWS::CloudWatch::Alarm
   FnHandlerSInsertAa23d7fc7Queue:
     Properties:
       Fn::If:
@@ -420,51 +318,6 @@ Resources:
             EventBusName: default
       Timeout: 60
     Type: AWS::Serverless::Function
-  TableAccountsCDCDispatcherColdstartLatencyAlarm:
-    Condition: CreateChangeDataCaptureAlarmsCondition
-    Properties:
-      ActionsEnabled: true
-      AlarmActions: []
-      AlarmDescription: TableAccountsCDCDispatcher Coldstart Latency > 500ms
-      AlarmName: TableAccountsCDCDispatcher Coldstart Latency
-      ComparisonOperator: GreaterThanThreshold
-      DatapointsToAlarm: 3
-      Dimensions:
-        - Name: function_name
-          Value:
-            Ref: TableAccountsCDCDispatcher
-      EvaluationPeriods: 5
-      MetricName: init_duration
-      Namespace: LambdaInsights
-      OKActions: []
-      Period: 60
-      Statistic: Maximum
-      Threshold: 500
-      TreatMissingData: notBreaching
-    Type: AWS::CloudWatch::Alarm
-  TableAccountsCDCDispatcherLambdaP99Alarm:
-    Condition: CreateChangeDataCaptureAlarmsCondition
-    Properties:
-      ActionsEnabled: true
-      AlarmActions: []
-      AlarmDescription: TableAccountsCDCDispatcher P99 Latency > 1000ms
-      AlarmName: TableAccountsCDCDispatcher Lambda Latency (P99)
-      ComparisonOperator: GreaterThanThreshold
-      DatapointsToAlarm: 3
-      Dimensions:
-        - Name: FunctionName
-          Value:
-            Ref: TableAccountsCDCDispatcher
-      EvaluationPeriods: 5
-      ExtendedStatistic: p99
-      MetricName: Duration
-      Namespace: AWS/Lambda
-      OKActions: []
-      Period: 60
-      Threshold: 1000
-      TreatMissingData: notBreaching
-      Unit: Milliseconds
-    Type: AWS::CloudWatch::Alarm
   TableAccountsCDCDispatcherLogGroup:
     Properties:
       LogGroupName:
@@ -472,51 +325,6 @@ Resources:
       RetentionInDays:
         Ref: LogRetentionInDays
     Type: AWS::Logs::LogGroup
-  TableAccountsCDCDispatcherMaxIteratorAgeAlarm:
-    Condition: CreateChangeDataCaptureAlarmsCondition
-    Properties:
-      ActionsEnabled: true
-      AlarmActions: []
-      AlarmDescription: TableAccountsCDCDispatcher Max Iterator Age > 30ms
-      AlarmName: TableAccountsCDCDispatcher Max Iterator Age
-      ComparisonOperator: GreaterThanThreshold
-      DatapointsToAlarm: 3
-      Dimensions:
-        - Name: FunctionName
-          Value:
-            Ref: TableAccountsCDCDispatcher
-      EvaluationPeriods: 5
-      MetricName: IteratorAge
-      Namespace: AWS/Lambda
-      OKActions: []
-      Period: 60
-      Statistic: Average
-      Threshold: 30
-      TreatMissingData: notBreaching
-      Unit: Seconds
-    Type: AWS::CloudWatch::Alarm
-  TableAccountsCDCDispatcherMemoryUsageAlarm:
-    Condition: CreateChangeDataCaptureAlarmsCondition
-    Properties:
-      ActionsEnabled: true
-      AlarmActions: []
-      AlarmDescription: TableAccountsCDCDispatcher Memory Usage > 80%
-      AlarmName: TableAccountsCDCDispatcher Memory Usage
-      ComparisonOperator: GreaterThanThreshold
-      DatapointsToAlarm: 3
-      Dimensions:
-        - Name: function_name
-          Value:
-            Ref: TableAccountsCDCDispatcher
-      EvaluationPeriods: 5
-      MetricName: memory_utilization
-      Namespace: LambdaInsights
-      OKActions: []
-      Period: 60
-      Statistic: Maximum
-      Threshold: 80
-      TreatMissingData: notBreaching
-    Type: AWS::CloudWatch::Alarm
   TableEmail:
     Properties:
       AttributeDefinitions:

@@ -1,6 +1,5 @@
 import {increasePathDepth} from '../../common/paths';
 import type {DispatcherConfig} from '../../parser';
-import {makeDispatcherAlarms} from '../alarms';
 import type {CloudFormationFragment} from '../types';
 
 import {combineFragments} from './combine-fragments';
@@ -45,48 +44,44 @@ export const handler = makeDynamoDBStreamDispatcher({
 
   const {memorySize, timeout} = dispatcherConfig;
 
-  return combineFragments(
-    makeLogGroup({functionName}),
-    makeDispatcherAlarms(functionName, dispatcherConfig),
-    {
-      resources: {
-        [functionName]: {
-          Metadata: {
-            BuildMethod: 'esbuild',
-            BuildProperties: buildProperties,
+  return combineFragments(makeLogGroup({functionName}), {
+    resources: {
+      [functionName]: {
+        Metadata: {
+          BuildMethod: 'esbuild',
+          BuildProperties: buildProperties,
+        },
+        Properties: {
+          CodeUri: codeUri,
+          Events: {
+            Stream: {
+              Properties: {
+                BatchSize: batchSize,
+                FunctionResponseTypes: ['ReportBatchItemFailures'],
+                MaximumRetryAttempts: maximumRetryAttempts,
+                StartingPosition: 'TRIM_HORIZON',
+                Stream: {'Fn::GetAtt': [tableName, 'StreamArn']},
+              },
+              Type: 'DynamoDB',
+            },
           },
-          Properties: {
-            CodeUri: codeUri,
-            Events: {
-              Stream: {
-                Properties: {
-                  BatchSize: batchSize,
-                  FunctionResponseTypes: ['ReportBatchItemFailures'],
-                  MaximumRetryAttempts: maximumRetryAttempts,
-                  StartingPosition: 'TRIM_HORIZON',
-                  Stream: {'Fn::GetAtt': [tableName, 'StreamArn']},
-                },
-                Type: 'DynamoDB',
+          MemorySize: memorySize,
+          Policies: [
+            'AWSLambdaBasicExecutionRole',
+            'AWSLambda_ReadOnlyAccess',
+            'AWSXrayWriteOnlyAccess',
+            'CloudWatchLambdaInsightsExecutionRolePolicy',
+            {CloudWatchPutMetricPolicy: {}},
+            {
+              EventBridgePutEventsPolicy: {
+                EventBusName: 'default',
               },
             },
-            MemorySize: memorySize,
-            Policies: [
-              'AWSLambdaBasicExecutionRole',
-              'AWSLambda_ReadOnlyAccess',
-              'AWSXrayWriteOnlyAccess',
-              'CloudWatchLambdaInsightsExecutionRolePolicy',
-              {CloudWatchPutMetricPolicy: {}},
-              {
-                EventBridgePutEventsPolicy: {
-                  EventBusName: 'default',
-                },
-              },
-            ],
-            Timeout: timeout,
-          },
-          Type: 'AWS::Serverless::Function',
+          ],
+          Timeout: timeout,
         },
+        Type: 'AWS::Serverless::Function',
       },
-    }
-  );
+    },
+  });
 }
