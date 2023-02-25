@@ -13,6 +13,7 @@ import {assert} from '../../assert';
 import type {WithTelemetry} from '../../dependencies';
 import {makeLambdaOTelAttributes} from '../telemetry';
 
+import {retry} from './retry';
 import type {UnmarshalledDynamoDBRecord} from './unmarshall-record';
 import {unmarshallRecord} from './unmarshall-record';
 
@@ -96,7 +97,7 @@ export function makeSqsHandler(
               const unmarshalledRecord = unmarshallRecord(ddbRecord);
 
               try {
-                return await cb(unmarshalledRecord, context);
+                return await retry(() => cb(unmarshalledRecord, context));
               } catch (err) {
                 // Technically this exception is escaping the span, but only for
                 // use in crafting batchItemFailures. At this point, it's been
