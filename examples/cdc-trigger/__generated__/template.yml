@@ -73,7 +73,7 @@ Resources:
               Fn::GetAtt:
                 - FnTriggerUSUpsert7d1674e2DLQ
                 - QueueName
-      Timeout: 30
+      Timeout: 90
     Type: AWS::Serverless::Function
   FnTriggerUSUpsert7d1674e2DLQ:
     Properties:

@@ -93,7 +93,14 @@ export interface HandlerConfig {
 
 /** Reusable options for all generated lambdas */
 export interface LambdaConfig {
+  /** Measured in megabytes. */
   memory?: InputMaybe<Scalars['Int']>;
+  /**
+   * Measured in seconds. Reminder that handlers may need to do retries in-band, so
+   * consider making this a relatively high number and using alarms to catch
+   * timeouts rather than terminating the function. In order to make space for up
+   * to 5 retries, please add sixty seconds to your intended timeout.
+   */
   timeout?: InputMaybe<Scalars['Int']>;
 }
 

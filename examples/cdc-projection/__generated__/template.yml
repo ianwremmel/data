@@ -85,7 +85,7 @@ Resources:
               Fn::GetAtt:
                 - FnHandlerSInsertAa23d7fc7DLQ
                 - QueueName
-      Timeout: 30
+      Timeout: 90
     Type: AWS::Serverless::Function
   FnHandlerSInsertAa23d7fc7DLQ:
     Properties:

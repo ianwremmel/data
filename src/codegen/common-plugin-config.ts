@@ -7,5 +7,9 @@ export const defaultDispatcherConfig: DispatcherConfig = {
 
 export const defaultHandlerConfig: HandlerConfig = {
   memorySize: 256,
-  timeout: 30,
+  /**
+   * Needs to be large to 1. account for retries with exponential backoff and
+   * 2. to because a single lambda invocation will handle multiple updates.
+   */
+  timeout: 90,
 };
