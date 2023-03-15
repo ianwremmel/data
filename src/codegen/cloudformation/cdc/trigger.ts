@@ -58,18 +58,16 @@ export function defineTriggerCdc(
     config.actionsModuleId
   );
 
-  const resolvedDependenciesModuleId = increasePathDepth(dependenciesModuleId);
   const resolvedHandlerModuleId = increasePathDepth(handlerModuleId);
 
   const template = `// This file is generated. Do not edit by hand.
 
 import {assert, makeTriggerHandler} from '${libImportPath}';
 
-import * as dependencies from '${resolvedDependenciesModuleId}';
 import {handler as cdcHandler} from '${resolvedHandlerModuleId}';
 import {unmarshall${sourceModelName}} from '${actionsModuleId}';
 
-export const handler = makeTriggerHandler(dependencies, (record) => {
+export const handler = makeTriggerHandler((record) => {
   assert(record.dynamodb.NewImage, 'Expected DynamoDB Record to have a NewImage');
   return cdcHandler(unmarshall${sourceModelName}(record.dynamodb.NewImage));
 });

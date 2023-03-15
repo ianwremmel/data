@@ -71,33 +71,6 @@ const translateConfig = {marshallOptions, unmarshallOptions};
 // Create the DynamoDB Document client.
 export const ddbDocClient = DynamoDBDocumentClient.from(ddb, translateConfig);
 
-/** From WithTelemetry */
-export function captureException(err: unknown) {
-  console.error({err});
-  if (err instanceof Error) {
-    getSegment()?.addError(err);
-  } else {
-    getSegment()?.addError(JSON.stringify(err));
-  }
-}
-
-/**
- * From WithTelemetry. In this case, we don't have anything to do for the
- * examples, but one possible use might be
- * @example
- *
- * ```
- * export function captureAsyncRootFunction<E, C, R>(fn: (e: E, c: C) => Promise<R>) :(e: E, c: C) => Promise<R> {
- *   return Sentry.AWSLambda.wrapHandler(fn);
- * }
- * ```
- */
-export function captureAsyncRootFunction<E, C, R>(
-  fn: (e: E, c: C) => Promise<R>
-): (e: E, c: C) => Promise<R> {
-  return fn;
-}
-
 /** Generates unique, random ids */
 export function idGenerator() {
   return cuid();

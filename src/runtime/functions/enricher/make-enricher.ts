@@ -1,6 +1,5 @@
 import assert from 'assert';
 
-import type {WithTelemetry} from '../../dependencies';
 import {NotFoundError} from '../../errors';
 import type {ResultType} from '../../types';
 import type {Handler} from '../common/handlers';
@@ -39,24 +38,22 @@ export function makeEnricher<
   CREATE_TARGET_INPUT,
   UPDATE_TARGET_INPUT
 >(
-  dependencies: WithTelemetry,
   enricher: Projector<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>,
   sdk: SDK<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>
 ): Handler {
   const {unmarshallSourceModel} = sdk;
 
-  return makeSqsHandler(dependencies, async (unmarshalledRecord) => {
+  return makeSqsHandler(async (unmarshalledRecord) => {
     assert(unmarshalledRecord.dynamodb?.NewImage);
     const source = unmarshallSourceModel(unmarshalledRecord.dynamodb?.NewImage);
     assert(source);
 
-    await enrich(dependencies, enricher, sdk, source);
+    await enrich(enricher, sdk, source);
   });
 }
 
 /** Enriches the source model into the target model */
 async function enrich<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>(
-  dependencies: WithTelemetry,
   enricher: Projector<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>,
   sdk: SDK<SOURCE, TARGET, CREATE_TARGET_INPUT, UPDATE_TARGET_INPUT>,
   source: SOURCE
