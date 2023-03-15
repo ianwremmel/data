@@ -82,6 +82,7 @@
   },
   "dependencies": {
     "@code-like-a-carpenter/exception": "^1.0.0",
+    "@code-like-a-carpenter/lambda-handlers": "^1.3.0",
     "@code-like-a-carpenter/parallel": "^1.1.0",
     "@code-like-a-carpenter/telemetry": "^1.1.0",
     "@graphql-codegen/plugin-helpers": "^3.1.1",

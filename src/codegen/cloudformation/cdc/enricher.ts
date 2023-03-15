@@ -63,7 +63,6 @@ export function defineModelEnricher(
 
 import {makeEnricher} from '${libImportPath}';
 
-import * as dependencies from '${resolvedDependenciesModuleId}';
 import {create, load, update} from '${resolvedHandlerModuleId}';
 import {
   ${sourceModelName},
@@ -81,7 +80,6 @@ ${targetModelName},
 Create${targetModelName}Input,
 Update${targetModelName}Input
 >(
-  dependencies,
   {create, load, update},
   {
     createTargetModel: create${targetModelName},

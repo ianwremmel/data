@@ -2,7 +2,6 @@
 
 import {makeEnricher} from '@ianwremmel/data';
 
-import * as dependencies from '../../../dependencies';
 import {create, load, update} from '../../handler';
 import type {
   Subscription,
@@ -18,7 +17,6 @@ export const handler = makeEnricher<
   CreateAccountInput,
   UpdateAccountInput
 >(
-  dependencies,
   {create, load, update},
   {
     createTargetModel: createAccount,
