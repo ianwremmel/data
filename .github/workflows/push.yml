@@ -34,13 +34,13 @@ jobs:
           ESLINT_FORMAT_OPTIONS:
             '--format json-with-metadata --output-file reports/style/eslint.json'
           TSC_OPTIONS: '| tee reports/style/tsc.log'
-      - uses: check-run-reporter/action@v2.11.1
+      - uses: check-run-reporter/action@v2.12.0
         if: ${{ always() }}
         with:
           token: ${{ secrets.CHECK_RUN_REPORTER_TOKEN }}
           label: ESLint
           report: 'reports/style/eslint.json'
-      - uses: check-run-reporter/action@v2.11.1
+      - uses: check-run-reporter/action@v2.12.0
         if: ${{ always() }}
         with:
           token: ${{ secrets.CHECK_RUN_REPORTER_TOKEN }}
@@ -62,7 +62,7 @@ jobs:
       - run: make -j 8 build
       - run: scripts/deploy-examples-to-localstack
       - run: TEST_MODE=localstack npm test
-      - uses: check-run-reporter/action@v2.11.1
+      - uses: check-run-reporter/action@v2.12.0
         if: ${{ always() }}
         with:
           token: ${{ secrets.CHECK_RUN_REPORTER_TOKEN }}
